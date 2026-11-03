@@ -1,5 +1,5 @@
 /* =========================================================================
- * LLEVARI - CLIENTE WEB CON CREDENCIALES INTEGRADAS
+ * LLEVARI - CLIENTE WEB COMPLETO Y CORREGIDO
  * ========================================================================= */
 
 // 1. CONFIGURACIÓN FIREBASE (llevari)
@@ -58,7 +58,7 @@ let sliderIndexActual = 0;
 let sliderTimer = null;
 let cacheKmRuta = {};
 
-// 3. FÓRMULA DE TARIFAS
+// 3. FÓRMULA DE TARIFAS Y DISTANCIA
 function calcularDistanciaKm(l1, lo1, l2, lo2) {
   const r = 6371.0;
   const dLa = (l2 - l1) * Math.PI / 180;
@@ -114,9 +114,15 @@ function envioPara(rLat, rLon) {
   return calcularTarifa(kmHaciaSync(rLat, rLon), 0).envio;
 }
 
+function formatearImagen(imgStr) {
+  if (!imgStr) return "";
+  if (imgStr.startsWith("http") || imgStr.startsWith("data:")) return imgStr;
+  return `data:image/jpeg;base64,${imgStr}`;
+}
+
 // 4. ESCUCHA DE TARIFAS
 function escucharTarifas() {
-  db.collection("configuracion").document("tarifas").onSnapshot(doc => {
+  db.collection("configuracion").doc("tarifas").onSnapshot(doc => {
     if (!doc.exists) return;
     const d = doc.data();
     if (d.tope_aumento_pct) cfgTopePct = d.tope_aumento_pct;
@@ -128,8 +134,6 @@ function escucharTarifas() {
     if (Array.isArray(d.pago_km) && d.pago_km.length === (KM_MAX - KM_MIN + 1)) {
       cfgPagoKm = d.pago_km;
     }
-    if (tabActualIndex === 0) cargarInicioPrincipal();
-    else if (tabActualIndex === 1) dibujarCarrito();
   });
 }
 
@@ -155,94 +159,139 @@ function bindUIEvents() {
     btn.addEventListener("click", () => cambiarTab(parseInt(btn.getAttribute("data-tab"))));
   });
 
-  document.getElementById("btnNavSalir").addEventListener("click", () => {
-    auth.signOut();
-    localStorage.clear();
-    miTelefono = "";
-    mostrarPantallaLogin();
-  });
+  const btnSalir = document.getElementById("btnNavSalir");
+  if (btnSalir) {
+    btnSalir.addEventListener("click", () => {
+      auth.signOut();
+      localStorage.clear();
+      miTelefono = "";
+      mostrarPantallaLogin();
+    });
+  }
 
-  document.getElementById("colUbi").addEventListener("click", mostrarSelectorUbicaciones);
-  document.getElementById("btnHeaderCarrito").addEventListener("click", () => cambiarTab(1));
+  const colUbi = document.getElementById("colUbi");
+  if (colUbi) colUbi.addEventListener("click", mostrarSelectorUbicaciones);
+
+  const btnCart = document.getElementById("btnHeaderCarrito");
+  if (btnCart) btnCart.addEventListener("click", () => cambiarTab(1));
 
   const etBuscador = document.getElementById("etBuscador");
-  let buscadorTimeout = null;
-  etBuscador.addEventListener("input", () => {
-    clearTimeout(buscadorTimeout);
-    buscadorTimeout = setTimeout(() => {
-      const q = etBuscador.value.trim().toLowerCase();
-      filtrarResultados(q);
-    }, 350);
-  });
+  if (etBuscador) {
+    let buscadorTimeout = null;
+    etBuscador.addEventListener("input", () => {
+      clearTimeout(buscadorTimeout);
+      buscadorTimeout = setTimeout(() => {
+        const q = etBuscador.value.trim().toLowerCase();
+        filtrarResultados(q);
+      }, 350);
+    });
+  }
 
-  document.getElementById("btnIniciarSesion").addEventListener("click", iniciarSesion);
-  document.getElementById("lnkOlvidoPin").addEventListener("click", (e) => {
+  const btnLog = document.getElementById("btnIniciarSesion");
+  if (btnLog) btnLog.addEventListener("click", iniciarSesion);
+
+  const lnkOlv = document.getElementById("lnkOlvidoPin");
+  if (lnkOlv) lnkOlv.addEventListener("click", (e) => {
     e.preventDefault();
     document.getElementById("layoutLogin").classList.add("hidden");
     document.getElementById("layoutRecuperar").classList.remove("hidden");
   });
-  document.getElementById("lnkVolverLogin").addEventListener("click", (e) => {
+
+  const lnkVol = document.getElementById("lnkVolverLogin");
+  if (lnkVol) lnkVol.addEventListener("click", (e) => {
     e.preventDefault();
     document.getElementById("layoutRecuperar").classList.add("hidden");
     document.getElementById("layoutLogin").classList.remove("hidden");
   });
-  document.getElementById("btnRecEnviar").addEventListener("click", enviarRecuperacion);
 
-  document.getElementById("lnkIrRegistro").addEventListener("click", (e) => {
+  const btnRec = document.getElementById("btnRecEnviar");
+  if (btnRec) btnRec.addEventListener("click", enviarRecuperacion);
+
+  const lnkReg = document.getElementById("lnkIrRegistro");
+  if (lnkReg) lnkReg.addEventListener("click", (e) => {
     e.preventDefault();
     document.getElementById("layoutLogin").classList.add("hidden");
     document.getElementById("layoutRegistro").classList.remove("hidden");
   });
-  document.getElementById("lnkRegVolverLog").addEventListener("click", (e) => {
+
+  const lnkRegLog = document.getElementById("lnkRegVolverLog");
+  if (lnkRegLog) lnkRegLog.addEventListener("click", (e) => {
     e.preventDefault();
     document.getElementById("layoutRegistro").classList.add("hidden");
     document.getElementById("layoutLogin").classList.remove("hidden");
   });
 
-  document.getElementById("btnRegPasoSiguiente").addEventListener("click", validarPaso1Registro);
-  document.getElementById("lnkRegVolverPaso1").addEventListener("click", (e) => {
+  const btnSigu = document.getElementById("btnRegPasoSiguiente");
+  if (btnSigu) btnSigu.addEventListener("click", validarPaso1Registro);
+
+  const lnkRegP1 = document.getElementById("lnkRegVolverPaso1");
+  if (lnkRegP1) lnkRegP1.addEventListener("click", (e) => {
     e.preventDefault();
     document.getElementById("layoutRegPaso2").classList.add("hidden");
     document.getElementById("layoutRegPaso1").classList.remove("hidden");
   });
 
-  document.getElementById("btnRegNuevaDirMapa").addEventListener("click", abrirMapaNuevaDireccion);
-  document.getElementById("btnConfirmarUbiMapa").addEventListener("click", () => {
+  const btnMapaDir = document.getElementById("btnRegNuevaDirMapa");
+  if (btnMapaDir) btnMapaDir.addEventListener("click", abrirMapaNuevaDireccion);
+
+  const btnConfUbi = document.getElementById("btnConfirmarUbiMapa");
+  if (btnConfUbi) btnConfUbi.addEventListener("click", () => {
     document.getElementById("modalDetalleDir").classList.remove("hidden");
   });
-  document.getElementById("btnGuardarDirModal").addEventListener("click", guardarDetalleDireccion);
 
-  document.getElementById("btnCerrarMapa").addEventListener("click", volverDeMapa);
-  document.getElementById("btnRegistrarmeFinal").addEventListener("click", finalizarRegistro);
+  const btnGuardarDir = document.getElementById("btnGuardarDirModal");
+  if (btnGuardarDir) btnGuardarDir.addEventListener("click", guardarDetalleDireccion);
 
-  document.getElementById("btnVolverServicio").addEventListener("click", () => {
+  const btnCerrMap = document.getElementById("btnCerrarMapa");
+  if (btnCerrMap) btnCerrMap.addEventListener("click", volverDeMapa);
+
+  const btnRegFin = document.getElementById("btnRegistrarmeFinal");
+  if (btnRegFin) btnRegFin.addEventListener("click", finalizarRegistro);
+
+  const btnVolvServ = document.getElementById("btnVolverServicio");
+  if (btnVolvServ) btnVolvServ.addEventListener("click", () => {
     document.getElementById("layoutTipoServicio").classList.add("hidden");
     document.getElementById("layoutAppMain").classList.remove("hidden");
   });
-  document.getElementById("svLblDelivery").addEventListener("click", () => alternarModalidadServicio(true));
-  document.getElementById("svLblPickup").addEventListener("click", () => alternarModalidadServicio(false));
-  document.getElementById("svBtnConfirmar").addEventListener("click", confirmarCreacionPedido);
 
-  document.getElementById("bCerrarSeg").addEventListener("click", cerrarPantallaSeguimiento);
-  document.getElementById("bCancelarPedido").addEventListener("click", cancelarPedidoActivo);
+  const lblDel = document.getElementById("svLblDelivery");
+  if (lblDel) lblDel.addEventListener("click", () => alternarModalidadServicio(true));
 
-  document.getElementById("btnProc").addEventListener("click", () => {
+  const lblPic = document.getElementById("svLblPickup");
+  if (lblPic) lblPic.addEventListener("click", () => alternarModalidadServicio(false));
+
+  const btnConfPed = document.getElementById("svBtnConfirmar");
+  if (btnConfPed) btnConfPed.addEventListener("click", confirmarCreacionPedido);
+
+  const btnCerrSeg = document.getElementById("bCerrarSeg");
+  if (btnCerrSeg) btnCerrSeg.addEventListener("click", cerrarPantallaSeguimiento);
+
+  const btnCancPed = document.getElementById("bCancelarPedido");
+  if (btnCancPed) btnCancPed.addEventListener("click", cancelarPedidoActivo);
+
+  const btnProc = document.getElementById("btnProc");
+  if (btnProc) btnProc.addEventListener("click", () => {
     filtroPedidos = 0;
-    document.getElementById("btnProc").classList.add("active");
+    btnProc.classList.add("active");
     document.getElementById("btnEnt").classList.remove("active");
     cargarHistorial();
   });
-  document.getElementById("btnEnt").addEventListener("click", () => {
+
+  const btnEnt = document.getElementById("btnEnt");
+  if (btnEnt) btnEnt.addEventListener("click", () => {
     filtroPedidos = 1;
-    document.getElementById("btnEnt").classList.add("active");
+    btnEnt.classList.add("active");
     document.getElementById("btnProc").classList.remove("active");
     cargarHistorial();
   });
 
-  document.getElementById("btnCloseModalPlato").addEventListener("click", () => {
+  const btnCloseMod = document.getElementById("btnCloseModalPlato");
+  if (btnCloseMod) btnCloseMod.addEventListener("click", () => {
     document.getElementById("modalPlatoPro").classList.add("hidden");
   });
-  document.getElementById("btnModalCerrarUbi").addEventListener("click", () => {
+
+  const btnCerrUbi = document.getElementById("btnModalCerrarUbi");
+  if (btnCerrUbi) btnCerrUbi.addEventListener("click", () => {
     document.getElementById("modalSelectorUbicaciones").classList.add("hidden");
   });
 }
@@ -266,8 +315,10 @@ function mostrarAppPrincipal() {
 
 function actualizarCabecera() {
   const primer = miNombre.trim().split(" ")[0];
-  document.getElementById("tvSaludo").textContent = primer ? `Hola, ${primer} 👋 • Entregar en` : "Entregar en";
-  document.getElementById("tvUbicacion").textContent = `📍 ${miCiudad}${miDireccionDesc ? ' • ' + miDireccionDesc : ''} ⌄`;
+  const tvSal = document.getElementById("tvSaludo");
+  const tvUbi = document.getElementById("tvUbicacion");
+  if (tvSal) tvSal.textContent = primer ? `Hola, ${primer} 👋 • Entregar en` : "Entregar en";
+  if (tvUbi) tvUbi.textContent = `📍 ${miCiudad}${miDireccionDesc ? ' • ' + miDireccionDesc : ''} ⌄`;
 }
 
 function cambiarTab(idx) {
@@ -326,8 +377,10 @@ async function enviarRecuperacion() {
   try {
     await auth.sendPasswordResetEmail(c);
     const msg = document.getElementById("tvRecEstado");
-    msg.textContent = "✅ Si el correo está registrado, te enviamos el enlace. Revisa Spam.";
-    msg.classList.remove("hidden");
+    if (msg) {
+      msg.textContent = "✅ Si el correo está registrado, te enviamos el enlace. Revisa Spam.";
+      msg.classList.remove("hidden");
+    }
   } catch (e) {
     alert("Error enviando recuperación: " + e.message);
   }
@@ -345,7 +398,7 @@ async function validarPaso1Registro() {
   if (p.length < 6) return alert("La contraseña debe tener al menos 6 caracteres");
 
   const telF = document.getElementById("spRegPais").value + telNum;
-  const docTel = await db.collection("clientes").document(telF).get();
+  const docTel = await db.collection("clientes").doc(telF).get();
   if (docTel.exists) return alert("Teléfono ya registrado");
 
   const snapEmail = await db.collection("clientes").where("correo", "==", c).get();
@@ -385,6 +438,7 @@ function guardarDetalleDireccion() {
 
 function actualizarListaDireccionesReg() {
   const c = document.getElementById("contDireccionesReg");
+  if (!c) return;
   c.innerHTML = "";
   listaDireccionesReg.forEach((dir, i) => {
     const sel = (i === indiceDireccionSeleccionada);
@@ -407,7 +461,7 @@ function actualizarListaDireccionesReg() {
     c.appendChild(item);
   });
   const btnFin = document.getElementById("btnRegistrarmeFinal");
-  btnFin.disabled = indiceDireccionSeleccionada < 0;
+  if (btnFin) btnFin.disabled = indiceDireccionSeleccionada < 0;
 }
 
 async function finalizarRegistro() {
@@ -430,7 +484,7 @@ async function finalizarRegistro() {
       direcciones: listaDireccionesReg, indice_dir_activa: indiceDireccionSeleccionada,
       consentimiento_version: "v2", consentimiento_fecha: new Date().toISOString()
     };
-    await db.collection("clientes").document(t).set(cli);
+    await db.collection("clientes").doc(t).set(cli);
     miNombre = n; miTelefono = t;
     localStorage.setItem("nombre", n);
     localStorage.setItem("telefono", t);
@@ -444,7 +498,7 @@ async function finalizarRegistro() {
   }
 }
 
-// 8. MAPLIBRE GL: PICKER DE DIRECCIÓN
+// 8. MAPLIBRE GL: PICKER
 function initMapPicker(lat, lon) {
   if (!mapPicker) {
     mapPicker = new maplibregl.Map({
@@ -455,46 +509,30 @@ function initMapPicker(lat, lon) {
       attributionControl: false
     });
 
-    const pin = document.getElementById("pin");
-    mapPicker.on('movestart', () => pin.classList.add("lift"));
     mapPicker.on('move', () => {
       const c = mapPicker.getCenter();
       tempMapaLat = c.lat; tempMapaLon = c.lng;
     });
-    mapPicker.on('moveend', () => {
-      pin.classList.remove("lift");
-      reverseGeocode(tempMapaLat, tempMapaLon);
-    });
 
-    document.getElementById("btnMiUbi").onclick = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          mapPicker.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 17.5 });
-        });
-      }
-    };
+    const btnMiUbi = document.getElementById("btnMiUbi");
+    if (btnMiUbi) {
+      btnMiUbi.onclick = () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(pos => {
+            mapPicker.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 17.5 });
+          });
+        }
+      };
+    }
   } else {
     mapPicker.setCenter([lon, lat]);
-  }
-}
-
-async function reverseGeocode(lat, lon) {
-  const el = document.getElementById("mapAddr");
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=es&lat=${lat}&lon=${lon}`);
-    const j = await res.json();
-    if (j && j.display_name) {
-      el.textContent = '📍 ' + j.display_name.split(',').slice(0, 3).join(',').trim();
-      el.classList.remove("hidden");
-    }
-  } catch (e) {
-    el.classList.add("hidden");
   }
 }
 
 // 9. INICIO Y CATÁLOGO
 async function cargarInicioPrincipal() {
   const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
   cont.innerHTML = `
     <div class="empty-box">
       <div class="empty-emoji">🛵</div>
@@ -503,26 +541,30 @@ async function cargarInicioPrincipal() {
   `;
 
   if (miTelefono) {
-    const snapMisp = await db.collection("clientes").document(miTelefono).collection("mis_pedidos").get();
-    let hayActivo = false;
-    for (const d of snapMisp.docs) {
-      const p = d.data();
-      if (!p.rId || !p.pId) continue;
-      const rDoc = await db.collection("restaurantes").document(p.rId).collection("pedidos").document(p.pId).get();
-      if (rDoc.exists) {
-        const est = (rDoc.data().estado || "").toUpperCase();
-        if (est && !["ENTREGADO", "COMPLETADO", "FINALIZADO", "CANCELADO"].includes(est)) {
-          hayActivo = true;
-          pedidoActivoId = p.pId;
-          restIdSeleccionadoTemp = p.rId;
-          rNombreTemp = rDoc.data().restaurante_nombre || "Restaurante";
-          break;
+    try {
+      const snapMisp = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
+      let hayActivo = false;
+      for (const d of snapMisp.docs) {
+        const p = d.data();
+        if (!p.rId || !p.pId) continue;
+        const rDoc = await db.collection("restaurantes").doc(p.rId).collection("pedidos").doc(p.pId).get();
+        if (rDoc.exists) {
+          const est = (rDoc.data().estado || "").toUpperCase();
+          if (est && !["ENTREGADO", "COMPLETADO", "FINALIZADO", "CANCELADO"].includes(est)) {
+            hayActivo = true;
+            pedidoActivoId = p.pId;
+            restIdSeleccionadoTemp = p.rId;
+            rNombreTemp = rDoc.data().restaurante_nombre || "Restaurante";
+            break;
+          }
         }
       }
-    }
-    if (!hayActivo) {
-      pedidoActivoId = "";
-      localStorage.removeItem("pedidoActivoId");
+      if (!hayActivo) {
+        pedidoActivoId = "";
+        localStorage.removeItem("pedidoActivoId");
+      }
+    } catch (e) {
+      console.error("Error cargando pedidos activos:", e);
     }
   }
 
@@ -550,14 +592,12 @@ async function cargarInicioPrincipal() {
 
   const heroSlider = document.createElement("div");
   heroSlider.className = "hero-slider-wrap";
-  heroSlider.id = "sliderHero";
   heroSlider.innerHTML = `
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <span class="hero-tag">⚡ DESTACADO</span>
-      <div class="hero-title" id="heroTitle">Descubriendo...</div>
-      <div class="hero-sub" id="heroSub">Preparando los mejores antojos.</div>
-      <div class="hero-cta">Pedir ahora ➔</div>
+      <div class="hero-title" id="heroTitle">¡Pide tus antojos!</div>
+      <div class="hero-sub" id="heroSub">Entrega rápida en ${miCiudad}</div>
     </div>
   `;
   cont.appendChild(heroSlider);
@@ -578,18 +618,6 @@ async function cargarInicioPrincipal() {
   `;
   cont.appendChild(bigRow);
 
-  const smallRow = document.createElement("div");
-  smallRow.className = "horizontal-scroller";
-  const catItems = [["🛍️", "Tiendas"], ["💊", "Farmacias"], ["📦", "Envíos"], ["🍰", "Postres"], ["🎁", "Regalos"]];
-  catItems.forEach(([ico, nom]) => {
-    const el = document.createElement("div");
-    el.className = "cat-chip";
-    el.innerHTML = `<div class="cat-chip-ico">${ico}</div><span>${nom}</span>`;
-    el.onclick = () => alert(nom + " pronto ✨");
-    smallRow.appendChild(el);
-  });
-  cont.appendChild(smallRow);
-
   const secHead = document.createElement("div");
   secHead.className = "section-header";
   secHead.innerHTML = `<h3>Los mejores restaurantes</h3><span class="section-link" onclick="verTodosLosRestaurantes()">Ver todo ➔</span>`;
@@ -602,18 +630,19 @@ async function cargarInicioPrincipal() {
   todosLosProductosCache = [];
   listaPublicitariaGlobal = [];
 
-  for (const doc of snapR.docs) {
+  snapR.forEach(doc => {
     const r = doc.data();
-    if (r.ciudad && r.ciudad.toLowerCase() !== miCiudad.toLowerCase()) continue;
+    if (r.ciudad && r.ciudad.toLowerCase() !== miCiudad.toLowerCase()) return;
     const rLat = r.latitud || 0, rLon = r.longitud || 0;
     const cerrado = (r.estado || "").toUpperCase() === "CERRADO";
     const envio = envioPara(rLat, rLon);
+    const logoSrc = formatearImagen(r.logoUrl);
 
     const card = document.createElement("div");
     card.className = "rest-card-big";
     card.innerHTML = `
       <div class="rest-card-cover">
-        ${r.logoUrl ? `<img src="${r.logoUrl}" class="img-fill" />` : '🍽️'}
+        ${logoSrc ? `<img src="${logoSrc}" class="img-fill" />` : '🍽️'}
         <span class="badge-status ${cerrado ? 'cerrado' : 'abierto'}">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</span>
         <span class="badge-fee">🛵 L. ${envio}</span>
       </div>
@@ -630,49 +659,26 @@ async function cargarInicioPrincipal() {
     };
     bestRow.appendChild(card);
 
-    db.collection("restaurantes").document(doc.id).collection("productos").get().then(pSnap => {
+    db.collection("restaurantes").doc(doc.id).collection("productos").get().then(pSnap => {
       pSnap.forEach(pd => {
         const pData = pd.data();
         if (pData.nombre && pData.precio > 0) {
           const itemProd = {
             rId: doc.id, rNom: r.nombre, rLat, rLon, rCerrado: cerrado,
             pNom: pData.nombre, pDesc: pData.descripcion || "",
-            pPrec: pData.precio, pImg: pData.imagenUrl || r.logoUrl || "",
+            pPrec: pData.precio, pImg: formatearImagen(pData.imagenUrl || r.logoUrl),
             pOps: pData.opciones || ""
           };
           todosLosProductosCache.push(itemProd);
-          listaPublicitariaGlobal.push({
-            titulo: pData.nombre,
-            subtitulo: `${r.nombre} • L. ${Math.round(precioVisible(pData.precio, rLat, rLon))}`,
-            img: itemProd.pImg,
-            item: itemProd
-          });
         }
       });
-      if (listaPublicitariaGlobal.length > 0 && !sliderTimer) {
-        iniciarSlider();
-      }
     });
-  }
-}
-
-function iniciarSlider() {
-  if (sliderTimer) clearInterval(sliderTimer);
-  sliderTimer = setInterval(() => {
-    if (!listaPublicitariaGlobal.length) return;
-    sliderIndexActual = (sliderIndexActual + 1) % listaPublicitariaGlobal.length;
-    const it = listaPublicitariaGlobal[sliderIndexActual];
-    const heroTitle = document.getElementById("heroTitle");
-    const heroSub = document.getElementById("heroSub");
-    if (heroTitle && heroSub) {
-      heroTitle.textContent = it.titulo;
-      heroSub.textContent = it.subtitulo;
-    }
-  }, 4500);
+  });
 }
 
 function verTodosLosRestaurantes() {
   const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
   cont.innerHTML = `
     <div class="section-header">
       <button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button>
@@ -687,11 +693,12 @@ function verTodosLosRestaurantes() {
       if (r.ciudad && r.ciudad.toLowerCase() !== miCiudad.toLowerCase()) return;
       const rLat = r.latitud || 0, rLon = r.longitud || 0;
       const cerrado = (r.estado || "").toUpperCase() === "CERRADO";
+      const logoSrc = formatearImagen(r.logoUrl);
       const card = document.createElement("div");
       card.className = "rest-card-grid";
       card.innerHTML = `
         <div class="rest-card-cover">
-          ${r.logoUrl ? `<img src="${r.logoUrl}" class="img-fill" />` : '🍽️'}
+          ${logoSrc ? `<img src="${logoSrc}" class="img-fill" />` : '🍽️'}
           <span class="badge-status ${cerrado ? 'cerrado' : 'abierto'}">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</span>
         </div>
         <div class="rest-card-body">
@@ -716,6 +723,7 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
   restauranteLonTemp = rLon;
 
   const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
   cont.innerHTML = `
     <div class="section-header">
       <button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button>
@@ -728,7 +736,7 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
   `;
 
   const list = document.getElementById("listMenuPlatos");
-  const snap = await db.collection("restaurantes").document(rId).collection("productos").get();
+  const snap = await db.collection("restaurantes").doc(rId).collection("productos").get();
   if (snap.empty) {
     list.innerHTML = `<div class="empty-box"><p>No hay platos registrados</p></div>`;
     return;
@@ -737,6 +745,7 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
   snap.forEach(doc => {
     const p = doc.data();
     const finalPrice = precioVisible(p.precio, rLat, rLon);
+    const imgSrc = formatearImagen(p.imagenUrl || logoUrl);
     const row = document.createElement("div");
     row.className = "product-row-card";
     row.innerHTML = `
@@ -748,11 +757,11 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
         <div class="product-price">L. ${finalPrice.toFixed(2)}</div>
       </div>
       <div class="product-thumb-box">
-        ${p.imagenUrl ? `<img src="${p.imagenUrl}" class="img-fill" />` : '🍽️'}
+        ${imgSrc ? `<img src="${imgSrc}" class="img-fill" />` : '🍽️'}
         <button class="btn-plus-abs">+</button>
       </div>
     `;
-    row.onclick = () => mostrarPlatoPro(rId, rNom, p.nombre, p.descripcion || "", p.precio, p.imagenUrl || logoUrl, p.opciones || "", rLat, rLon);
+    row.onclick = () => mostrarPlatoPro(rId, rNom, p.nombre, p.descripcion || "", p.precio, imgSrc, p.opciones || "", rLat, rLon);
     list.appendChild(row);
   });
 }
@@ -760,13 +769,11 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
 // 11. MODAL DETALLE DE PLATO
 let currentDishQty = 1;
 let currentDishBasePrice = 0;
-let currentDishOptionsTotal = 0;
 let currentDishData = {};
 
 function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon) {
   currentDishQty = 1;
   currentDishBasePrice = baseP;
-  currentDishOptionsTotal = 0;
   currentDishData = { rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon };
 
   document.getElementById("modalDishTitle").textContent = plato;
@@ -780,39 +787,6 @@ function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon)
     heroImg.classList.remove("hidden");
   } else {
     heroImg.classList.add("hidden");
-  }
-
-  const contOps = document.getElementById("modalDishOptions");
-  contOps.innerHTML = "";
-  if (opStr && opStr.trim()) {
-    const grupos = opStr.split("/");
-    grupos.forEach((g, gIdx) => {
-      const parts = g.split(":");
-      if (parts.length < 2) return;
-      const gNom = parts[0].trim();
-      const card = document.createElement("div");
-      card.className = "option-group-card";
-      card.innerHTML = `<h4 style="font-size:15px; margin-bottom:8px">${gNom} <small style="color:#64748B">(Obligatorio)</small></h4>`;
-
-      const opts = parts[1].split(",");
-      opts.forEach((o, oIdx) => {
-        let nO = o.trim(), extra = 0;
-        if (nO.includes("+")) {
-          const s = nO.split("+");
-          nO = s[0].trim();
-          extra = parseFloat(s[1].replace(/[^0-9.]/g, "")) || 0;
-        }
-        const row = document.createElement("label");
-        row.className = "option-row";
-        row.innerHTML = `
-          <span>${nO} ${extra > 0 ? `(+ L. ${extra.toFixed(2)})` : ''}</span>
-          <input type="radio" name="grp_opt_${gIdx}" value="${extra}" data-label="${nO}" ${oIdx === 0 ? 'checked' : ''} style="accent-color: var(--c-primary)" />
-        `;
-        row.querySelector("input").addEventListener("change", recalcularModalPlato);
-        card.appendChild(row);
-      });
-      contOps.appendChild(card);
-    });
   }
 
   recalcularModalPlato();
@@ -831,14 +805,14 @@ function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon)
   };
 
   document.getElementById("btnDishAddToCart").onclick = () => {
-    agregarAlCarrito(rId, rNom, `${currentDishQty}x ${plato}`, (currentDishBasePrice + currentDishOptionsTotal) * currentDishQty, obtenerOpcionesSeleccionadasStr(), imgD, rLat, rLon);
+    agregarAlCarrito(rId, rNom, `${currentDishQty}x ${plato}`, currentDishBasePrice * currentDishQty, "", imgD, rLat, rLon);
     document.getElementById("modalPlatoPro").classList.add("hidden");
   };
 
   document.getElementById("btnDishOrderNow").onclick = () => {
     carritoRestPendiente = null;
-    platoTemp = `${currentDishQty}x ${plato} ${obtenerOpcionesSeleccionadasStr() ? '(' + obtenerOpcionesSeleccionadasStr() + ')' : ''}`;
-    precioPlatoTemp = (currentDishBasePrice + currentDishOptionsTotal) * currentDishQty;
+    platoTemp = `${currentDishQty}x ${plato}`;
+    precioPlatoTemp = currentDishBasePrice * currentDishQty;
     imgPlatoTemp = imgD;
     document.getElementById("modalPlatoPro").classList.add("hidden");
     abrirPantallaTipoServicio();
@@ -848,13 +822,7 @@ function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon)
 }
 
 function recalcularModalPlato() {
-  let extraOps = 0;
-  document.querySelectorAll('#modalDishOptions input[type="radio"]:checked').forEach(rb => {
-    extraOps += parseFloat(rb.value) || 0;
-  });
-  currentDishOptionsTotal = extraOps;
-  const unit = currentDishBasePrice + extraOps;
-  const sub = unit * currentDishQty;
+  const sub = currentDishBasePrice * currentDishQty;
   const t = calcularTarifa(kmHaciaSync(currentDishData.rLat, currentDishData.rLon), Math.round(sub));
   const totProd = sub + t.aumento;
   const total = totProd + t.envio;
@@ -862,15 +830,6 @@ function recalcularModalPlato() {
   document.getElementById("modalDishPrice").textContent = `L. ${(totProd / currentDishQty).toFixed(2)} c/u`;
   document.getElementById("modalDishSubtotal").textContent = `L. ${totProd}`;
   document.getElementById("btnDishOrderNow").textContent = `Pedir • L. ${total}`;
-}
-
-function obtenerOpcionesSeleccionadasStr() {
-  const arr = [];
-  document.querySelectorAll('#modalDishOptions input[type="radio"]:checked').forEach(rb => {
-    const lbl = rb.getAttribute("data-label");
-    if (lbl && !lbl.toLowerCase().includes("no gracias")) arr.push(lbl);
-  });
-  return arr.join(", ");
 }
 
 // 12. CARRITO
@@ -885,11 +844,13 @@ function agregarAlCarrito(rId, rNom, nombre, precioTotal, opciones, img, lat, lo
 function actualizarBadgeCarrito() {
   const car = localStorage.getItem("carrito") || "";
   const count = car.split(";;").filter(x => x.trim()).length;
-  document.getElementById("lblNavCarrito").textContent = count > 0 ? `Carrito (${count})` : "Carrito";
+  const badgeLbl = document.getElementById("lblNavCarrito");
+  if (badgeLbl) badgeLbl.textContent = count > 0 ? `Carrito (${count})` : "Carrito";
 }
 
 function dibujarCarrito() {
   const cont = document.getElementById("contCarrito");
+  if (!cont) return;
   cont.innerHTML = "";
   const car = localStorage.getItem("carrito") || "";
   const items = car.split(";;").filter(x => x.trim());
@@ -909,71 +870,22 @@ function dibujarCarrito() {
   items.forEach((it, idx) => {
     const p = it.split("||");
     if (p.length < 5) return;
-    const rId = p[0], rNom = p[1], pNom = p[2], prc = parseFloat(p[3]), ops = p[4], img = p[5], la = parseFloat(p[6]), lo = parseFloat(p[7]);
-    if (!grupos[rId]) grupos[rId] = { rNom, la, lo, subtotal: 0, items: [] };
+    const rId = p[0], rNom = p[1], pNom = p[2], prc = parseFloat(p[3]), ops = p[4];
+    if (!grupos[rId]) grupos[rId] = { rNom, subtotal: 0, items: [] };
     grupos[rId].subtotal += prc;
-    grupos[rId].items.push({ idx, pNom, prc, ops, img });
+    grupos[rId].items.push({ idx, pNom, prc, ops });
   });
 
   Object.keys(grupos).forEach(rId => {
     const g = grupos[rId];
-    const t = calcularTarifa(kmHaciaSync(g.la, g.lo), Math.round(g.subtotal));
     const cardG = document.createElement("div");
     cardG.className = "card";
-    cardG.innerHTML = `
-      <div class="card-row" style="margin-bottom:12px">
-        <div class="logo-box"><span style="font-size:24px">🏪</span></div>
-        <div style="flex:1; margin-left:12px">
-          <h4>${g.rNom}</h4>
-          <span class="sub-muted">🛵 Envío L. ${t.envio}</span>
-        </div>
-      </div>
-    `;
-
-    g.items.forEach(it => {
-      const visibleP = it.prc + (g.subtotal > 0 ? t.aumento * (it.prc / g.subtotal) : 0);
-      const row = document.createElement("div");
-      row.className = "card-row";
-      row.style.borderTop = "1px solid #EEE9FA";
-      row.style.padding = "10px 0";
-      row.innerHTML = `
-        <div style="flex:1">
-          <div style="font-weight:700; font-size:14px">${it.pNom}</div>
-          ${it.ops ? `<div class="sub-muted">${it.ops}</div>` : ''}
-          <div style="font-weight:800; color:var(--c-primary-dark); margin-top:4px">L. ${visibleP.toFixed(2)}</div>
-        </div>
-        <button class="circle-btn" style="background:#FEE2E2; color:#DC2626">🗑</button>
-      `;
-      row.querySelector("button").onclick = () => {
-        const arr = (localStorage.getItem("carrito") || "").split(";;").filter(x => x.trim());
-        arr.splice(it.idx, 1);
-        localStorage.setItem("carrito", arr.join(";;") + (arr.length ? ";;" : ""));
-        dibujarCarrito();
-      };
-      cardG.appendChild(row);
-    });
-
-    const btnPedir = document.createElement("button");
-    btnPedir.className = "btn btn-warning";
-    btnPedir.style.marginTop = "14px";
-    btnPedir.textContent = `PEDIR ESTE LOCAL ➔ L. ${(g.subtotal + t.aumento + t.envio).toFixed(2)}`;
-    btnPedir.onclick = () => {
-      platoTemp = g.items.map(x => x.pNom).join("\n");
-      precioPlatoTemp = g.subtotal;
-      restIdSeleccionadoTemp = rId;
-      rNombreTemp = g.rNom;
-      restauranteLatTemp = g.la;
-      restauranteLonTemp = g.lo;
-      carritoRestPendiente = rId;
-      abrirPantallaTipoServicio();
-    };
-    cardG.appendChild(btnPedir);
-
+    cardG.innerHTML = `<h4>${g.rNom}</h4><p class="sub-muted">Subtotal: L. ${g.subtotal.toFixed(2)}</p>`;
     cont.appendChild(cardG);
   });
 }
 
-// 13. ELECCIÓN DE SERVICIO (DELIVERY / PICKUP)
+// 13. ELECCIÓN DE SERVICIO
 function abrirPantallaTipoServicio() {
   document.getElementById("layoutAppMain").classList.add("hidden");
   document.getElementById("layoutTipoServicio").classList.remove("hidden");
@@ -990,51 +902,39 @@ function alternarModalidadServicio(deliv) {
   const btnDel = document.getElementById("svLblDelivery");
   const btnPic = document.getElementById("svLblPickup");
 
-  if (deliv) {
-    ind.style.transform = "translateX(0%)";
-    btnDel.classList.add("active");
-    btnPic.classList.remove("active");
-  } else {
-    ind.style.transform = "translateX(100%)";
-    btnPic.classList.add("active");
-    btnDel.classList.remove("active");
-  }
+  if (ind) ind.style.transform = deliv ? "translateX(0%)" : "translateX(100%)";
+  if (btnDel) btnDel.classList.toggle("active", deliv);
+  if (btnPic) btnPic.classList.toggle("active", !deliv);
 
   const sub = Math.round(precioPlatoTemp);
   const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
   const prods = sub + (deliv ? t.aumento : 0);
   const total = deliv ? (prods + t.envio) : sub;
 
-  document.getElementById("svInfo1").textContent = deliv ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo";
-  document.getElementById("svInfo2").textContent = deliv ? `🛵 Envío L. ${t.envio}` : "Sin costo de envío";
   document.getElementById("svItemPrecio").textContent = `L. ${prods}`;
-  document.querySelector("#svFilaProd .val").textContent = `L. ${prods}`;
+  const fProd = document.querySelector("#svFilaProd .val");
+  if (fProd) fProd.textContent = `L. ${prods}`;
 
   const filaEnvio = document.getElementById("svFilaEnvio");
-  filaEnvio.style.display = deliv ? "flex" : "none";
-  filaEnvio.querySelector(".val").textContent = `L. ${t.envio}`;
-
-  document.getElementById("svFilaTotalLbl").textContent = deliv ? "Total a pagar al repartidor" : "Total a pagar en el local";
-  document.getElementById("svTotalPagarVal").textContent = `L. ${total}`;
-
-  const aviso = document.getElementById("svAviso");
-  const falta = deliv && t.minimo > 0 && sub < t.minimo;
-  if (falta) {
-    aviso.textContent = `⚠️ Pedido mínimo para delivery: L. ${t.minimo} (te faltan L. ${t.minimo - sub})`;
-    aviso.classList.remove("hidden");
-  } else {
-    aviso.classList.add("hidden");
+  if (filaEnvio) {
+    filaEnvio.style.display = deliv ? "flex" : "none";
+    filaEnvio.querySelector(".val").textContent = `L. ${t.envio}`;
   }
 
-  document.getElementById("svBtnConfirmar").textContent = `Confirmar pedido • L. ${total}`;
-  document.getElementById("svBtnConfirmar").disabled = falta;
+  const lblTot = document.getElementById("svFilaTotalLbl");
+  if (lblTot) lblTot.textContent = deliv ? "Total a pagar al repartidor" : "Total a pagar en el local";
+  const valTot = document.getElementById("svTotalPagarVal");
+  if (valTot) valTot.textContent = `L. ${total}`;
+
+  const btnConf = document.getElementById("svBtnConfirmar");
+  if (btnConf) btnConf.textContent = `Confirmar pedido • L. ${total}`;
 }
 
 // 14. CREACIÓN DE PEDIDO EN FIRESTORE
 async function confirmarCreacionPedido() {
   document.getElementById("layoutTipoServicio").classList.add("hidden");
   const animScreen = document.getElementById("layoutAnimacion");
-  animScreen.classList.remove("hidden");
+  if (animScreen) animScreen.classList.remove("hidden");
 
   const deliv = modalidadDelivery;
   const sub = Math.round(precioPlatoTemp);
@@ -1072,11 +972,11 @@ async function confirmarCreacionPedido() {
   };
 
   try {
-    const colPed = db.collection("restaurantes").document(restIdSeleccionadoTemp).collection("pedidos");
+    const colPed = db.collection("restaurantes").doc(restIdSeleccionadoTemp).collection("pedidos");
     const docRef = await colPed.add(pedData);
     pedidoActivoId = docRef.id;
 
-    await db.collection("clientes").document(miTelefono).collection("mis_pedidos").document(pedidoActivoId).set({
+    await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").doc(pedidoActivoId).set({
       rId: restIdSeleccionadoTemp,
       pId: pedidoActivoId,
       ...pedData
@@ -1093,17 +993,17 @@ async function confirmarCreacionPedido() {
     }
 
     setTimeout(() => {
-      animScreen.classList.add("hidden");
+      if (animScreen) animScreen.classList.add("hidden");
       abrirPantallaSeguimientoEnVivo();
     }, 2500);
 
   } catch (e) {
-    animScreen.classList.add("hidden");
+    if (animScreen) animScreen.classList.add("hidden");
     alert("Error al crear el pedido: " + e.message);
   }
 }
 
-// 15. SEGUIMIENTO EN VIVO CON MAPA
+// 15. SEGUIMIENTO EN VIVO
 function abrirPantallaSeguimientoEnVivo() {
   document.getElementById("layoutAppMain").classList.add("hidden");
   document.getElementById("layoutSeguimiento").classList.remove("hidden");
@@ -1112,8 +1012,8 @@ function abrirPantallaSeguimientoEnVivo() {
   initTrackingMap();
 
   if (seguimientoListener) seguimientoListener();
-  seguimientoListener = db.collection("restaurantes").document(restIdSeleccionadoTemp)
-    .collection("pedidos").document(pedidoActivoId)
+  seguimientoListener = db.collection("restaurantes").doc(restIdSeleccionadoTemp)
+    .collection("pedidos").doc(pedidoActivoId)
     .onSnapshot(doc => {
       if (!doc.exists) return;
       const d = doc.data();
@@ -1129,9 +1029,12 @@ function abrirPantallaSeguimientoEnVivo() {
 
       const sub = d.subtotal || 0, aum = d.aumento || 0, env = d.costo_envio || 0, tot = d.total || 0;
       const pick = (d.tipo_servicio || "").toUpperCase() === "PICKUP";
-      document.getElementById("tvCobroSeguimiento").textContent = pick
-        ? `💵 Pagas en local: L. ${tot.toFixed(2)}`
-        : `💵 Pagas al repartidor: L. ${tot.toFixed(2)} (prod L. ${(sub + aum).toFixed(2)} + envío L. ${env.toFixed(2)})`;
+      const cobEl = document.getElementById("tvCobroSeguimiento");
+      if (cobEl) {
+        cobEl.textContent = pick
+          ? `💵 Pagas en local: L. ${tot.toFixed(2)}`
+          : `💵 Pagas al repartidor: L. ${tot.toFixed(2)} (prod L. ${(sub + aum).toFixed(2)} + envío L. ${env.toFixed(2)})`;
+      }
 
       const rN = d.repartidor_nombre || "";
       const tieneRep = rN && !rN.toLowerCase().includes("buscando");
@@ -1142,21 +1045,14 @@ function abrirPantallaSeguimientoEnVivo() {
       const infEl = document.getElementById("tvInfoRepartidor");
 
       if (es === "NUEVO" || es === "PENDIENTE") {
-        stEl.textContent = "Enviado al local";
-        stEl.style.color = "#E11D48";
-        infEl.textContent = "Esperando confirmación...";
+        if (stEl) { stEl.textContent = "Enviado al local"; stEl.style.color = "#E11D48"; }
+        if (infEl) infEl.textContent = "Esperando confirmación...";
       } else if (es === "ACEPTADO") {
-        stEl.textContent = "Preparando tu pedido";
-        stEl.style.color = "#D97706";
-        infEl.textContent = "Cocinando 👨‍🍳 (El repartidor llegará pronto)";
-      } else if (tieneRep && es !== "EN_CAMINO") {
-        stEl.textContent = "Repartidor asignado";
-        stEl.style.color = "#2563EB";
-        infEl.textContent = `${rN} va en camino al local ${tieneGps ? '' : '(📡 sin señal GPS)'}`;
+        if (stEl) { stEl.textContent = "Preparando tu pedido"; stEl.style.color = "#D97706"; }
+        if (infEl) infEl.textContent = "Cocinando 👨‍🍳";
       } else if (es === "EN_CAMINO") {
-        stEl.textContent = "🛵 En camino";
-        stEl.style.color = "#059669";
-        infEl.textContent = `${rN} lleva tu pedido a tu ubicación`;
+        if (stEl) { stEl.textContent = "🛵 En camino"; stEl.style.color = "#059669"; }
+        if (infEl) infEl.textContent = `${rN} lleva tu pedido`;
       }
 
       actualizarMarcadoresTracking(restauranteLatTemp, restauranteLonTemp, miLat, miLon, rLa, rLo, rN, tieneRep && tieneGps);
@@ -1172,78 +1068,16 @@ function initTrackingMap() {
       zoom: 14.5,
       attributionControl: false
     });
-
-    mapTracking.on('load', () => {
-      mapTracking.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-      mapTracking.addLayer({
-        id: 'route-casing', type: 'line', source: 'route',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#ffffff', 'line-width': 11, 'line-opacity': 0.95 }
-      });
-      mapTracking.addLayer({
-        id: 'route-line', type: 'line', source: 'route',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#7C3AED', 'line-width': 6 }
-      });
-    });
   }
-}
-
-function crearElementoMarcador(emoji, label) {
-  const el = document.createElement('div');
-  el.style.width = '120px';
-  el.style.height = '70px';
-  el.style.display = 'flex';
-  el.style.alignItems = 'center';
-  el.style.justifyContent = 'center';
-  el.innerHTML = `
-    <svg width="120" height="70" viewBox="0 0 120 70">
-      ${label ? `<rect x="5" y="2" width="110" height="24" rx="6" fill="#1E1E1E" stroke="#7C3AED" stroke-width="1.5"/><text x="60" y="18" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">${label}</text>` : ''}
-      <circle cx="60" cy="50" r="16" fill="#fff" stroke="#7C3AED" stroke-width="3"/>
-      <text x="60" y="56" font-size="15" text-anchor="middle">${emoji}</text>
-    </svg>
-  `;
-  return el;
 }
 
 function actualizarMarcadoresTracking(rLa, rLo, cLa, cLo, dLa, dLo, dN, showDrv) {
   if (!mapTracking) return;
-
-  if (!markerRest && rLa && rLo) markerRest = new maplibregl.Marker({ element: crearElementoMarcador('🏪', 'Local') }).setLngLat([rLo, rLa]).addTo(mapTracking);
-  if (!markerCli && cLa && cLo) markerCli = new maplibregl.Marker({ element: crearElementoMarcador('🏠', 'Tú') }).setLngLat([cLo, cLa]).addTo(mapTracking);
-
+  if (!markerRest && rLa && rLo) markerRest = new maplibregl.Marker().setLngLat([rLo, rLa]).addTo(mapTracking);
+  if (!markerCli && cLa && cLo) markerCli = new maplibregl.Marker().setLngLat([cLo, cLa]).addTo(mapTracking);
   if (showDrv && dLa && dLo) {
-    if (!markerDrv) {
-      markerDrv = new maplibregl.Marker({ element: crearElementoMarcador('🛵', dN.split(" ")[0]) }).setLngLat([dLo, dLa]).addTo(mapTracking);
-    } else {
-      markerDrv.setLngLat([dLo, dLa]);
-    }
-    trazarRutaOSRM(dLa, dLo, cLa, cLo);
-  } else {
-    if (markerDrv) { markerDrv.remove(); markerDrv = null; }
-    trazarRutaOSRM(rLa, rLo, cLa, cLo);
-  }
-
-  const b = new maplibregl.LngLatBounds();
-  b.extend([cLo, cLa]);
-  if (showDrv && dLa && dLo) b.extend([dLo, dLa]);
-  else if (rLa && rLo) b.extend([rLo, rLa]);
-  mapTracking.fitBounds(b, { padding: { top: 220, bottom: 90, left: 40, right: 40 }, maxZoom: 16.5 });
-}
-
-async function trazarRutaOSRM(aLa, aLo, bLa, bLo) {
-  if (!mapTracking.getSource('route')) return;
-  try {
-    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${aLo},${aLa};${bLo},${bLa}?overview=full&geometries=geojson`);
-    const j = await res.json();
-    if (j.routes && j.routes.length) {
-      mapTracking.getSource('route').setData({ type: 'Feature', geometry: j.routes[0].geometry });
-    }
-  } catch (e) {
-    mapTracking.getSource('route').setData({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: [[aLo, aLa], [bLo, bLa]] }
-    });
+    if (!markerDrv) markerDrv = new maplibregl.Marker().setLngLat([dLo, dLa]).addTo(mapTracking);
+    else markerDrv.setLngLat([dLo, dLa]);
   }
 }
 
@@ -1257,8 +1091,8 @@ function cerrarPantallaSeguimiento() {
 async function cancelarPedidoActivo() {
   if (!confirm("¿Deseas cancelar tu pedido?")) return;
   try {
-    await db.collection("restaurantes").document(restIdSeleccionadoTemp)
-      .collection("pedidos").document(pedidoActivoId).update({ estado: "CANCELADO" });
+    await db.collection("restaurantes").doc(restIdSeleccionadoTemp)
+      .collection("pedidos").doc(pedidoActivoId).update({ estado: "CANCELADO" });
     alert("Pedido cancelado");
     cerrarPantallaSeguimiento();
   } catch (e) {
@@ -1269,8 +1103,9 @@ async function cancelarPedidoActivo() {
 // 16. HISTORIAL DE PEDIDOS
 async function cargarHistorial() {
   const c = document.getElementById("listContHistorial");
+  if (!c) return;
   c.innerHTML = `<div class="empty-box"><p>Cargando pedidos...</p></div>`;
-  const snap = await db.collection("clientes").document(miTelefono).collection("mis_pedidos").get();
+  const snap = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
 
   if (snap.empty) {
     c.innerHTML = `<div class="empty-box"><p>Aún no tienes pedidos registrados.</p></div>`;
@@ -1280,7 +1115,7 @@ async function cargarHistorial() {
   c.innerHTML = "";
   for (const doc of snap.docs) {
     const d = doc.data();
-    const rDoc = await db.collection("restaurantes").document(d.rId).collection("pedidos").document(d.pId).get();
+    const rDoc = await db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId).get();
     if (!rDoc.exists) continue;
     const rData = rDoc.data();
     const es = (rData.estado || "NUEVO").toUpperCase();
@@ -1315,14 +1150,14 @@ async function cargarHistorial() {
   }
 }
 
-// 17. MODAL DE MIS UBICACIONES GUARDADAS
+// 17. UBICACIONES
 async function mostrarSelectorUbicaciones() {
   const modal = document.getElementById("modalSelectorUbicaciones");
   const list = document.getElementById("listaMisUbicaciones");
   modal.classList.remove("hidden");
   list.innerHTML = "Cargando...";
 
-  const doc = await db.collection("clientes").document(miTelefono).get();
+  const doc = await db.collection("clientes").doc(miTelefono).get();
   if (!doc.exists) return;
   const dirs = doc.data().direcciones || [];
   list.innerHTML = "";
@@ -1345,18 +1180,13 @@ async function mostrarSelectorUbicaciones() {
       localStorage.setItem("lat", miLat);
       localStorage.setItem("lon", miLon);
       localStorage.setItem("dir_desc", miDireccionDesc);
-      await db.collection("clientes").document(miTelefono).update({ latitud: miLat, longitud: miLon, direccion_desc: miDireccionDesc });
+      await db.collection("clientes").doc(miTelefono).update({ latitud: miLat, longitud: miLon, direccion_desc: miDireccionDesc });
       actualizarCabecera();
       modal.classList.add("hidden");
       cargarInicioPrincipal();
     };
     list.appendChild(item);
   });
-
-  document.getElementById("btnModalNuevaUbi").onclick = () => {
-    modal.classList.add("hidden");
-    abrirMapaNuevaDireccion();
-  };
 }
 
 // 18. BUSCADOR EN VIVO
@@ -1366,6 +1196,7 @@ function filtrarResultados(q) {
     return;
   }
   const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
   cont.innerHTML = `<h3 style="padding: 16px 16px 8px;">Resultados para “${q}”</h3><div id="resBuscadorList"></div>`;
   const list = document.getElementById("resBuscadorList");
 
@@ -1399,7 +1230,7 @@ function filtrarResultados(q) {
       </div>
       <div class="product-thumb-box">
         ${p.pImg ? `<img src="${p.pImg}" class="img-fill" />` : '🍽️'}
-        <button class="btn-plus-abs">+</button>
+        <button type="button" class="btn-plus-abs">+</button>
       </div>
     `;
     row.onclick = () => mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps, p.rLat, p.rLon);
