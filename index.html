@@ -1,271 +1,493 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Llevari</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#6D28D9">
-  <link rel="apple-touch-icon" href="icon-180.png">
-  
-  <!-- Limpiador automático de caché del Service Worker -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) { registration.unregister(); }
-      });
-    }
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        for (let name of names) caches.delete(name);
-      });
-    }
-  </script>
-
-  <!-- Leaflet Maps CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-  <!-- Estilos Integrados Directamente -->
-  <style>
-    :root {
-      --p: #6D28D9;
-      --pd: #4C1D95;
-      --bg: #F8FAFC;
-      --txt: #0F172A;
-      --mu: #64748B;
-      --border: #E2E8F0;
-      --white: #FFFFFF;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background-color: #F1F5F9;
-      color: var(--txt);
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-    }
-
-    #app {
-      width: 100%;
-      max-width: 480px;
-      min-height: 100vh;
-      background-color: var(--white);
-      padding: 16px 16px 95px 16px;
-      position: relative;
-      box-shadow: 0 0 20px rgba(0,0,0,0.05);
-    }
-
-    #app.noNav { padding-bottom: 24px; }
-
-    #toast {
-      position: fixed;
-      top: -60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #0F172A;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 25px;
-      font-size: 13px;
-      font-weight: 600;
-      z-index: 99999;
-      transition: top 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      pointer-events: none;
-      max-width: 90%;
-      text-align: center;
-    }
-    #toast.on { top: 16px; }
-
-    .hm-head { margin-bottom: 16px; }
-    .hm-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .hm-who { display: flex; flex-direction: column; }
-    .hm-hi { font-size: 13px; color: var(--mu); display: flex; gap: 6px; align-items: center; }
-    .hm-loc { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--txt); }
-    .hm-btns { display: flex; gap: 8px; }
-    .hm-btn { background: #F1F5F9; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; position: relative; cursor: pointer; }
-    .hm-n { position: absolute; top: -2px; right: -2px; background: #DC2626; color: white; font-size: 10px; font-style: normal; border-radius: 10px; padding: 2px 5px; font-weight: bold; }
-
-    .hm-search { display: flex; gap: 8px; }
-    .hm-search input { flex: 1; background: #F1F5F9; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; font-size: 14px; outline: none; }
-    .hm-go { background: var(--p); border: none; border-radius: 14px; width: 46px; color: white; font-size: 16px; cursor: pointer; }
-
-    .hm-hero {
-      background: linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%);
-      color: white;
-      border-radius: 20px;
-      padding: 22px;
-      margin-bottom: 20px;
-      position: relative;
-      box-shadow: 0 8px 20px rgba(109, 40, 217, 0.25);
-    }
-    .hm-tag { font-size: 11px; font-weight: 800; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 8px; letter-spacing: 0.5px; }
-    .hm-hero h2 { font-size: 22px; margin: 10px 0 6px 0; font-weight: 800; }
-    .hm-hero p { font-size: 13px; opacity: 0.9; line-height: 1.4; }
-    .hm-cta { margin-top: 14px; background: white; color: var(--p); border: none; border-radius: 25px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    .hm-dots { display: flex; gap: 5px; position: absolute; bottom: 14px; right: 18px; }
-    .hm-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); }
-    .hm-dots i.on { background: white; width: 16px; border-radius: 4px; }
-
-    .hm-big { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-    .hm-bc { border: none; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s ease; }
-    .hm-bc:active { transform: scale(0.97); }
-    .hm-bc.sup { background: #FEF3C7; color: #78350F; }
-    .hm-bc.res { background: #EDE9FE; color: #4C1D95; }
-    .hm-bc .circ { font-size: 28px; }
-    .hm-bc b { font-size: 14px; }
-
-    .hm-bleed { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
-    .hm-scroll { display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; margin-bottom: 20px; padding-bottom: 4px; }
-    .hm-scroll::-webkit-scrollbar { display: none; }
-
-    .hm-mc { flex: 0 0 auto; width: 76px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
-    .hm-mc .circ { width: 56px; height: 56px; border-radius: 18px; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-    .hm-mc.on .circ { background: var(--p); color: white; }
-    .hm-mc b { font-size: 12px; color: var(--txt); }
-
-    .hm-st { flex: 0 0 auto; width: 76px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; }
-    .hm-ring { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--p); padding: 2px; background: white; display: flex; align-items: center; justify-content: center; position: relative; }
-    .hm-ring img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .hm-st span { font-size: 11px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-weight: 500; }
-
-    .hm-sec { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 12px 0; }
-    .hm-sec h2 { font-size: 18px; font-weight: 800; }
-    .hm-sec a { font-size: 13px; color: var(--p); font-weight: 700; cursor: pointer; }
-
-    .hm-rests { display: flex; gap: 14px; }
-    .hm-rests.all { flex-direction: column; }
-
-    .hm-rc { flex: 0 0 240px; background: white; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-    .hm-rests.all .hm-rc { flex: 1 1 auto; width: 100%; }
-
-    .hm-img { width: 100%; height: 125px; background: #E2E8F0; position: relative; display: flex; align-items: center; justify-content: center; font-size: 32px; }
-    .hm-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
-    .hm-closed { position: absolute; top: 8px; left: 8px; background: #DC2626; color: white; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; z-index: 2; }
-    .hm-fee { position: absolute; bottom: 8px; right: 8px; background: rgba(255,255,255,0.92); color: var(--txt); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; backdrop-filter: blur(4px); z-index: 2; }
-
-    .hm-ri { padding: 12px; display: flex; gap: 10px; align-items: center; }
-    .hm-lg { width: 40px; height: 40px; border-radius: 50%; background: #F1F5F9; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid var(--border); }
-    .hm-lg img { width: 100%; height: 100%; object-fit: cover; }
-    .hm-rt { display: flex; flex-direction: column; overflow: hidden; }
-    .hm-rt b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hm-rt small { font-size: 11px; color: var(--mu); margin-top: 2px; }
-    .hm-rt small.ok { color: #16A34A; font-weight: 600; }
-
-    .hm-ant { margin-top: 24px; }
-    .hm-ant h2 { font-size: 18px; font-weight: 800; }
-    .hm-ant p { font-size: 12px; color: var(--mu); margin-bottom: 12px; }
-    .hm-dishes { display: flex; gap: 12px; }
-    .hm-dish { flex: 0 0 140px; background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; cursor: pointer; position: relative; }
-    .hm-dish img { width: 100%; height: 95px; object-fit: cover; background: #F1F5F9; }
-    .hm-ph { width: 100%; height: 95px; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-    .hm-dn { padding: 10px; display: flex; flex-direction: column; gap: 2px; }
-    .hm-dn b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hm-dn small { font-size: 12px; color: var(--p); font-weight: 700; }
-
-    .card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
-    .card.row { display: flex; gap: 12px; align-items: center; }
-    .col { flex: 1; }
-    .row { display: flex; align-items: center; gap: 10px; }
-
-    .thumb { width: 52px; height: 52px; border-radius: 12px; background: #F1F5F9; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; }
-
-    .logo { width: 44px; height: 44px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden; flex-shrink: 0; }
-    .logo img { width: 100%; height: 100%; object-fit: cover; }
-
-    .btn { width: 100%; height: 48px; background: var(--p); color: white; border: none; border-radius: 14px; font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
-    .btn.soft { background: #F1F5F9; color: var(--txt); }
-    .btn.mut { background: #E2E8F0; color: var(--mu); }
-    .btn.sky { background: #0284C7; color: white; }
-    .btn.red { background: #DC2626; color: white; }
-    .btn.gr { background: #16A34A; color: white; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .back { background: #F1F5F9; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer; }
-    .chip { display: inline-block; padding: 8px 16px; background: #F1F5F9; border-radius: 20px; font-size: 13px; font-weight: 600; margin-right: 8px; cursor: pointer; }
-    .chip.on { background: var(--p); color: white; }
-
-    #nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 68px; background: var(--white); border-top: 1px solid var(--border); display: flex; justify-space: around; align-items: center; z-index: 999; box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
-    #nav.hidden { display: none; }
-    #nav button { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--mu); font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; }
-    #nav button .i { font-size: 20px; }
-    #nav button.on { color: var(--p); font-weight: 700; }
-
-    .full { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 100vh; background: white; z-index: 1000; overflow-y: auto; padding-bottom: 120px; }
-    .floatback { position: absolute; top: 16px; left: 16px; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .hero { width: 100%; height: 240px; background: #E2E8F0; position: relative; display: flex; align-items: center; justify-content: center; font-size: 48px; }
-    .hero img { width: 100%; height: 100%; object-fit: cover; }
-    .rn { position: absolute; bottom: 12px; left: 16px; background: rgba(0,0,0,0.6); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; backdrop-filter: blur(4px); }
-
-    .sheetbot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: white; border-top: 1px solid var(--border); padding: 16px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 1001; }
-    .qty { display: flex; align-items: center; gap: 12px; background: #F1F5F9; border-radius: 12px; padding: 4px 12px; }
-    .qty button { background: none; border: none; font-size: 20px; font-weight: bold; cursor: pointer; width: 32px; height: 32px; }
-
-    .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-    .modal .box { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
-
-    .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--pd); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-    .overlay .em { font-size: 64px; animation: bounce 1s infinite alternate; }
-    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-15px); } }
-
-    .map { width: 100%; height: 260px; border-radius: 16px; margin: 12px 0; overflow: hidden; }
-    .mapfull { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; }
-    #pm { width: 100%; height: 100%; }
-    .pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); font-size: 40px; pointer-events: none; z-index: 2001; }
-    .maptop { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 8px; z-index: 2001; }
-    .maptop input { flex: 1; background: white; border: none; border-radius: 12px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    .mapcard { position: absolute; bottom: 20px; left: 16px; right: 16px; background: white; padding: 16px; border-radius: 16px; z-index: 2001; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-
-    .chat { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 100vh; background: #F8FAFC; z-index: 1000; display: flex; flex-direction: column; }
-    .chat .h { padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: center; }
-    .chat .sug { display: flex; gap: 8px; overflow-x: auto; padding: 8px 16px; background: white; border-bottom: 1px solid var(--border); }
-    .chat .sug span { background: #F1F5F9; padding: 6px 12px; border-radius: 16px; font-size: 12px; white-space: nowrap; cursor: pointer; }
-    .chat .msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-    .bub { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 14px; background: white; align-self: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
-    .bub.me { background: var(--p); color: white; align-self: flex-end; }
-    .chat .in { padding: 12px 16px; background: white; display: flex; gap: 8px; border-top: 1px solid var(--border); align-items: center; }
-    .chat .in input { flex: 1; height: 42px; background: #F1F5F9; border: none; border-radius: 20px; padding: 0 16px; outline: none; }
-    .rb { width: 40px; height: 40px; border-radius: 50%; border: none; background: #F1F5F9; font-size: 18px; cursor: pointer; }
-    .rb.send { background: var(--p); color: white; }
-
-    img.img-broken { display: none !important; }
-    .loader { text-align: center; padding: 40px; color: var(--mu); }
-    .empty { text-align: center; padding: 40px 20px; color: var(--mu); white-space: pre-line; }
-    .empty .e { font-size: 48px; margin-bottom: 12px; }
-    .hidden { display: none !important; }
-    .warn { background: #FEF2F2; color: #DC2626; padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; margin: 8px 0; }
-    .mu { color: var(--mu); }
-    .small { font-size: 12px; }
-    .b { font-weight: bold; }
-    .price { color: var(--p); font-weight: bold; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Llevari Web</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- MapLibre GL CSS & JS -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-800 pb-24">
 
-  <!-- Contenedor Principal de la App -->
-  <div id="app"></div>
+  <!-- Header / Navbar -->
+  <header class="bg-red-600 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold tracking-wide">LLEVARI</h1>
+      <p class="text-xs text-red-100" id="user-location-text">Obteniendo ubicación...</p>
+    </div>
+    <button id="btn-ver-carrito" onclick="toggleCarrito()" class="relative bg-white text-red-600 px-4 py-2 rounded-full font-bold text-sm shadow">
+      🛒 Carrito (<span id="cart-count">0</span>)
+    </button>
+  </header>
 
-  <!-- Capa para Modales y Hojas Deslizantes -->
-  <div id="layer"></div>
+  <!-- VISTA PRINCIPAL: Lista de Restaurantes -->
+  <main id="vista-restaurantes" class="max-w-4xl mx-auto p-4">
+    <h2 class="text-xl font-bold mb-4 text-gray-700">Restaurantes Disponibles</h2>
+    <div id="grid-restaurantes" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <p class="text-gray-500">Cargando locales cercanos...</p>
+    </div>
+  </main>
 
-  <!-- Barra de Navegación Inferior -->
-  <div id="nav" class="hidden"></div>
+  <!-- VISTA MENU / PRODUCTOS (Modal Full) -->
+  <div id="modal-menu" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex justify-end">
+    <div class="bg-white w-full max-w-lg h-full overflow-y-auto p-6 shadow-2xl relative flex flex-col">
+      <button onclick="cerrarMenu()" class="absolute top-4 right-4 bg-gray-200 text-gray-800 rounded-full w-8 h-8 font-bold">✕</button>
+      <h2 id="menu-restaurante-nombre" class="text-2xl font-bold text-red-600 mb-1"></h2>
+      <p id="menu-restaurante-distancia" class="text-sm text-gray-500 mb-4"></p>
+      
+      <div id="lista-productos" class="flex-1 space-y-4 overflow-y-auto"></div>
+    </div>
+  </div>
 
-  <!-- Notificaciones Toast -->
-  <div id="toast"></div>
+  <!-- VISTA CARRITO & CHECKOUT (Modal Drawer) -->
+  <div id="modal-carrito" class="hidden fixed inset-0 bg-black/50 z-50 flex justify-end">
+    <div class="bg-white w-full max-w-md h-full flex flex-col p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h2 class="text-xl font-bold text-gray-800">Tu Pedido</h2>
+        <button onclick="toggleCarrito()" class="text-gray-500 text-xl font-bold">✕</button>
+      </div>
 
-  <!-- Lógica Principal -->
-  <script type="module" src="app.js?v=9"></script>
+      <div id="items-carrito" class="flex-1 overflow-y-auto space-y-3 divide-y">
+        <p class="text-gray-400 text-center mt-10">El carrito está vacío</p>
+      </div>
 
+      <!-- Modalidad Delivery vs Pickup -->
+      <div class="mt-4 pt-4 border-t space-y-2">
+        <label class="block text-sm font-semibold text-gray-700">Modalidad de entrega:</label>
+        <div class="flex gap-2">
+          <button id="btn-delivery" onclick="setModalidad('DELIVERY')" class="flex-1 py-2 rounded-lg font-bold border-2 border-red-600 bg-red-600 text-white text-sm">Delivery</button>
+          <button id="btn-pickup" onclick="setModalidad('PICKUP')" class="flex-1 py-2 rounded-lg font-bold border-2 border-gray-300 text-gray-600 text-sm">Pickup (Llevar)</button>
+        </div>
+      </div>
+
+      <!-- Desglose de Totales -->
+      <div class="border-t pt-4 mt-4 space-y-1 text-sm">
+        <div class="flex justify-between text-gray-600">
+          <span>Subtotal:</span>
+          <span>L. <span id="cart-subtotal">0.00</span></span>
+        </div>
+        <div class="flex justify-between text-gray-600" id="row-envio">
+          <span>Costo de envío:</span>
+          <span>L. <span id="cart-envio">0.00</span></span>
+        </div>
+        <div class="flex justify-between font-bold text-lg text-gray-900 border-t pt-2">
+          <span>Total:</span>
+          <span>L. <span id="cart-total">0.00</span></span>
+        </div>
+      </div>
+
+      <button id="btn-confirmar-pedido" onclick="enviarPedidoFirestore()" disabled class="mt-4 w-full bg-red-600 disabled:bg-gray-300 text-white font-bold py-3 rounded-xl text-lg shadow-lg">
+        Confirmar Pedido
+      </button>
+    </div>
+  </div>
+
+  <!-- VISTA SEGUIMIENTO EN TIEMPO REAL -->
+  <div id="vista-seguimiento" class="hidden fixed inset-0 bg-white z-50 flex flex-col">
+    <div class="bg-red-600 text-white p-4 flex justify-between items-center shadow-md">
+      <div>
+        <h3 class="font-bold text-lg">Seguimiento de Pedido</h3>
+        <p id="tracking-estado" class="text-sm bg-red-800 px-2 py-0.5 rounded-full inline-block mt-1">ESTADO: NUEVO</p>
+      </div>
+      <button onclick="cerrarSeguimiento()" class="bg-white text-red-600 px-3 py-1 rounded-lg font-bold text-sm">Volver</button>
+    </div>
+
+    <!-- Contenedor del Mapa MapLibre -->
+    <div id="mapa-seguimiento" class="flex-1 w-full bg-gray-200"></div>
+
+    <div class="p-4 bg-white shadow-top border-t flex justify-between items-center">
+      <div>
+        <p class="text-xs text-gray-500">ID Pedido</p>
+        <p id="tracking-id" class="font-mono text-sm font-bold text-gray-800">-</p>
+      </div>
+      <div id="badge-chat" class="bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded-full text-xs hidden">
+        💬 Mensajes nuevos
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGICA DE FIREBASE Y APLICACION -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, collection, query, where, getDocs, getDoc, doc, addDoc, onSnapshot, GeoPoint, serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 1. CONFIGURACION FIREBASE (Reemplazar con credenciales de tu consola)
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "tu-proyecto.firebaseapp.com",
+      projectId: "tu-proyecto",
+      storageBucket: "tu-proyecto.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Estado global
+    let clienteUbi = { lat: 13.3025, lng: -87.1941 }; // Ubicación por defecto (Choluteca)
+    let carrito = [];
+    let restauranteSeleccionado = null;
+    let modalidadActual = 'DELIVERY';
+    let costoEnvioCalculado = 0;
+    let listenerPedidoUnsubscribe = null;
+    let mapInstance = null;
+    let markerCliente = null;
+    let markerRepartidor = null;
+
+    // Inicialización del cliente
+    window.addEventListener('DOMContentLoaded', () => {
+      obtenerUbicacionNavegador();
+    });
+
+    function obtenerUbicacionNavegador() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clienteUbi = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            document.getElementById('user-location-text').textContent = `Ubicación: ${clienteUbi.lat.toFixed(4)}, ${clienteUbi.lng.toFixed(4)}`;
+            cargarRestaurantes();
+          },
+          () => {
+            document.getElementById('user-location-text').textContent = "Ubicación por defecto (Choluteca)";
+            cargarRestaurantes();
+          }
+        );
+      } else {
+        cargarRestaurantes();
+      }
+    }
+
+    // 2. CÁLCULO DE DISTANCIAS Y TARIFAS (OSRM + HAVERSINE)
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    }
+
+    async function obtenerDistanciaOSRM(lat1, lon1, lat2, lon2) {
+      try {
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (data.routes?.[0]) return data.routes[0].distance / 1000;
+      } catch (e) {
+        console.warn("OSRM no disponible, usando línea recta.");
+      }
+      return haversineKm(lat1, lon1, lat2, lon2);
+    }
+
+    async function calcularTarifaEnvio(restLat, restLng) {
+      let pagoKm = 15;
+      let envioMax = 150;
+
+      try {
+        const snap = await getDoc(doc(db, "configuracion", "tarifas"));
+        if (snap.exists()) {
+          pagoKm = snap.data().pago_km ?? pagoKm;
+          envioMax = snap.data().envio_visible_max ?? envioMax;
+        }
+      } catch (e) {
+        console.error("Error al leer tarifas Firestore", e);
+      }
+
+      const dist = await obtenerDistanciaOSRM(clienteUbi.lat, clienteUbi.lng, restLat, restLng);
+      const costo = Math.min(Math.max(pagoKm, dist * pagoKm), envioMax);
+      
+      return { distKm: dist.toFixed(2), costoEnvio: Number(costo.toFixed(2)) };
+    }
+
+    // 3. CONSULTA DE RESTAURANTES (FILTRO ABIERTOS Y PROXIMIDAD)
+    async function cargarRestaurantes() {
+      const container = document.getElementById('grid-restaurantes');
+      try {
+        const q = query(collection(db, "restaurantes"), where("estado", "==", "abierto"));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          container.innerHTML = `<p class="text-gray-500 col-span-2">No hay restaurantes abiertos por el momento.</p>`;
+          return;
+        }
+
+        const lista = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const rLat = data.ubicacion?.latitude ?? data.latitud;
+          const rLng = data.ubicacion?.longitude ?? data.longitud;
+          const dist = (rLat && rLng) ? haversineKm(clienteUbi.lat, clienteUbi.lng, rLat, rLng) : 999;
+          
+          lista.push({ id: docSnap.id, ...data, rLat, rLng, distCalculada: dist });
+        });
+
+        // Ordenar por proximidad
+        lista.sort((a, b) => a.distCalculada - b.distCalculada);
+
+        container.innerHTML = lista.map(r => `
+          <div onclick='abrirMenuRestaurante(${JSON.stringify(r)})' class="bg-white p-4 rounded-xl shadow hover:shadow-lg cursor-pointer transition flex items-center justify-between border">
+            <div>
+              <h3 class="font-bold text-lg text-gray-800">${r.nombre}</h3>
+              <p class="text-xs text-gray-500">${r.categoria || 'Restaurante'}</p>
+              <p class="text-xs text-red-600 font-semibold mt-1">📍 A ${r.distCalculada.toFixed(1)} km aproximadamente</p>
+            </div>
+            <span class="bg-red-50 text-red-600 p-2 rounded-full font-bold text-xl">➔</span>
+          </div>
+        `).join('');
+
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = `<p class="text-red-500">Error al cargar restaurantes. Verifica tu conexión y configuración de Firebase.</p>`;
+      }
+    }
+
+    // 4. MENU Y PRODUCTOS
+    window.abrirMenuRestaurante = async (rest) => {
+      restauranteSeleccionado = rest;
+      
+      // Calcular tarifa de envío exacta con OSRM al abrir el local
+      const tarifa = await calcularTarifaEnvio(rest.rLat, rest.rLng);
+      costoEnvioCalculado = tarifa.costoEnvio;
+
+      document.getElementById('menu-restaurante-nombre').textContent = rest.nombre;
+      document.getElementById('menu-restaurante-distancia').textContent = `Distancia: ${tarifa.distKm} km | Envío: L. ${tarifa.costoEnvio}`;
+
+      const container = document.getElementById('lista-productos');
+      const menuItems = rest.menu || rest.productos || [];
+
+      if (menuItems.length === 0) {
+        container.innerHTML = `<p class="text-gray-400">Este restaurante aún no tiene menú configurado.</p>`;
+      } else {
+        container.innerHTML = menuItems.map((prod, index) => `
+          <div class="flex justify-between items-center border-b pb-3">
+            <div>
+              <h4 class="font-bold text-gray-800">${prod.nombre}</h4>
+              <p class="text-xs text-gray-500">${prod.descripcion || ''}</p>
+              <p class="font-bold text-red-600 mt-1">L. ${Number(prod.precio).toFixed(2)}</p>
+            </div>
+            <button onclick='agregarAlCarrito(${JSON.stringify(prod)})' class="bg-red-600 text-white font-bold px-3 py-1 rounded-lg text-sm shadow">
+              + Agregar
+            </button>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('modal-menu').classList.remove('hidden');
+    };
+
+    window.cerrarMenu = () => {
+      document.getElementById('modal-menu').classList.add('hidden');
+    };
+
+    // 5. CARRITO DE COMPRAS
+    window.agregarAlCarrito = (producto) => {
+      const idx = carrito.findIndex(i => i.nombre === producto.nombre);
+      if (idx > -1) {
+        carrito[idx].cantidad += 1;
+      } else {
+        carrito.push({ ...producto, cantidad: 1 });
+      }
+      actualizarCarritoUI();
+    };
+
+    function actualizarCarritoUI() {
+      const totalItems = carrito.reduce((acc, item) => acc + item.cantidad, 0);
+      document.getElementById('cart-count').textContent = totalItems;
+
+      const itemsContainer = document.getElementById('items-carrito');
+      
+      if (carrito.length === 0) {
+        itemsContainer.innerHTML = `<p class="text-gray-400 text-center mt-10">El carrito está vacío</p>`;
+        document.getElementById('cart-subtotal').textContent = "0.00";
+        document.getElementById('cart-envio').textContent = "0.00";
+        document.getElementById('cart-total').textContent = "0.00";
+        document.getElementById('btn-confirmar-pedido').disabled = true;
+        return;
+      }
+
+      let subtotal = 0;
+      itemsContainer.innerHTML = carrito.map((item, idx) => {
+        const itemSubtotal = item.precio * item.cantidad;
+        subtotal += itemSubtotal;
+        return `
+          <div class="flex justify-between items-center pt-2">
+            <div>
+              <p class="font-bold text-sm text-gray-800">${item.nombre}</p>
+              <p class="text-xs text-gray-500">L. ${item.precio} x ${item.cantidad}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="cambiarCantidad(${idx}, -1)" class="bg-gray-200 px-2 py-0.5 rounded font-bold">-</button>
+              <span class="font-bold text-sm">${item.cantidad}</span>
+              <button onclick="cambiarCantidad(${idx}, 1)" class="bg-gray-200 px-2 py-0.5 rounded font-bold">+</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const envioFinal = modalidadActual === 'DELIVERY' ? costoEnvioCalculado : 0;
+      const total = subtotal + envioFinal;
+
+      document.getElementById('cart-subtotal').textContent = subtotal.toFixed(2);
+      document.getElementById('cart-envio').textContent = envioFinal.toFixed(2);
+      document.getElementById('cart-total').textContent = total.toFixed(2);
+      document.getElementById('btn-confirmar-pedido').disabled = false;
+    }
+
+    window.cambiarCantidad = (index, delta) => {
+      carrito[index].cantidad += delta;
+      if (carrito[index].cantidad <= 0) {
+        carrito.splice(index, 1);
+      }
+      actualizarCarritoUI();
+    };
+
+    window.toggleCarrito = () => {
+      const el = document.getElementById('modal-carrito');
+      el.classList.toggle('hidden');
+    };
+
+    window.setModalidad = (mod) => {
+      modalidadActual = mod;
+      const btnDel = document.getElementById('btn-delivery');
+      const btnPick = document.getElementById('btn-pickup');
+      const rowEnvio = document.getElementById('row-envio');
+
+      if (mod === 'DELIVERY') {
+        btnDel.className = "flex-1 py-2 rounded-lg font-bold border-2 border-red-600 bg-red-600 text-white text-sm";
+        btnPick.className = "flex-1 py-2 rounded-lg font-bold border-2 border-gray-300 text-gray-600 text-sm";
+        rowEnvio.classList.remove('hidden');
+      } else {
+        btnPick.className = "flex-1 py-2 rounded-lg font-bold border-2 border-red-600 bg-red-600 text-white text-sm";
+        btnDel.className = "flex-1 py-2 rounded-lg font-bold border-2 border-gray-300 text-gray-600 text-sm";
+        rowEnvio.classList.add('hidden');
+      }
+      actualizarCarritoUI();
+    };
+
+    // 6. GUARDAR PEDIDO Y VISTA TIEMPO REAL
+    window.enviarPedidoFirestore = async () => {
+      if (!restauranteSeleccionado || carrito.length === 0) return;
+
+      const btn = document.getElementById('btn-confirmar-pedido');
+      btn.disabled = true;
+      btn.textContent = "Procesando...";
+
+      const subtotal = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
+      const envio = modalidadActual === 'DELIVERY' ? costoEnvioCalculado : 0;
+
+      try {
+        const payload = {
+          cliente_id: "usr_web_client",
+          restaurante_id: restauranteSeleccionado.id,
+          restaurante_nombre: restauranteSeleccionado.nombre,
+          productos: carrito,
+          subtotal: subtotal,
+          costo_envio: envio,
+          total: subtotal + envio,
+          modalidad: modalidadActual,
+          estado: "NUEVO",
+          ubicacion_cliente: new GeoPoint(clienteUbi.lat, clienteUbi.lng),
+          ubicacion_repartidor: null,
+          repartidor_id: null,
+          mensajes_no_leidos: 0,
+          fecha_creacion: serverTimestamp()
+        };
+
+        const docRef = await addDoc(collection(db, "pedidos"), payload);
+
+        // Limpiar
+        carrito = [];
+        actualizarCarritoUI();
+        toggleCarrito();
+        cerrarMenu();
+
+        // Iniciar pantalla de seguimiento en vivo
+        iniciarSeguimientoPedido(docRef.id);
+
+      } catch (e) {
+        console.error("Error al crear pedido en Firestore:", e);
+        alert("Ocurrió un error al enviar el pedido.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Confirmar Pedido";
+      }
+    };
+
+    // 7. SEGUIMIENTO CON MAPLIBRE Y FIRESTORE LISTENER
+    function iniciarSeguimientoPedido(pedidoId) {
+      document.getElementById('vista-seguimiento').classList.remove('hidden');
+      document.getElementById('tracking-id').textContent = pedidoId;
+
+      // Iniciar mapa MapLibre GL
+      if (!mapInstance) {
+        mapInstance = new maplibregl.Map({
+          container: 'mapa-seguimiento',
+          style: 'https://demotiles.maplibre.org/style.json',
+          center: [clienteUbi.lng, clienteUbi.lat],
+          zoom: 14
+        });
+
+        markerCliente = new maplibregl.Marker({ color: "#DC2626" })
+          .setLngLat([clienteUbi.lng, clienteUbi.lat])
+          .setPopup(new maplibregl.Popup().setText("Tu Ubicación"))
+          .addTo(mapInstance);
+      } else {
+        mapInstance.setCenter([clienteUbi.lng, clienteUbi.lat]);
+      }
+
+      // Escuchar cambios en Firestore
+      const pedidoRef = doc(db, "pedidos", pedidoId);
+      listenerPedidoUnsubscribe = onSnapshot(pedidoRef, (snap) => {
+        if (!snap.exists()) return;
+
+        const data = snap.data();
+
+        // Actualizar etiqueta de estado
+        document.getElementById('tracking-estado').textContent = `ESTADO: ${data.estado || 'NUEVO'}`;
+
+        // Ubicación en tiempo real del repartidor
+        if (data.ubicacion_repartidor) {
+          const repLng = data.ubicacion_repartidor.longitude;
+          const repLat = data.ubicacion_repartidor.latitude;
+
+          if (!markerRepartidor) {
+            markerRepartidor = new maplibregl.Marker({ color: "#2563EB" })
+              .setLngLat([repLng, repLat])
+              .setPopup(new maplibregl.Popup().setText("Repartidor"))
+              .addTo(mapInstance);
+          } else {
+            markerRepartidor.setLngLat([repLng, repLat]);
+          }
+
+          // Ajustar zoom para ver ambos puntos
+          const bounds = new maplibregl.LngLatBounds()
+            .extend([clienteUbi.lng, clienteUbi.lat])
+            .extend([repLng, repLat]);
+          mapInstance.fitBounds(bounds, { padding: 80 });
+        }
+
+        // Indicador de mensajes
+        const badgeChat = document.getElementById('badge-chat');
+        if (data.mensajes_no_leidos > 0) {
+          badgeChat.classList.remove('hidden');
+        } else {
+          badgeChat.classList.add('hidden');
+        }
+      });
+    }
+
+    window.cerrarSeguimiento = () => {
+      if (listenerPedidoUnsubscribe) {
+        listenerPedidoUnsubscribe();
+        listenerPedidoUnsubscribe = null;
+      }
+      document.getElementById('vista-seguimiento').classList.add('hidden');
+    };
+  </script>
 </body>
 </html>
