@@ -1,0 +1,2333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🛵 LLEVARI - Cliente</title>
+  <!-- MapLibre GL -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-primary: #7C3AED;
+      --c-primary-dark: #5B21B6;
+      --c-primary-deep: #3B0764;
+      --c-primary-light: #EDE9FE;
+      --c-accent: #FF8A00;
+      --c-accent-dark: #F25C05;
+      --c-bg: #F6F4FB;
+      --c-text: #1F1B2E;
+      --c-muted: #6B6880;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', Roboto, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: #130924;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Contenedor tipo móvil adaptable */
+    #app-shell {
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      background-color: var(--c-bg);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 50px rgba(0,0,0,0.6);
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      background: var(--c-bg);
+      z-index: 10;
+    }
+    .screen.active { display: flex; animation: fadeIn 0.28s ease-out; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes floatAnim {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes motoTilt {
+      0%, 100% { transform: translateY(0) rotateY(-22deg); }
+      50% { transform: translateY(-4px) rotateY(22deg); }
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.65); opacity: 0.9; }
+      100% { transform: scale(1.55); opacity: 0; }
+    }
+    @keyframes slideBar {
+      0% { transform: translateX(-80px); }
+      100% { transform: translateX(260px); }
+    }
+
+    .pressable {
+      cursor: pointer;
+      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s;
+    }
+    .pressable:active { transform: scale(0.96); }
+
+    /* Pantallas Auth */
+    #layoutAuth {
+      background: linear-gradient(135deg, var(--c-primary-deep), var(--c-primary-dark), var(--c-primary));
+      padding: 24px 20px;
+      overflow-y: auto;
+      justify-content: center;
+      align-items: center;
+    }
+    .auth-brand {
+      font-size: 34px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.08em;
+      text-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      animation: floatAnim 2.4s ease-in-out infinite;
+      text-align: center;
+    }
+    .auth-subbrand {
+      font-size: 14px;
+      color: #E9D5FF;
+      margin: 6px 0 28px;
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 26px;
+      padding: 22px;
+      width: 100%;
+      box-shadow: 0 12px 28px rgba(59, 7, 100, 0.18);
+    }
+    .input-field, .select-field {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: var(--c-text);
+      background: var(--c-bg);
+      border: 1.5px solid #E4DEF5;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .input-field:focus, .select-field:focus {
+      background: #fff;
+      border-color: var(--c-primary);
+      border-width: 2px;
+    }
+    .btn-main {
+      width: 100%;
+      padding: 15px 16px;
+      border: none;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(90deg, var(--c-primary), var(--c-primary-dark));
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .btn-main:disabled { opacity: 0.5; pointer-events: none; }
+    .link-txt {
+      display: block;
+      text-align: center;
+      color: #2563EB;
+      font-size: 14px;
+      margin-top: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    /* Header Principal */
+    #headerBar {
+      background: linear-gradient(135deg, var(--c-primary-deep), var(--c-primary-dark), var(--c-primary));
+      border-radius: 0 0 30px 30px;
+      padding: 16px 16px 18px;
+      box-shadow: 0 8px 22px rgba(59, 7, 100, 0.28);
+      z-index: 5;
+      flex-shrink: 0;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+       justify-content: space-between;
+    }
+    .header-ubi { flex: 1; overflow: hidden; cursor: pointer; }
+    .header-saludo { font-size: 12px; color: #DDD6FE; }
+    .header-ciudad {
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    #searchRow {
+      margin-top: 14px;
+      height: 52px;
+      background: #fff;
+      border-radius: 26px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px 0 18px;
+      box-shadow: 0 6px 16px rgba(30, 27, 75, 0.2);
+    }
+    #etBuscador {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: var(--c-text);
+      background: transparent;
+    }
+    .lupa-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--c-accent), var(--c-accent-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #fff;
+      box-shadow: 0 3px 8px rgba(242, 92, 5, 0.4);
+    }
+
+    /* Contenido de Tabs */
+    .tab-view {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 28px;
+      display: none;
+    }
+    .tab-view.active { display: block; animation: fadeIn 0.25s ease-out; }
+    .tab-view::-webkit-scrollbar, .h-scroll::-webkit-scrollbar { display: none; }
+
+    /* Barra de Navegación Inferior */
+    #navBar {
+      background: #fff;
+      border-radius: 26px 26px 0 0;
+      padding: 8px 6px 12px;
+      display: flex;
+      box-shadow: 0 -8px 26px rgba(59, 7, 100, 0.14);
+      z-index: 5;
+      flex-shrink: 0;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+    .nav-pill {
+      padding: 4px 18px;
+      border-radius: 16px;
+      transition: all 0.25s;
+    }
+    .nav-item.active .nav-pill { background: var(--c-primary-light); }
+    .nav-icon { font-size: 20px; opacity: 0.55; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .nav-item.active .nav-icon { opacity: 1; transform: scale(1.12); }
+    .nav-label { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+    .nav-item.active .nav-label { color: var(--c-primary); font-weight: 800; }
+
+    /* Slider Publicitario */
+    #sliderPublicidadContainer {
+      margin: 16px 16px 6px;
+      height: 178px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, var(--c-primary-deep), var(--c-primary));
+      box-shadow: 0 10px 24px rgba(59, 7, 100, 0.25);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .slider-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 6s linear;
+    }
+    .slider-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(59,7,100,0.92) 0%, rgba(59,7,100,0.18) 100%);
+    }
+    .slider-content {
+      position: relative;
+      z-index: 2;
+      width: 66%;
+      height: 100%;
+      padding: 16px 12px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .slider-badge {
+      align-self: flex-start;
+      background: linear-gradient(90deg, var(--c-accent), var(--c-accent-dark));
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 10px;
+    }
+    .slider-dots {
+      position: absolute;
+      bottom: 12px;
+      left: 20px;
+      display: flex;
+      gap: 5px;
+      z-index: 3;
+    }
+    .slider-dot {
+      height: 6px;
+      width: 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.5);
+      transition: all 0.25s;
+    }
+    .slider-dot.active { width: 20px; background: var(--c-accent); }
+
+    /* Filas Horizontales y Categorías */
+    .h-scroll {
+      display: flex;
+      overflow-x: auto;
+      padding: 6px 12px 14px;
+      gap: 10px;
+      align-items: center;
+    }
+    .cat-big-row {
+      display: flex;
+      padding: 10px 12px 0;
+      gap: 12px;
+    }
+    .cat-big {
+      flex: 1;
+      height: 132px;
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 7px 18px rgba(59, 7, 100, 0.14);
+    }
+    .cat-big-circle {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      animation: floatAnim 2.6s ease-in-out infinite;
+    }
+    .cat-small {
+      min-width: 82px;
+      background: #fff;
+      border-radius: 20px;
+      padding: 12px 6px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(59, 7, 100, 0.1);
+    }
+    .cat-small-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--c-primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    /* Tarjetas Restaurantes y Productos */
+    .rest-circle-item {
+      width: 78px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .rest-circle-ring {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--c-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 5px 14px rgba(59, 7, 100, 0.16);
+    }
+    .rest-card-large {
+      width: 280px;
+      flex-shrink: 0;
+      background: #fff;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(59, 7, 100, 0.15);
+    }
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 4px 14px;
+    }
+    .rest-card-grid {
+      background: #fff;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(59, 7, 100, 0.12);
+    }
+    .prod-row-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 5px 14px rgba(59, 7, 100, 0.1);
+    }
+    .btn-plus {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.22);
+    }
+
+    /* Modal / Diálogo Pantalla Completa y Flotante */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 40;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .modal-backdrop.active { display: flex; animation: fadeIn 0.2s ease-out; }
+
+    /* Segmented Control (Efectivo / Tarjeta) */
+    .seg-wrap {
+      background: #E9E5F5;
+      border-radius: 30px;
+      height: 56px;
+      position: relative;
+      display: flex;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .seg-ind {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      left: 4px;
+      width: calc(50% - 4px);
+      background: linear-gradient(90deg, var(--c-primary-deep), var(--c-primary-dark));
+      border-radius: 26px;
+      box-shadow: 0 6px 14px rgba(59, 7, 100, 0.35);
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .seg-btn {
+      flex: 1;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Map Pin Ubicación */
+    #pinWrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 1000;
+      pointer-events: none;
+    }
+    #pin {
+      position: absolute;
+      left: -22px;
+      top: -53px;
+      width: 44px;
+      height: 58px;
+      transition: transform 0.18s ease;
+    }
+    #pin .head {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: linear-gradient(135deg, #7C3AED, #5B21B6);
+      box-shadow: 0 6px 14px rgba(59,7,100,.45);
+    }
+    #pin .head::after {
+      content: "";
+      position: absolute;
+      top: 13px;
+      left: 13px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    #pin.lift { transform: translateY(-14px); }
+    #pinShadow {
+      position: absolute;
+      left: -9px;
+      top: -4px;
+      width: 18px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(0,0,0,.28);
+      transition: all 0.18s ease;
+    }
+    #pinShadow.lift { transform: scale(.6); opacity: .5; }
+
+    /* Toast */
+    #toast-box {
+      position: absolute;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(31, 27, 46, 0.94);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 13.5px;
+      font-weight: 600;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s;
+      text-align: center;
+      max-width: 90%;
+    }
+    #toast-box.show { opacity: 1; }
+
+    /* Barra Indeterminada */
+    .indeterminate-track {
+      width: 100%;
+      height: 5px;
+      background: var(--c-primary-light);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+      position: relative;
+    }
+    .indeterminate-bar {
+      width: 75px;
+      height: 100%;
+      background: linear-gradient(90deg, var(--c-accent), var(--c-primary));
+      border-radius: 4px;
+      animation: slideBar 1.3s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-shell">
+
+  <!-- ==================== 1. PANTALLA AUTH (LOGIN / REGISTRO / RECUPERAR) ==================== -->
+  <div id="layoutAuth" class="screen">
+    <div style="width:100%; max-width:400px;">
+      <div class="auth-brand">🛵 LLEVARI</div>
+      <div class="auth-subbrand">Tus antojos favoritos a la puerta</div>
+
+      <!-- Login Card -->
+      <div id="layoutLogin" class="card">
+        <h2 style="font-size:24px; color:#111827; margin-bottom:6px;">¡Hola de nuevo! 👋</h2>
+        <p style="font-size:13px; color:#6B7280; margin-bottom:22px;">Inicia sesión para continuar con tus pedidos.</p>
+        <input id="etLogTelefono" type="email" class="input-field" placeholder="Correo electrónico" />
+        <input id="etLogPin" type="password" class="input-field" placeholder="Contraseña" />
+        <button class="btn-main pressable" onclick="iniciarSesion()">ENTRAR AHORA</button>
+        <span class="link-txt" onclick="mostrarRecuperar()">¿Olvidaste tu contraseña?</span>
+        <span class="link-txt" onclick="cambiarVistaAuth('registro')">¿No tienes cuenta? Regístrate aquí</span>
+        <span class="link-txt" style="font-size:12px; color:#6B7280;" onclick="abrirModalLegal()">Términos y Política de Privacidad</span>
+      </div>
+
+      <!-- Recuperar Contraseña Card -->
+      <div id="layoutRecuperar" class="card" style="display:none;">
+        <h2 style="font-size:22px; color:#111827; margin-bottom:6px;">Recupera tu contraseña 🔑</h2>
+        <p style="font-size:13px; color:#6B7280; margin-bottom:18px;">Escribe el correo de tu cuenta y te enviaremos un enlace para crear una nueva contraseña.</p>
+        <input id="etRecCorreo" type="email" class="input-field" placeholder="Correo electrónico" />
+        <p id="tvRecEstado" style="font-size:13px; color:#059669; font-weight:700; margin-bottom:12px; display:none;"></p>
+        <button id="btnRecEnviar" class="btn-main pressable" onclick="enviarRecuperacion()">ENVIAR ENLACE</button>
+        <span class="link-txt" style="color:var(--c-primary);" onclick="cambiarVistaAuth('login')">❮ Volver a iniciar sesión</span>
+      </div>
+
+      <!-- Registro Card -->
+      <div id="layoutRegistro" class="card" style="display:none;">
+        <h2 style="font-size:24px; color:#111827; margin-bottom:6px;">Crea tu cuenta 🚀</h2>
+        <p style="font-size:13px; color:#6B7280; margin-bottom:20px;">Regístrate rápido y empieza a ordenar.</p>
+
+        <!-- Paso 1 -->
+        <div id="layoutRegPaso1">
+          <input id="etRegNombre" type="text" class="input-field" placeholder="Nombre completo" />
+          <input id="etRegCorreo" type="email" class="input-field" placeholder="Correo electrónico" />
+          <div style="display:flex; gap:8px;">
+            <select id="spRegPais" class="select-field" style="flex:0.45;" onchange="ajustarMaxTel()">
+              <option value="+504" data-len="8">+504 (HN)</option>
+              <option value="+52" data-len="10">+52 (MX)</option>
+              <option value="+503" data-len="8">+503 (SV)</option>
+              <option value="+502" data-len="8">+502 (GT)</option>
+              <option value="+1" data-len="10">+1 (USA)</option>
+            </select>
+            <input id="etRegTelefono" type="tel" maxlength="8" class="input-field" style="flex:0.55;" placeholder="Número" />
+          </div>
+          <label style="font-size:13px; font-weight:700; color:#374151; display:block; margin-bottom:6px;">Selecciona tu Ciudad:</label>
+          <select id="spRegCiudad" class="select-field">
+            <option value="Choluteca">Choluteca</option>
+            <option value="Tegucigalpa">Tegucigalpa</option>
+            <option value="San Pedro Sula">San Pedro Sula</option>
+            <option value="Comayagua">Comayagua</option>
+          </select>
+          <label style="font-size:13px; font-weight:700; color:#374151; display:block; margin-bottom:6px;">Idioma de preferencia:</label>
+          <select id="spRegIdioma" class="select-field">
+            <option value="Español">Español</option>
+            <option value="English">English</option>
+          </select>
+          <input id="etRegPin" type="password" class="input-field" placeholder="Crea tu contraseña (mínimo 6)" />
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:12.5px; color:#374151; margin:8px 0 12px; cursor:pointer;">
+            <input id="cbAcepto" type="checkbox" style="margin-top:3px;" />
+            <span>Soy mayor de 18 años y acepto los Términos y Condiciones y la Política de Privacidad</span>
+          </label>
+          <span class="link-txt" style="text-align:left; margin:4px 0;" onclick="abrirModalLegal()">📜 Leer Términos y Política de Privacidad</span>
+          <button class="btn-main pressable" style="background:linear-gradient(90deg,#D97706,#B45309); margin-top:12px;" onclick="validarPaso1Registro()">SIGUIENTE ➔</button>
+          <span class="link-txt" onclick="cambiarVistaAuth('login')">¿Ya tienes una cuenta? Inicia sesión</span>
+        </div>
+
+        <!-- Paso 2: Direcciones -->
+        <div id="layoutRegPaso2" style="display:none;">
+          <h3 style="font-size:19px; color:#111827; margin-bottom:6px;">Tus Direcciones 📍</h3>
+          <p style="font-size:13px; color:#6B7280; margin-bottom:16px;">Agrega al menos una dirección para entregas.</p>
+          <div id="contDireccionesReg" style="margin-bottom:14px;"></div>
+          <button class="btn-main pressable" style="background:linear-gradient(90deg,#2563EB,#1D4ED8);" onclick="abrirMapaParaNuevaDireccion(false)">+ Agregar Nueva Dirección en Mapa</button>
+          <button id="btnRegistrarmeFinal" class="btn-main pressable" style="background:linear-gradient(90deg,#059669,#047857);" disabled onclick="finalizarRegistro()">FINALIZAR REGISTRO ✅</button>
+          <span class="link-txt" style="color:var(--c-primary);" onclick="volverRegPaso1()">❮ Volver a datos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. PANTALLA PRINCIPAL APP ==================== -->
+  <div id="layoutAppMain" class="screen">
+    <div id="headerBar">
+      <div class="header-top">
+        <div class="header-ubi pressable" onclick="mostrarSelectorUbicaciones()">
+          <div id="tvSaludo" class="header-saludo">Entregar en</div>
+          <div id="tvUbicacion" class="header-ciudad">📍 Choluteca ⌄</div>
+        </div>
+        <div class="header-btn pressable" onclick="abrirModalLegal()">⚙️</div>
+        <div class="header-btn pressable" onclick="cambiarTab(1)">🛒</div>
+      </div>
+      <div id="searchRow">
+        <input id="etBuscador" type="text" placeholder="Locales, platos y productos" oninput="filtrarResultados(this.value.trim())" />
+        <div class="lupa-circle">🔍</div>
+      </div>
+    </div>
+
+    <!-- Tab 0: Inicio / Restaurantes / Menú -->
+    <div id="tabInicio" class="tab-view active">
+      <div id="contRestaurantes"></div>
+    </div>
+
+    <!-- Tab 1: Carrito -->
+    <div id="tabCarrito" class="tab-view" style="padding:16px;">
+      <div id="contCarrito"></div>
+    </div>
+
+    <!-- Tab 2: Pedidos / Historial -->
+    <div id="tabPedidos" class="tab-view">
+      <div id="contHistorial"></div>
+    </div>
+
+    <!-- Barra Inferior -->
+    <div id="navBar">
+      <div class="nav-item active pressable" onclick="cambiarTab(0)">
+        <div class="nav-pill"><div class="nav-icon">🏠</div></div>
+        <div class="nav-label" id="navLbl0">Inicio</div>
+      </div>
+      <div class="nav-item pressable" onclick="cambiarTab(1)">
+        <div class="nav-pill"><div class="nav-icon">🛒</div></div>
+        <div class="nav-label" id="navLbl1">Carrito</div>
+      </div>
+      <div class="nav-item pressable" onclick="cambiarTab(2)">
+        <div class="nav-pill"><div class="nav-icon">🧾</div></div>
+        <div class="nav-label" id="navLbl2">Pedidos</div>
+      </div>
+      <div class="nav-item pressable" onclick="cerrarSesion()">
+        <div class="nav-pill"><div class="nav-icon">🚪</div></div>
+        <div class="nav-label" id="navLbl3">Salir</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 3. PANTALLA DETALLE DE PLATO (mostrarPlatoPro) ==================== -->
+  <div id="layoutPlatoPro" class="screen" style="background:#fff; z-index:25;">
+    <div id="platoScroll" style="flex:1; overflow-y:auto; padding-bottom:230px;"></div>
+    <div class="pressable" onclick="cerrarPlatoPro()" style="position:absolute; top:16px; left:16px; width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.92); box-shadow:0 4px 14px rgba(0,0,0,0.22); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; z-index:30;">❮</div>
+    <div id="platoBotBar" style="position:absolute; bottom:0; left:0; right:0; background:#fff; border-radius:28px 28px 0 0; padding:16px 18px; box-shadow:0 -10px 30px rgba(59,7,100,0.18); z-index:30;"></div>
+  </div>
+
+  <!-- ==================== 4. PANTALLA TIPO DE SERVICIO (Tu pedido) ==================== -->
+  <div id="layoutTipoServicio" class="screen" style="z-index:28;">
+    <div style="background:#fff; padding:14px 16px; display:flex; align-items:center; box-shadow:0 4px 14px rgba(59,7,100,0.1);">
+      <div class="pressable" onclick="cerrarTipoServicio()" style="width:42px; height:42px; border-radius:50%; background:#F1EEFA; display:flex; align-items:center; justify-content:center; font-weight:800;">❮</div>
+      <div style="flex:1; text-align:center; font-size:18px; font-weight:800; color:var(--c-text);">Tu pedido</div>
+      <div style="width:42px;"></div>
+    </div>
+
+    <div style="flex:1; overflow-y:auto; padding:16px;">
+      <!-- Card Restaurante -->
+      <div class="card" style="display:flex; align-items:center; padding:14px; border-radius:24px; margin-bottom:14px;">
+        <div style="width:56px; height:56px; border-radius:16px; background:var(--c-primary-light); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:24px;">
+          🏪
+          <img id="svLogoRest" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none;" />
+        </div>
+        <div style="flex:1; padding:0 12px; overflow:hidden;">
+          <div id="svNombreRest" style="font-size:16px; font-weight:800; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Restaurante</div>
+          <div style="font-size:12px; color:var(--c-muted); margin-top:2px;">Elige cómo quieres pagar</div>
+        </div>
+        <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,var(--c-accent),var(--c-accent-dark)); display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 6px 14px rgba(242,92,5,0.4); animation:motoTilt 1.4s infinite ease-in-out;">🛵</div>
+      </div>
+
+      <!-- Selector Efectivo / Tarjeta -->
+      <div class="seg-wrap">
+        <div id="svInd" class="seg-ind"></div>
+        <div id="svLblDelivery" class="seg-btn" style="color:#fff;" onclick="elegirModalidad(true)">💵 Efectivo</div>
+        <div id="svLblPickup" class="seg-btn" style="color:var(--c-text); opacity:0.55;" onclick="mostrarToast('💳 Pago con tarjeta: próximamente disponible')">💳 Tarjeta<br><span style="font-size:10px; font-weight:400;">Próximamente</span></div>
+      </div>
+
+      <!-- Modalidad Delivery / Pickup Switch -->
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button id="btnModDeliv" class="pressable" onclick="elegirModalidad(true)" style="flex:1; padding:10px; border-radius:14px; border:2px solid var(--c-primary); background:var(--c-primary-light); font-weight:800; font-size:13px; color:var(--c-primary-dark);">🛵 Delivery</button>
+        <button id="btnModPickup" class="pressable" onclick="elegirModalidad(false)" style="flex:1; padding:10px; border-radius:14px; border:1px solid #E4DEF5; background:#fff; font-weight:700; font-size:13px; color:var(--c-muted);">🏪 Retirar (Pickup)</button>
+      </div>
+
+      <!-- Info Tiempo y Envío -->
+      <div style="padding:0 4px 14px;">
+        <div id="svInfo1" style="font-size:14px; color:var(--c-text);">⏱ Recibes en 20-35 min</div>
+        <div id="svInfo2" style="font-size:14px; font-weight:800; color:var(--c-primary-dark); margin-top:4px;">🛵 Envío L. 26</div>
+      </div>
+
+      <!-- Card Item -->
+      <div class="card" style="display:flex; align-items:center; padding:12px; border-radius:22px; margin-bottom:14px;">
+        <div style="width:84px; height:84px; border-radius:16px; background:var(--c-primary-light); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0;">
+          🍽️
+          <img id="svImgItem" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none;" />
+        </div>
+        <div style="flex:1; padding-left:14px;">
+          <div id="svItemNombre" style="font-size:14.5px; font-weight:800; color:var(--c-text); line-height:1.3;"></div>
+          <div id="svItemPrecio" style="font-size:17px; font-weight:800; color:var(--c-primary-dark); margin-top:6px;"></div>
+        </div>
+      </div>
+
+      <!-- Resumen -->
+      <div class="card" style="border-radius:26px; padding:20px;">
+        <div style="font-size:20px; font-weight:800; color:var(--c-text); margin-bottom:12px;">Resumen</div>
+        <div style="display:flex; justify-content:space-between; font-size:14px; color:var(--c-muted); margin-bottom:8px;">
+          <span>Productos</span>
+          <strong id="svValProd" style="color:var(--c-text);">L. 0</strong>
+        </div>
+        <div id="svFilaEnvio" style="display:flex; justify-content:space-between; font-size:14px; color:var(--c-muted); margin-bottom:8px;">
+          <span>Envío</span>
+          <strong id="svValEnvio" style="color:var(--c-text);">L. 0</strong>
+        </div>
+        <div style="height:1px; background:#EEE9FA; margin:12px 0;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong id="svLblTotal" style="font-size:16px; color:var(--c-text);">Total a pagar al repartidor</strong>
+          <strong id="svValTotal" style="font-size:20px; color:var(--c-primary-dark);">L. 0</strong>
+        </div>
+        <div id="svAviso" style="font-size:12px; font-weight:800; color:#B91C1C; margin-top:10px; display:none;"></div>
+      </div>
+    </div>
+
+    <div style="background:#fff; padding:14px 16px; border-radius:26px 26px 0 0; box-shadow:0 -10px 25px rgba(59,7,100,0.14);">
+      <button id="svBtnConfirmar" class="btn-main pressable" style="margin:0; padding:18px; font-size:16px;" onclick="confirmarPedidoServicio()">Confirmar pedido</button>
+    </div>
+  </div>
+
+  <!-- ==================== 5. PANTALLA ANIMACIÓN ENVIANDO PEDIDO ==================== -->
+  <div id="layoutAnimacion" class="screen" style="background:linear-gradient(180deg,var(--c-primary-deep),var(--c-primary)); align-items:center; justify-content:center; z-index:50;">
+    <div style="position:relative; width:150px; height:150px; display:flex; align-items:center; justify-content:center;">
+      <div style="position:absolute; width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,0.35); animation:pulseRing 1.2s infinite;"></div>
+      <div style="font-size:56px; z-index:2; animation:floatAnim 0.9s infinite ease-in-out;">🛵</div>
+    </div>
+    <div style="font-size:34px; font-weight:800; color:#fff; letter-spacing:0.15em; margin:16px 0 6px;">LLEVARI</div>
+    <div style="font-size:15px; color:#DDD6FE;">Procesando tu pedido con éxito...</div>
+  </div>
+
+  <!-- ==================== 6. PANTALLA MAPA SELECTOR DE UBICACIÓN ==================== -->
+  <div id="layoutMapa" class="screen" style="z-index:35;">
+    <div id="mapPicker" style="width:100%; height:100%;"></div>
+    <div id="pinWrap"><div id="pinShadow"></div><div id="pin"><div class="head"></div></div></div>
+
+    <!-- TopBar Mapa -->
+    <div style="position:absolute; top:0; left:0; right:0; background:#fff; padding:14px 16px; display:flex; align-items:center; box-shadow:0 4px 14px rgba(0,0,0,0.12); z-index:1002;">
+      <span class="pressable" onclick="volverDeMapa()" style="color:var(--c-primary); font-weight:800; font-size:15px;">❮ Volver</span>
+      <span style="flex:1; text-align:center; font-weight:800; font-size:16px; color:#111827;">Ubica tu dirección</span>
+      <span style="width:52px;"></span>
+    </div>
+
+    <!-- Buscador Nominatim -->
+    <div style="position:absolute; top:64px; left:12px; right:12px; z-index:1002;">
+      <input id="mapSearchInput" type="search" placeholder="Buscar calle, colonia o lugar" oninput="buscarEnNominatim(this.value)" style="width:100%; padding:13px 16px; border:none; border-radius:16px; font-size:14.5px; background:#fff; box-shadow:0 4px 16px rgba(59,7,100,0.22); outline:none;" />
+      <div id="mapSearchRes" style="margin-top:6px; background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(59,7,100,0.25); overflow:hidden; display:none;"></div>
+    </div>
+
+    <!-- Botón Satélite y Mi Ubicación -->
+    <button class="pressable" onclick="toggleSatelitePicker()" id="btnToggleSat" style="position:absolute; right:12px; top:124px; z-index:1002; width:46px; height:46px; border-radius:50%; background:#fff; border:none; font-size:20px; box-shadow:0 4px 14px rgba(59,7,100,0.3);">🛰️</button>
+    <button class="pressable" onclick="centrarEnMiGps()" style="position:absolute; right:16px; bottom:190px; z-index:1002; width:52px; height:52px; border-radius:50%; background:#fff; border:none; font-size:22px; box-shadow:0 6px 18px rgba(0,0,0,0.25);">🎯</button>
+
+    <div id="addrReverse" style="position:absolute; left:14px; right:14px; bottom:140px; z-index:1001; background:rgba(255,255,255,0.96); padding:10px 14px; border-radius:14px; font-size:13px; color:var(--c-text); box-shadow:0 4px 14px rgba(59,7,100,0.2); display:none;"></div>
+
+    <!-- Card Confirmar Pin -->
+    <div style="position:absolute; bottom:18px; left:14px; right:14px; background:#fff; border-radius:26px; padding:18px; box-shadow:0 10px 28px rgba(0,0,0,0.22); z-index:1002;">
+      <div style="font-size:14.5px; font-weight:800; color:#111827; margin-bottom:10px;">📍 Mueve el mapa para centrar el pin</div>
+      <button class="btn-main pressable" style="background:linear-gradient(90deg,#059669,#047857); margin:0;" onclick="abrirModalDetalleDireccion()">CONFIRMAR UBICACIÓN ✅</button>
+    </div>
+  </div>
+
+  <!-- ==================== 7. PANTALLA SEGUIMIENTO EN VIVO ==================== -->
+  <div id="layoutSeguimiento" class="screen" style="z-index:32;">
+    <div id="mapTracking" style="width:100%; height:100%;"></div>
+
+    <div class="pressable" onclick="cerrarPantallaSeguimiento()" style="position:absolute; top:20px; left:16px; background:#fff; padding:10px 16px; border-radius:24px; font-size:14px; font-weight:800; color:var(--c-text); box-shadow:0 6px 16px rgba(0,0,0,0.2); z-index:1002;">❮  Volver</div>
+
+    <div id="btnAbrirChat" class="pressable" onclick="abrirModalChat()" style="position:absolute; top:20px; right:16px; background:linear-gradient(90deg,var(--c-accent),var(--c-accent-dark)); padding:10px 16px; border-radius:24px; font-size:14px; font-weight:800; color:#fff; box-shadow:0 6px 16px rgba(242,92,5,0.4); z-index:1002; display:none;">💬 Chat Repartidor</div>
+
+    <!-- Isla Superior Estado -->
+    <div style="position:absolute; top:76px; left:16px; right:16px; background:#fff; border-radius:24px; padding:14px 16px; display:flex; align-items:center; box-shadow:0 12px 28px rgba(59,7,100,0.25); z-index:1002;">
+      <div style="width:52px; height:52px; border-radius:50%; background:var(--c-primary-light); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0;">🛵</div>
+      <div style="flex:1; padding-left:14px;">
+        <div id="tvNombreRestauranteSeguimiento" style="font-size:12px; font-weight:800; color:var(--c-muted);">Conectando...</div>
+        <div id="tvEstadoSeguimiento" style="font-size:17px; font-weight:800; color:#10B981; margin:2px 0;">Buscando ruta</div>
+        <div id="tvInfoRepartidor" style="font-size:12px; color:var(--c-text);">Espera un momento</div>
+        <div id="tvCobroSeguimiento" style="font-size:12.5px; font-weight:800; color:var(--c-primary-dark); margin-top:4px; white-space:pre-line;"></div>
+        <div class="indeterminate-track"><div class="indeterminate-bar"></div></div>
+      </div>
+    </div>
+
+    <button class="pressable" onclick="recenterTrackingMap()" style="position:absolute; right:16px; bottom:86px; z-index:1002; width:48px; height:48px; border-radius:50%; background:#fff; border:none; font-size:22px; box-shadow:0 4px 14px rgba(59,7,100,0.35);">🎯</button>
+
+    <div class="pressable" onclick="cancelarPedidoActivo()" style="position:absolute; bottom:20px; left:16px; right:16px; background:#DC2626; color:#fff; text-align:center; padding:14px; border-radius:24px; font-size:14px; font-weight:800; box-shadow:0 6px 18px rgba(220,38,38,0.35); z-index:1002;">✖  Cancelar pedido</div>
+  </div>
+
+  <!-- ==================== MODALES FLOTANTES ==================== -->
+  <div id="modalGeneric" class="modal-backdrop">
+    <div id="modalGenericContent" class="card" style="max-height:88%; overflow-y:auto;"></div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-box"></div>
+</div>
+
+<!-- ==================== FIREBASE & LÓGICA DE APLICACIÓN ==================== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    sendPasswordResetEmail, sendEmailVerification, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, addDoc,
+    query, where, orderBy, limit, onSnapshot, runTransaction, arrayUnion, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // =========================================================================
+  // CONFIGURA AQUÍ TUS CREDENCIALES WEB DE FIREBASE (Proyecto Llevari)
+  // =========================================================================
+  const FIREBASE_CONFIG = {
+    apiKey: "REEMPLAZAR_CON_TU_API_KEY",
+    authDomain: "tu-proyecto.firebaseapp.com",
+    projectId: "tu-proyecto",
+    storageBucket: "tu-proyecto.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:000000000000"
+  };
+
+  let app, auth, db;
+  try {
+    if (FIREBASE_CONFIG.apiKey !== "REEMPLAZAR_CON_TU_API_KEY") {
+      app = initializeApp(FIREBASE_CONFIG);
+      auth = getAuth(app);
+      db = getFirestore(app);
+    }
+  } catch (e) { console.warn("Firebase pendiente de configurar:", e); }
+
+  // ==================== CONSTANTES Y ESTADO DE SESIÓN ====================
+  const KM_MIN = 2, KM_MAX = 20;
+  let cfgTopePct = 35, cfgEnvioMax = 30, cfgGanancia = 5, cfgExtraPct = 3, cfgMinimoLargo = 100, cfgKmMinimo = 5;
+  let cfgPagoKm = [40, 50, 55, 60, 64, 70, 76, 82, 88, 95, 102, 109, 116, 123, 130, 137, 144, 151, 158];
+
+  let miNombre = localStorage.getItem("llevari_nombre") || "";
+  let miTelefono = localStorage.getItem("llevari_telefono") || "";
+  let miCiudad = localStorage.getItem("llevari_ciudad") || "Choluteca";
+  let miLat = parseFloat(localStorage.getItem("llevari_lat")) || 13.3024;
+  let miLon = parseFloat(localStorage.getItem("llevari_lon")) || -87.1921;
+  let miDireccionDesc = localStorage.getItem("llevari_dir_desc") || "";
+  let pedidoActivoId = localStorage.getItem("llevari_pedidoActivoId") || "";
+  let restIdSeleccionadoTemp = localStorage.getItem("llevari_restIdActivo") || "";
+  let rNombreTemp = localStorage.getItem("llevari_rNombreActivo") || "";
+  let restauranteLatTemp = parseFloat(localStorage.getItem("llevari_restLatActivo")) || (miLat + 0.003);
+  let restauranteLonTemp = parseFloat(localStorage.getItem("llevari_restLonActivo")) || (miLon + 0.003);
+
+  let tabActualIndex = 0, vistaActualTipo = "inicio", filtroPedidos = 0;
+  let restauranteIdActual = "", restauranteNombreActual = "", restauranteLogoActual = "";
+  let platoTemp = "", precioPlatoTemp = 0, imgPlatoTemp = "", modalidadDelivery = true, tipoServicioElegido = "DELIVERY";
+  let carritoRestPendiente = null;
+  let menuLat = 0, menuLon = 0, dlgLat = 0, dlgLon = 0, menuModo = 0;
+  let menuItems = [], listaPublicitariaGlobal = [], todosLosProductosCache = [], listaDireccionesReg = [];
+  let indiceDireccionSeleccionada = -1, sliderIndexActual = 0, sliderInterval = null;
+  let agregandoDesdeApp = false, tempMapaLat = miLat, tempMapaLon = miLon;
+
+  const cacheKmRuta = new Map();
+  const kmPendientes = new Set();
+  const estadoLocales = new Map();
+  const logoRestCache = new Map();
+  let seguimientoUnsub = null, chatUnsub = null, timerInterval = null;
+
+  // ==================== UTILIDADES VISUALES ====================
+  window.mostrarToast = (msg) => {
+    const t = document.getElementById("toast-box");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => t.classList.remove("show"), 2800);
+  };
+
+  function mostrarPantalla(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+  }
+
+  function resolverSrcImagen(str) {
+    if (!str || !str.trim()) return "";
+    const s = str.trim();
+    if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("data:image")) return s;
+    return "data:image/jpeg;base64," + s;
+  }
+
+  function escHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ==================== CÁLCULO EXACTO DE TARIFAS Y OSRM ====================
+  function calcularDistanciaKm(l1, lo1, l2, lo2) {
+    const r = 6371.0, dLa = (l2 - l1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
+    const a = Math.sin(dLa/2)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180) * Math.sin(dLo/2)**2;
+    return r * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  }
+
+  function claveRuta(a, b, c, d) {
+    return `${a.toFixed(4)},${b.toFixed(4)}>${c.toFixed(4)},${d.toFixed(4)}`;
+  }
+
+  function kmRuta(rLat, rLon, cLat, cLon) {
+    const k = claveRuta(rLat, rLon, cLat, cLon);
+    if (cacheKmRuta.has(k)) return cacheKmRuta.get(k);
+    const saved = parseFloat(localStorage.getItem("kmruta_" + k));
+    if (saved > 0) { cacheKmRuta.set(k, saved); return saved; }
+    pedirKmRuta(k, rLat, rLon, cLat, cLon);
+    return calcularDistanciaKm(rLat, rLon, cLat, cLon) * 1.3;
+  }
+
+  async function pedirKmRuta(k, a, b, c, d) {
+    if (kmPendientes.has(k)) return;
+    kmPendientes.add(k);
+    try {
+      const u = `https://router.project-osrm.org/route/v1/driving/${b},${a};${d},${c}?overview=false`;
+      const res = await fetch(u);
+      const j = await res.json();
+      if (j.code && j.code.toLowerCase() === "ok" && j.routes?.[0]) {
+        const km = j.routes[0].distance / 1000.0;
+        if (km > 0) {
+          cacheKmRuta.set(k, km);
+          localStorage.setItem("kmruta_" + k, km);
+        }
+      }
+    } catch (_) {}
+    kmPendientes.delete(k);
+  }
+
+  function kmHacia(rLat, rLon) {
+    if (!rLat || !rLon) { rLat = miLat + 0.003; rLon = miLon + 0.003; }
+    return kmRuta(rLat, rLon, miLat, miLon);
+  }
+
+  function calcularTarifa(kmReal, subtotal) {
+    const kmCobro = Math.max(KM_MIN, Math.min(KM_MAX, Math.ceil(kmReal)));
+    const pago = cfgPagoKm[kmCobro - KM_MIN] || 40;
+    const cubrir = pago + cfgGanancia;
+    const envio = Math.min(cubrir, cfgEnvioMax);
+    const base = cubrir - envio;
+    const minimo = kmCobro >= cfgKmMinimo ? cfgMinimoLargo : 0;
+    const maximo = Math.round(subtotal * cfgTopePct / 100.0);
+    const holgura = Math.max(0, maximo - base);
+    const extra = Math.min(holgura, Math.round(subtotal * cfgExtraPct / 100.0));
+    const aumento = base + extra;
+    const ganancia = cfgGanancia + extra;
+    return { kmCobro, pago, envio, base, minimo, extra, aumento, ganancia };
+  }
+
+  function precioVisible(precioBase, rLat, rLon) {
+    return precioBase + calcularTarifa(kmHacia(rLat, rLon), Math.round(precioBase)).aumento;
+  }
+
+  function envioPara(rLat, rLon) {
+    return calcularTarifa(kmHacia(rLat, rLon), 0).envio;
+  }
+
+  function unaSucursalPorMarca(docs) {
+    const grupos = new Map();
+    for (const d of docs) {
+      const m = (d.data().marca_id || "").trim().toLowerCase();
+      if (!m) continue;
+      if (!grupos.has(m)) grupos.set(m, []);
+      grupos.get(m).push(d);
+    }
+    if (grupos.size === 0) return docs;
+    const elegida = new Map();
+    for (const [k, lista] of grupos.entries()) {
+      let mejor = null, mejorKm = Infinity, mejorAbierto = false;
+      for (const d of lista) {
+        const dt = d.data();
+        if (dt.ciudad && dt.ciudad.toLowerCase() !== miCiudad.toLowerCase()) continue;
+        const abierto = String(dt.estado || "").toUpperCase() !== "CERRADO";
+        const la = Number(dt.latitud || 0), lo = Number(dt.longitud || 0);
+        const km = (!la || !lo) ? Infinity / 2 : calcularDistanciaKm(miLat, miLon, la, lo);
+        if (!mejor || (abierto && !mejorAbierto) || (abierto === mejorAbierto && km < mejorKm)) {
+          mejor = d; mejorKm = km; mejorAbierto = abierto;
+        }
+      }
+      if (mejor) elegida.set(k, mejor.id);
+    }
+    return docs.filter(d => {
+      const m = (d.data().marca_id || "").trim().toLowerCase();
+      if (!m) return true;
+      const id = elegida.get(m);
+      return !id || id === d.id;
+    });
+  }
+
+  // ==================== ESCUCHAS GLOBALES FIREBASE ====================
+  function iniciarListenersGlobales() {
+    if (!db) return;
+    onSnapshot(doc(db, "configuracion", "tarifas"), (snap) => {
+      if (!snap.exists()) return;
+      const d = snap.data();
+      if (typeof d.tope_aumento_pct === "number") cfgTopePct = d.tope_aumento_pct;
+      if (typeof d.envio_visible_max === "number") cfgEnvioMax = d.envio_visible_max;
+      if (typeof d.ganancia_pedido === "number") cfgGanancia = d.ganancia_pedido;
+      if (typeof d.ganancia_extra_pct === "number") cfgExtraPct = d.ganancia_extra_pct;
+      if (typeof d.pedido_minimo === "number") cfgMinimoLargo = d.pedido_minimo;
+      if (typeof d.km_pedido_minimo === "number") cfgKmMinimo = d.km_pedido_minimo;
+      if (Array.isArray(d.pago_km) && d.pago_km.length === (KM_MAX - KM_MIN + 1)) cfgPagoKm = d.pago_km;
+    });
+
+    onSnapshot(collection(db, "restaurantes"), (snap) => {
+      for (const d of unaSucursalPorMarca(snap.docs)) {
+        estadoLocales.set(d.id, String(d.data().estado || "ABIERTO"));
+      }
+    });
+  }
+
+  // ==================== FLUJO DE AUTENTICACIÓN ====================
+  window.cambiarVistaAuth = (vista) => {
+    document.getElementById("layoutLogin").style.display = vista === "login" ? "block" : "none";
+    document.getElementById("layoutRegistro").style.display = vista === "registro" ? "block" : "none";
+    document.getElementById("layoutRecuperar").style.display = vista === "recuperar" ? "block" : "none";
+  };
+
+  window.mostrarRecuperar = () => {
+    document.getElementById("etRecCorreo").value = document.getElementById("etLogTelefono").value.trim();
+    document.getElementById("tvRecEstado").style.display = "none";
+    cambiarVistaAuth("recuperar");
+  };
+
+  window.enviarRecuperacion = async () => {
+    const c = document.getElementById("etRecCorreo").value.trim().toLowerCase();
+    if (!c.includes("@")) { mostrarToast("Escribe un correo válido"); return; }
+    if (auth) await sendPasswordResetEmail(auth, c).catch(()=>{});
+    const tv = document.getElementById("tvRecEstado");
+    tv.textContent = "✅ Si el correo está registrado, te enviamos el enlace. Revisa también tu carpeta de Spam.";
+    tv.style.display = "block";
+  };
+
+  window.ajustarMaxTel = () => {
+    const sel = document.getElementById("spRegPais");
+    const len = sel.options[sel.selectedIndex].getAttribute("data-len") || "8";
+    document.getElementById("etRegTelefono").maxLength = parseInt(len);
+  };
+
+  window.validarPaso1Registro = async () => {
+    const cb = document.getElementById("cbAcepto").checked;
+    if (!cb) { mostrarToast("Debes aceptar los términos y la política"); return; }
+    const n = document.getElementById("etRegNombre").value.trim();
+    const c = document.getElementById("etRegCorreo").value.trim().toLowerCase();
+    const t = document.getElementById("etRegTelefono").value.trim();
+    const p = document.getElementById("etRegPin").value;
+    if (!n || !c || !t || !p) { mostrarToast("Completa todos los campos"); return; }
+    if (p.length < 6) { mostrarToast("La contraseña debe tener mínimo 6 caracteres"); return; }
+    if (!c.includes("@")) { mostrarToast("Correo inválido"); return; }
+
+    const telF = document.getElementById("spRegPais").value + t;
+    if (db) {
+      const docTel = await getDoc(doc(db, "clientes", telF));
+      if (docTel.exists()) { mostrarToast("Teléfono ya registrado"); return; }
+      const qMail = await getDocs(query(collection(db, "clientes"), where("correo", "==", c)));
+      if (!qMail.empty) { mostrarToast("Correo ya registrado"); return; }
+    }
+    document.getElementById("layoutRegPaso1").style.display = "none";
+    document.getElementById("layoutRegPaso2").style.display = "block";
+  };
+
+  window.volverRegPaso1 = () => {
+    document.getElementById("layoutRegPaso2").style.display = "none";
+    document.getElementById("layoutRegPaso1").style.display = "block";
+  };
+
+  window.actualizarListaDireccionesReg = () => {
+    const cont = document.getElementById("contDireccionesReg");
+    cont.innerHTML = "";
+    listaDireccionesReg.forEach((dir, i) => {
+      const sel = i === indiceDireccionSeleccionada;
+      const div = document.createElement("div");
+      div.className = "pressable";
+      div.style.cssText = `display:flex; align-items:center; padding:12px 14px; border-radius:16px; margin-bottom:10px; background:${sel ? 'var(--c-primary-light)' : '#fff'}; border:${sel ? '2px solid var(--c-primary)' : '1px solid #E4DEF5'};`;
+      div.innerHTML = `
+        <input type="radio" ${sel ? 'checked' : ''} style="margin-right:10px; accent-color:var(--c-primary);" />
+        <div style="flex:1;">
+          <div style="font-size:15px; font-weight:800; color:var(--c-text);">${escHtml(dir.etiqueta)}</div>
+          ${dir.desc ? `<div style="font-size:13px; color:var(--c-muted);">${escHtml(dir.desc)}</div>` : ''}
+        </div>
+      `;
+      div.onclick = () => { indiceDireccionSeleccionada = i; actualizarListaDireccionesReg(); };
+      cont.appendChild(div);
+    });
+    const btn = document.getElementById("btnRegistrarmeFinal");
+    btn.disabled = indiceDireccionSeleccionada < 0;
+  };
+
+  window.finalizarRegistro = async () => {
+    if (indiceDireccionSeleccionada < 0) return;
+    const n = document.getElementById("etRegNombre").value.trim();
+    const c = document.getElementById("etRegCorreo").value.trim().toLowerCase();
+    const t = document.getElementById("etRegTelefono").value.trim();
+    const p = document.getElementById("etRegPin").value;
+    const telF = document.getElementById("spRegPais").value + t;
+    const dA = listaDireccionesReg[indiceDireccionSeleccionada];
+
+    miLat = dA.lat; miLon = dA.lon; miDireccionDesc = dA.desc || dA.etiqueta;
+    miCiudad = document.getElementById("spRegCiudad").value;
+    const miIdioma = document.getElementById("spRegIdioma").value;
+
+    try {
+      if (auth) {
+        const cred = await createUserWithEmailAndPassword(auth, c, p);
+        sendEmailVerification(cred.user).catch(()=>{});
+      }
+      if (db) {
+        await setDoc(doc(db, "clientes", telF), {
+          nombre: n, correo: c, telefono: telF, ciudad: miCiudad, idioma: miIdioma,
+          consentimiento_version: "v2",
+          consentimiento_fecha: new Date().toISOString().slice(0,16).replace("T"," "),
+          latitud: miLat, longitud: miLon, direccion_desc: miDireccionDesc,
+          direcciones: listaDireccionesReg, indice_dir_activa: indiceDireccionSeleccionada
+        });
+      }
+      guardarSesionLocal(n, telF, miCiudad, miLat, miLon, miDireccionDesc);
+      mostrarAppPrincipal();
+      cambiarTab(0);
+    } catch (e) {
+      mostrarToast("No se pudo crear la cuenta: " + e.message);
+    }
+  };
+
+  window.iniciarSesion = async () => {
+    const c = document.getElementById("etLogTelefono").value.trim().toLowerCase();
+    const p = document.getElementById("etLogPin").value;
+    if (!c || !p) { mostrarToast("Escribe tu correo y contraseña"); return; }
+
+    if (!db || !auth) {
+      // Modo Demo si aún no puso sus credenciales de Firebase
+      guardarSesionLocal("Cliente Demo", "+50499999999", "Choluteca", 13.3024, -87.1921, "Centro Choluteca");
+      mostrarAppPrincipal();
+      cambiarTab(0);
+      return;
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, c, p);
+      const q = await getDocs(query(collection(db, "clientes"), where("correo", "==", c)));
+      if (q.empty) {
+        await signOut(auth);
+        mostrarToast("No encontramos tu perfil. Crea tu cuenta.");
+        return;
+      }
+      const docSnap = q.docs[0];
+      const dt = docSnap.data();
+      const telF = dt.telefono || docSnap.id;
+      guardarSesionLocal(
+        dt.nombre || "Cliente", telF, dt.ciudad || "Choluteca",
+        Number(dt.latitud || 13.3024), Number(dt.longitud || -87.1921), dt.direccion_desc || ""
+      );
+      mostrarAppPrincipal();
+      cambiarTab(0);
+    } catch (e) {
+      mostrarToast("Correo o contraseña incorrectos");
+    }
+  };
+
+  window.cerrarSesion = async () => {
+    if (sliderInterval) clearInterval(sliderInterval);
+    if (auth) await signOut(auth).catch(()=>{});
+    localStorage.clear();
+    miTelefono = "";
+    mostrarPantalla("layoutAuth");
+    cambiarVistaAuth("login");
+  };
+
+  function guardarSesionLocal(nom, tel, ciu, lat, lon, desc) {
+    miNombre = nom; miTelefono = tel; miCiudad = ciu; miLat = lat; miLon = lon; miDireccionDesc = desc;
+    localStorage.setItem("llevari_nombre", nom);
+    localStorage.setItem("llevari_telefono", tel);
+    localStorage.setItem("llevari_ciudad", ciu);
+    localStorage.setItem("llevari_lat", lat);
+    localStorage.setItem("llevari_lon", lon);
+    localStorage.setItem("llevari_dir_desc", desc);
+  }
+
+  function mostrarAppPrincipal() {
+    mostrarPantalla("layoutAppMain");
+    actualizarCabecera();
+    actualizarBadgeCarrito();
+  }
+
+  function actualizarCabecera() {
+    const primer = (miNombre || "").trim().split(" ")[0];
+    document.getElementById("tvSaludo").textContent = primer ? `Hola, ${primer} 👋  •  Entregar en` : "Entregar en";
+    document.getElementById("tvUbicacion").textContent = `📍 ${miCiudad}${miDireccionDesc ? ' • ' + miDireccionDesc : ''} ⌄`;
+  }
+
+  // ==================== NAVEGACIÓN DE TABS Y CABECERA ====================
+  window.cambiarTab = (i) => {
+    tabActualIndex = i;
+    document.querySelectorAll(".tab-view").forEach((el, idx) => el.classList.toggle("active", idx === i));
+    document.querySelectorAll(".nav-item").forEach((el, idx) => el.classList.toggle("active", idx === i));
+    document.getElementById("searchRow").style.display = i === 0 ? "flex" : "none";
+
+    if (i === 0) {
+      document.getElementById("etBuscador").value = "";
+      vistaActualTipo = "inicio";
+      cargarInicioPrincipal();
+    } else {
+      if (sliderInterval) clearInterval(sliderInterval);
+      if (i === 1) dibujarCarrito();
+      if (i === 2) cargarHistorial();
+    }
+  };
+
+  // ==================== CARGA DE INICIO PRINCIPAL ====================
+  window.cargarInicioPrincipal = async () => {
+    vistaActualTipo = "inicio";
+    const cont = document.getElementById("contRestaurantes");
+    document.getElementById("etBuscador").placeholder = "Locales, platos y productos";
+    cont.innerHTML = crearHtmlLoaderInicio();
+    listaPublicitariaGlobal = [];
+    todosLosProductosCache = [];
+
+    // Construir estructura base de inicio
+    setTimeout(async () => {
+      cont.innerHTML = "";
+      if (pedidoActivoId && rNombreTemp) {
+        cont.appendChild(crearBannerPedidoEnProceso(rNombreTemp));
+      }
+
+      // Slider Publicitario
+      const sliderDiv = document.createElement("div");
+      sliderDiv.id = "sliderPublicidadContainer";
+      cont.appendChild(sliderDiv);
+      actualizarVistaSliderPublicitario("Descubriendo...", "Preparando los mejores antojos.", "", null);
+
+      // Categorías Grandes (Súper y Restaurantes)
+      const filaG = document.createElement("div");
+      filaG.className = "cat-big-row";
+      filaG.innerHTML = `
+        <div class="cat-big pressable" style="background:linear-gradient(135deg,#FFF1DC,#FFD6A0);" onclick="mostrarToast('Súper pronto ✨')">
+          <div class="cat-big-circle">🛒</div>
+          <div style="font-size:15px; font-weight:800; color:var(--c-text); margin-top:8px;">Súper</div>
+        </div>
+        <div class="cat-big pressable" style="background:linear-gradient(135deg,#EDE9FE,#D2C2FA);" onclick="mostrarTodosLosRestaurantes()">
+          <div class="cat-big-circle">🍔</div>
+          <div style="font-size:15px; font-weight:800; color:var(--c-text); margin-top:8px;">Restaurantes</div>
+        </div>
+      `;
+      cont.appendChild(filaG);
+
+      // Categorías Chicas
+      const peques = [["🛍️", "Tiendas"], ["💊", "Farmacias"], ["📦", "Envíos"], ["🍰", "Postres"], ["🎁", "Regalos"]];
+      const filaCh = document.createElement("div");
+      filaCh.className = "h-scroll";
+      filaCh.innerHTML = peques.map(p => `
+        <div class="cat-small pressable" onclick="mostrarToast('${p[1]} pronto ✨')">
+          <div class="cat-small-icon">${p[0]}</div>
+          <div style="font-size:11.5px; font-weight:800; color:var(--c-text); margin-top:6px;">${p[1]}</div>
+        </div>
+      `).join("");
+      cont.appendChild(filaCh);
+
+      // Fila Logos Circulares
+      const rowLogos = document.createElement("div");
+      rowLogos.className = "h-scroll";
+      cont.appendChild(rowLogos);
+
+      // Sección Los mejores restaurantes
+      const secBest = document.createElement("div");
+      secBest.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin:18px 18px 6px;";
+      secBest.innerHTML = `
+        <span style="font-size:18px; font-weight:800; color:var(--c-text);">Los mejores restaurantes</span>
+        <span class="pressable" onclick="mostrarTodosLosRestaurantes()" style="font-size:13px; font-weight:800; color:var(--c-primary);">Ver todo ➔</span>
+      `;
+      cont.appendChild(secBest);
+
+      const rowBest = document.createElement("div");
+      rowBest.className = "h-scroll";
+      cont.appendChild(rowBest);
+
+      // Favoritos recientes
+      const recWrap = document.createElement("div");
+      recWrap.style.padding = "0 14px";
+      recWrap.innerHTML = `<div style="font-size:18px; font-weight:800; color:var(--c-text); margin:18px 4px 10px;">Tus favoritos recientes ⚡</div>`;
+      const contRecientesUI = document.createElement("div");
+      contRecientesUI.className = "grid-2col";
+      contRecientesUI.style.padding = "0";
+      recWrap.appendChild(contRecientesUI);
+      cont.appendChild(recWrap);
+
+      // Panel Antojos para hoy
+      const panel = document.createElement("div");
+      panel.style.cssText = "margin:22px 12px 10px; padding:18px 0 8px; border-radius:28px; background:linear-gradient(135deg,var(--c-primary),var(--c-primary-dark)); box-shadow:0 10px 24px rgba(59,7,100,0.28); display:none;";
+      panel.innerHTML = `
+        <div style="font-size:19px; font-weight:800; color:#fff; padding:0 18px;">Antojos para hoy 🔥</div>
+        <div style="font-size:12px; color:#DDD6FE; padding:2px 18px 8px;">Platillos que se te van a antojar</div>
+      `;
+      const rowPlatos = document.createElement("div");
+      rowPlatos.className = "h-scroll";
+      panel.appendChild(rowPlatos);
+      cont.appendChild(panel);
+
+      // Cargar desde Firestore (o datos de demostración si no hay conexión)
+      let locales = [];
+      if (db) {
+        try {
+          const snap = await getDocs(collection(db, "restaurantes"));
+          locales = unaSucursalPorMarca(snap.docs).map(d => ({ id: d.id, ...d.data() }));
+        } catch (e) { console.warn(e); }
+      }
+      if (locales.length === 0) locales = obtenerLocalesDemo();
+
+      const filtrados = locales.filter(d => d.nombre && (!d.ciudad || d.ciudad.toLowerCase() === miCiudad.toLowerCase()));
+      if (filtrados.length === 0) {
+        rowBest.innerHTML = `<div style="padding:24px; color:var(--c-muted);">🏪 No hay locales disponibles en ${escHtml(miCiudad)} por ahora.</div>`;
+      }
+
+      for (const r of filtrados) {
+        rowLogos.appendChild(crearLogoCirculo(r));
+        rowBest.appendChild(crearTarjetaRestauranteGrande(r));
+      }
+
+      // Recientes
+      const recIds = (localStorage.getItem("llevari_recientes") || "").split(",").filter(Boolean);
+      if (recIds.length === 0) {
+        contRecientesUI.style.display = "block";
+        contRecientesUI.innerHTML = `<div style="background:#fff; border:1px solid #E4DEF5; border-radius:16px; padding:14px 16px; font-size:13px; color:var(--c-muted);">Aún no has visitado locales. ¡Explora y empieza a pedir! 🍽️</div>`;
+      } else {
+        recIds.forEach(idR => {
+          const d = filtrados.find(x => x.id === idR);
+          if (d) contRecientesUI.appendChild(crearVistaTarjetaRestaurante(d));
+        });
+      }
+
+      // Productos para Slider y Antojos
+      for (const r of filtrados) {
+        let prods = r._demoProds || [];
+        if (db && !r._demoProds) {
+          try {
+            const pSnap = await getDocs(collection(db, "restaurantes", r.id, "productos"));
+            prods = pSnap.docs.map(pd => pd.data());
+          } catch (_) {}
+        }
+        const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
+        for (const pD of prods) {
+          if (!pD.nombre || !(pD.precio > 0)) continue;
+          const pC = {
+            rId: r.id, rNom: r.nombre, pNom: pD.nombre, pDesc: pD.descripcion || "",
+            pPrec: Number(pD.precio), pImg: pD.imagenUrl || r.logoUrl || "",
+            pOps: pD.opciones || "", rLat: Number(r.latitud || 0), rLon: Number(r.longitud || 0),
+            rCerrado: cerrado
+          };
+          todosLosProductosCache.push(pC);
+          const slogan = generarSloganInteligente(pC.pNom);
+          listaPublicitariaGlobal.push({
+            tipo: "plato",
+            titulo: slogan[0],
+            subtitulo: `${pC.pNom} • L. ${Math.round(precioVisible(pC.pPrec, pC.rLat, pC.rLon))}\n${slogan[1]}`,
+            img: pC.pImg,
+            datos: pC
+          });
+          if (rowPlatos.children.length < 12) {
+            rowPlatos.appendChild(crearTarjetaPlatoPanel(pC));
+            panel.style.display = "block";
+          }
+        }
+      }
+      iniciarSliderAutomatico();
+    }, 320);
+  };
+
+  function crearHtmlLoaderInicio() {
+    return `
+      <div style="display:flex; flex-direction:column; align-items:center; padding:60px 24px;">
+        <div style="width:92px; height:92px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:44px; box-shadow:0 12px 28px rgba(59,7,100,0.22); animation:motoTilt 1.2s infinite ease-in-out;">🛵</div>
+        <div style="font-size:17px; font-weight:800; color:var(--c-text); margin-top:18px;">Preparando tus antojos</div>
+        <div style="font-size:13px; color:var(--c-muted); margin-top:4px;">Un momento, ya casi estamos...</div>
+        <div class="indeterminate-track" style="width:170px; margin-top:16px;"><div class="indeterminate-bar"></div></div>
+      </div>
+    `;
+  }
+
+  function crearBannerPedidoEnProceso(nomRest) {
+    const b = document.createElement("div");
+    b.className = "pressable";
+    b.style.cssText = "margin:14px 16px 0; padding:14px 16px; border-radius:20px; background:linear-gradient(90deg,var(--c-accent),var(--c-accent-dark)); display:flex; align-items:center; box-shadow:0 8px 20px rgba(242,92,5,0.35); color:#fff;";
+    b.innerHTML = `
+      <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; font-size:24px;">🛵</div>
+      <div style="flex:1; padding:0 14px;">
+        <div style="font-size:16px; font-weight:800;">¡Pedido en proceso!</div>
+        <div style="font-size:13px; color:#FFF3E0;">${escHtml(nomRest)}</div>
+      </div>
+      <div style="font-size:20px; font-weight:800;">➔</div>
+    `;
+    b.onclick = () => abrirPantallaSeguimientoEnVivo();
+    return b;
+  }
+
+  function generarSloganInteligente(n) {
+    n = n.toLowerCase();
+    if (n.includes("hamburguesa") || n.includes("burger")) return ["¡Gran antojo! 🍔", "Jugosa maravilla."];
+    if (n.includes("pizza")) return ["¡Para compartir! 🍕", "Con mucho queso."];
+    if (n.includes("pollo") || n.includes("alitas")) return ["¡Crujiente! 🍗", "Perfecto hoy."];
+    if (n.includes("taco") || n.includes("nacho")) return ["¡Sabor! 🌮", "Explosión en tu boca."];
+    return ["¡Pídelo ahora! ✨", "Descubre sabor."];
+  }
+
+  function iniciarSliderAutomatico() {
+    if (sliderInterval) clearInterval(sliderInterval);
+    sliderInterval = setInterval(() => {
+      if (listaPublicitariaGlobal.length === 0) return;
+      sliderIndexActual = (sliderIndexActual + 1) % listaPublicitariaGlobal.length;
+      const it = listaPublicitariaGlobal[sliderIndexActual];
+      actualizarVistaSliderPublicitario(it.titulo, it.subtitulo, it.img, it);
+    }, 5000);
+  }
+
+  function actualizarVistaSliderPublicitario(t, s, u, a) {
+    const c = document.getElementById("sliderPublicidadContainer");
+    if (!c) return;
+    const src = resolverSrcImagen(u);
+    const total = Math.min(Math.max(listaPublicitariaGlobal.length, 1), 6);
+    let dotsHtml = "";
+    for (let i = 0; i < total; i++) {
+      dotsHtml += `<div class="slider-dot ${i === (sliderIndexActual % total) ? 'active' : ''}"></div>`;
+    }
+    c.innerHTML = `
+      ${src ? `<img class="slider-bg" src="${src}" /><div class="slider-overlay"></div>` : ''}
+      <div class="slider-content">
+        <span class="slider-badge">⚡ DESTACADO</span>
+        <div style="font-size:21px; font-weight:800; color:#fff; margin:8px 0 4px; text-shadow:0 2px 4px rgba(0,0,0,0.4);">${escHtml(t)}</div>
+        <div style="font-size:12.5px; color:#FFE2B8; white-space:pre-line;">${escHtml(s)}</div>
+        ${a ? `<span style="align-self:flex-start; margin-top:10px; background:#fff; color:var(--c-primary-dark); font-size:12px; font-weight:800; padding:6px 14px; border-radius:16px;">Pedir ahora ➔</span>` : ''}
+      </div>
+      <div class="slider-dots">${dotsHtml}</div>
+    `;
+    c.onclick = () => {
+      if (a && a.datos) cargarMenu(a.datos.rId, a.datos.rNom, "");
+    };
+  }
+
+  // ==================== COMPONENTES DE RESTAURANTES Y PRODUCTOS ====================
+  function crearLogoCirculo(r) {
+    const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
+    const envio = envioPara(r.latitud, r.longitud);
+    const src = resolverSrcImagen(r.logoUrl);
+    const d = document.createElement("div");
+    d.className = "rest-circle-item pressable";
+    if (cerrado) d.style.opacity = "0.55";
+    d.innerHTML = `
+      <div class="rest-circle-ring" style="border-color:${cerrado ? '#D1D5DB' : 'var(--c-primary)'};">
+        ${src ? `<img src="${src}" style="width:58px; height:58px; border-radius:50%; object-fit:cover;" />` : `<span style="font-size:22px;">🍴</span>`}
+      </div>
+      <div style="font-size:11px; font-weight:800; color:var(--c-text); margin-top:8px; max-width:74px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml(r.nombre)}</div>
+    `;
+    d.onclick = () => abrirRestaurante(r.id, r.nombre, r.logoUrl, cerrado, envio);
+    return d;
+  }
+
+  function crearTarjetaRestauranteGrande(r) {
+    const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
+    const costoEnvio = envioPara(r.latitud, r.longitud);
+    const src = resolverSrcImagen(r.logoUrl);
+    const d = document.createElement("div");
+    d.className = "rest-card-large pressable";
+    if (cerrado) d.style.opacity = "0.65";
+    d.innerHTML = `
+      <div style="height:150px; background:var(--c-primary-light); position:relative; display:flex; align-items:center; justify-content:center; font-size:40px;">
+        🍽️
+        ${src ? `<img src="${src}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" />` : ''}
+        <div style="position:absolute; top:12px; left:12px; background:${cerrado ? 'rgba(220,38,38,0.9)' : 'rgba(5,150,105,0.9)'}; color:#fff; font-size:11px; font-weight:800; padding:4px 10px; border-radius:12px;">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</div>
+        <div style="position:absolute; bottom:10px; right:12px; background:#fff; color:var(--c-text); font-size:12px; font-weight:800; padding:5px 10px; border-radius:12px; box-shadow:0 3px 8px rgba(0,0,0,0.2);">🛵 L. ${costoEnvio}</div>
+      </div>
+      <div style="padding:12px; display:flex; align-items:center;">
+        <div style="width:46px; height:46px; border-radius:50%; background:var(--c-primary-light); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+          ${src ? `<img src="${src}" style="width:100%; height:100%; object-fit:cover;" />` : '🏪'}
+        </div>
+        <div style="flex:1; padding-left:12px; overflow:hidden;">
+          <div style="font-size:16px; font-weight:800; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml(r.nombre)}</div>
+          <div style="font-size:12px; color:${cerrado ? '#DC2626' : 'var(--c-muted)'}; margin-top:2px;">${cerrado ? 'No disponible temporalmente' : `⏱ 20-35 min  •  🛵 L. ${costoEnvio}`}</div>
+        </div>
+      </div>
+    `;
+    d.onclick = () => abrirRestaurante(r.id, r.nombre, r.logoUrl, cerrado, costoEnvio);
+    return d;
+  }
+
+  function crearVistaTarjetaRestaurante(r) {
+    const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
+    const costoEnvio = envioPara(r.latitud, r.longitud);
+    const src = resolverSrcImagen(r.logoUrl);
+    const d = document.createElement("div");
+    d.className = "rest-card-grid pressable";
+    if (cerrado) d.style.opacity = "0.65";
+    d.innerHTML = `
+      <div style="height:110px; background:var(--c-primary-light); position:relative; display:flex; align-items:center; justify-content:center; font-size:32px;">
+        🍽️
+        ${src ? `<img src="${src}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" />` : ''}
+        <div style="position:absolute; top:8px; right:8px; background:${cerrado ? 'rgba(220,38,38,0.9)' : 'rgba(5,150,105,0.9)'}; color:#fff; font-size:10px; font-weight:800; padding:3px 8px; border-radius:10px;">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</div>
+      </div>
+      <div style="padding:10px 12px 12px;">
+        <div style="font-size:14px; font-weight:800; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml(r.nombre)}</div>
+        <div style="font-size:11.5px; color:${cerrado ? '#DC2626' : 'var(--c-muted)'}; margin-top:2px;">${cerrado ? 'No disponible' : `⏱ 20-35m • 🛵 L.${costoEnvio}`}</div>
+      </div>
+    `;
+    d.onclick = () => abrirRestaurante(r.id, r.nombre, r.logoUrl, cerrado, costoEnvio);
+    return d;
+  }
+
+  function crearTarjetaPlatoPanel(pC) {
+    const src = resolverSrcImagen(pC.pImg);
+    const vis = Math.round(precioVisible(pC.pPrec, pC.rLat, pC.rLon));
+    const d = document.createElement("div");
+    d.className = "pressable";
+    d.style.cssText = `width:156px; flex-shrink:0; background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 8px 18px rgba(30,27,75,0.25); ${pC.rCerrado ? 'opacity:0.7;' : ''}`;
+    d.innerHTML = `
+      <div style="height:120px; background:var(--c-primary-light); position:relative; display:flex; align-items:center; justify-content:center; font-size:32px;">
+        🍽️
+        ${src ? `<img src="${src}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" />` : ''}
+      </div>
+      <div style="padding:10px;">
+        <div style="font-size:13px; font-weight:800; color:var(--c-text); height:34px; overflow:hidden;">${escHtml(pC.pNom)}</div>
+        <div style="font-size:11px; color:var(--c-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:2px 0 6px;">${escHtml(pC.rNom)}</div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <strong style="font-size:15px; color:var(--c-primary-dark);">L. ${vis}</strong>
+          <div class="btn-plus" style="width:30px; height:30px; background:linear-gradient(135deg,var(--c-accent),var(--c-accent-dark)); color:#fff;">+</div>
+        </div>
+      </div>
+    `;
+    d.onclick = () => {
+      if (pC.rCerrado) { mostrarToast("Este local está cerrado actualmente 🛑"); return; }
+      dlgLat = pC.rLat; dlgLon = pC.rLon;
+      mostrarPlatoPro(pC.rId, pC.rNom, pC.pNom, pC.pDesc, pC.pPrec, pC.pImg, pC.pOps);
+    };
+    return d;
+  }
+
+  function crearFilaProducto(nombre, desc, precio, img, onClick) {
+    const src = resolverSrcImagen(img);
+    const d = document.createElement("div");
+    d.className = "prod-row-card pressable";
+    d.innerHTML = `
+      <div style="flex:1; height:104px; display:flex; flex-direction:column; padding-right:12px;">
+        <div style="font-size:15px; font-weight:800; color:var(--c-text);">${escHtml(nombre)}</div>
+        ${desc ? `<div style="font-size:12px; color:var(--c-muted); margin-top:4px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${escHtml(desc)}</div>` : ''}
+        <div style="flex:1;"></div>
+        <div style="font-size:16px; font-weight:800; color:var(--c-primary-dark);">L. ${Number(precio).toFixed(2)}</div>
+      </div>
+      <div style="width:110px; height:104px; border-radius:16px; background:var(--c-primary-light); position:relative; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:30px;">
+        🍽️
+        ${src ? `<img src="${src}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" />` : ''}
+        <div class="btn-plus" style="position:absolute; bottom:6px; right:6px; background:#fff; color:var(--c-primary);">+</div>
+      </div>
+    `;
+    d.onclick = onClick;
+    return d;
+  }
+
+  // ==================== TODOS LOS LOCALES Y MENÚ DE RESTAURANTE ====================
+  window.mostrarTodosLosRestaurantes = async () => {
+    vistaActualTipo = "todos_locales";
+    if (sliderInterval) clearInterval(sliderInterval);
+    const cont = document.getElementById("contRestaurantes");
+    cont.innerHTML = `
+      <div style="display:flex; align-items:center; padding:16px 16px 8px;">
+        <div class="pressable" onclick="cargarInicioPrincipal()" style="width:42px; height:42px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--c-primary); box-shadow:0 4px 12px rgba(59,7,100,0.15);">❮</div>
+        <div style="padding-left:14px;">
+          <div style="font-size:20px; font-weight:800; color:var(--c-text);">Todos los locales</div>
+          <div style="font-size:12px; color:var(--c-muted);">Descubre lo mejor de ${escHtml(miCiudad)}</div>
+        </div>
+      </div>
+      <div id="gridTodosLocales" class="grid-2col" style="padding:10px 14px 24px;"></div>
+    `;
+    let locales = [];
+    if (db) {
+      try {
+        const snap = await getDocs(collection(db, "restaurantes"));
+        locales = unaSucursalPorMarca(snap.docs).map(d => ({ id: d.id, ...d.data() }));
+      } catch (_) {}
+    }
+    if (locales.length === 0) locales = obtenerLocalesDemo();
+    const grid = document.getElementById("gridTodosLocales");
+    locales.filter(r => r.nombre && (!r.ciudad || r.ciudad.toLowerCase() === miCiudad.toLowerCase()))
+           .forEach(r => grid.appendChild(crearVistaTarjetaRestaurante(r)));
+  };
+
+  function abrirRestaurante(id, nom, img, cerrado, costoEnvio) {
+    if (cerrado) { mostrarToast("Este local está cerrado actualmente 🛑"); return; }
+    guardarLocalReciente(id);
+    cargarMenu(id, nom, img);
+  }
+
+  function guardarLocalReciente(rId) {
+    if (!rId) return;
+    const prev = (localStorage.getItem("llevari_recientes") || "").split(",").filter(Boolean);
+    const nueva = [rId, ...prev.filter(x => x !== rId)].slice(0, 4);
+    localStorage.setItem("llevari_recientes", nueva.join(","));
+  }
+
+  window.cargarMenu = async (rId, rNom, logo) => {
+    vistaActualTipo = "menu_restaurante";
+    restauranteIdActual = rId;
+    restauranteNombreActual = rNom;
+    restauranteLogoActual = logo || "";
+    if (sliderInterval) clearInterval(sliderInterval);
+    document.getElementById("etBuscador").value = "";
+    document.getElementById("etBuscador").placeholder = "Buscar en " + rNom;
+
+    const cont = document.getElementById("contRestaurantes");
+    cont.innerHTML = `
+      <div style="display:flex; align-items:center; padding:16px 16px 8px;">
+        <div class="pressable" onclick="cargarInicioPrincipal()" style="width:42px; height:42px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--c-primary); box-shadow:0 4px 12px rgba(59,7,100,0.15);">❮</div>
+        <div style="padding-left:14px; overflow:hidden;">
+          <div style="font-size:20px; font-weight:800; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml(rNom)}</div>
+          <div style="font-size:12px; color:var(--c-muted);">Elige tu platillo favorito</div>
+        </div>
+      </div>
+      <div class="h-scroll" id="chipsMenuRow">
+        <div class="pressable" id="chipM0" onclick="cambiarChipMenu(0)" style="padding:9px 14px; border-radius:20px; font-size:13px; font-weight:800; background:linear-gradient(90deg,var(--c-primary),var(--c-primary-dark)); color:#fff;">✨ Todos</div>
+        <div class="pressable" id="chipM1" onclick="cambiarChipMenu(1)" style="padding:9px 14px; border-radius:20px; font-size:13px; font-weight:800; background:#fff; border:1px solid #E4DEF5; color:var(--c-text);">💲 Más económico</div>
+        <div class="pressable" id="chipM2" onclick="cambiarChipMenu(2)" style="padding:9px 14px; border-radius:20px; font-size:13px; font-weight:800; background:#fff; border:1px solid #E4DEF5; color:var(--c-text);">💎 Más caro</div>
+      </div>
+      <div id="menuListaCont" style="padding:4px 14px 28px;"></div>
+    `;
+
+    menuItems = [];
+    menuModo = 0;
+    menuLat = miLat + 0.003;
+    menuLon = miLon + 0.003;
+
+    if (db) {
+      try {
+        const rd = await getDoc(doc(db, "restaurantes", rId));
+        if (rd.exists()) {
+          menuLat = Number(rd.data().latitud || rd.data().lat || menuLat);
+          menuLon = Number(rd.data().longitud || rd.data().lon || menuLon);
+          if (rd.data().logoUrl) logoRestCache.set(rId, rd.data().logoUrl);
+        }
+        const pSnap = await getDocs(collection(db, "restaurantes", rId, "productos"));
+        menuItems = pSnap.docs.map(d => ({
+          p: d.data().nombre, de: d.data().descripcion || "",
+          im: d.data().imagenUrl || "", op: d.data().opciones || "",
+          pr: Number(d.data().precio || 0)
+        }));
+      } catch (_) {}
+    }
+    if (menuItems.length === 0) {
+      const demo = obtenerLocalesDemo().find(x => x.id === rId);
+      if (demo && demo._demoProds) {
+        menuLat = demo.latitud; menuLon = demo.longitud;
+        menuItems = demo._demoProds.map(d => ({ p: d.nombre, de: d.descripcion, im: d.imagenUrl, op: d.opciones, pr: d.precio }));
+      }
+    }
+    pintarListaMenu();
+  };
+
+  window.cambiarChipMenu = (modo) => {
+    menuModo = modo;
+    [0,1,2].forEach(k => {
+      const el = document.getElementById("chipM" + k);
+      if (!el) return;
+      if (k === modo) {
+        el.style.background = "linear-gradient(90deg,var(--c-primary),var(--c-primary-dark))";
+        el.style.color = "#fff";
+        el.style.border = "none";
+      } else {
+        el.style.background = "#fff";
+        el.style.color = "var(--c-text)";
+        el.style.border = "1px solid #E4DEF5";
+      }
+    });
+    pintarListaMenu();
+  };
+
+  function pintarListaMenu() {
+    const cont = document.getElementById("menuListaCont");
+    if (!cont) return;
+    cont.innerHTML = "";
+    const q = (document.getElementById("etBuscador").value || "").trim().toLowerCase();
+    let lista = menuItems.filter(it => !q || (it.p + " " + it.de).toLowerCase().includes(q));
+    if (menuModo === 1) lista.sort((a,b) => a.pr - b.pr);
+    if (menuModo === 2) lista.sort((a,b) => b.pr - a.pr);
+
+    if (lista.length === 0) {
+      cont.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--c-muted);">🍽️ No encontramos productos disponibles.</div>`;
+      return;
+    }
+    const info = document.createElement("div");
+    info.style.cssText = "font-size:12px; font-weight:800; color:var(--c-muted); margin:2px 4px 10px;";
+    info.textContent = `${lista.length} ${lista.length === 1 ? 'producto' : 'productos'}  •  🛵 Envío L. ${envioPara(menuLat, menuLon)}`;
+    cont.appendChild(info);
+
+    lista.forEach(it => {
+      cont.appendChild(crearFilaProducto(it.p, it.de, precioVisible(it.pr, menuLat, menuLon), it.im, () => {
+        dlgLat = menuLat; dlgLon = menuLon;
+        mostrarPlatoPro(restauranteIdActual, restauranteNombreActual, it.p, it.de, it.pr, it.im, it.op);
+      }));
+    });
+  }
+
+  // ==================== BUSCADOR GLOBAL ====================
+  window.filtrarResultados = (q) => {
+    if (vistaActualTipo === "menu_restaurante") {
+      pintarListaMenu();
+      return;
+    }
+    if (!q) { cargarInicioPrincipal(); return; }
+    const cont = document.getElementById("contRestaurantes");
+    cont.innerHTML = `<div style="font-size:18px; font-weight:800; color:var(--c-text); margin:18px 18px 8px;">Resultados para “${escHtml(q)}”</div><div id="busqCont" style="padding:4px 14px 24px;"></div>`;
+    const bCont = document.getElementById("busqCont");
+    const norm = q.toLowerCase();
+    const encontrados = todosLosProductosCache.filter(p => (p.pNom + " " + p.pDesc + " " + p.rNom).toLowerCase().includes(norm));
+    if (encontrados.length === 0) {
+      bCont.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--c-muted);">🔍 No encontramos locales ni productos con esa búsqueda.</div>`;
+      return;
+    }
+    encontrados.forEach(p => {
+      bCont.appendChild(crearFilaProducto(p.pNom, `De: ${p.rNom}  •  🛵 Envío L. ${envioPara(p.rLat, p.rLon)}`, precioVisible(p.pPrec, p.rLat, p.rLon), p.pImg, () => {
+        if (p.rCerrado) { mostrarToast("Este local está cerrado actualmente 🛑"); return; }
+        dlgLat = p.rLat; dlgLon = p.rLon;
+        mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps);
+      }));
+    });
+  };
+
+  // ==================== DETALLE DE PLATO PRO (mostrarPlatoPro) ====================
+  let platoProState = { cnt: 1, baseP: 0, grupos: [], rId: "", rNom: "", plato: "", imgD: "", rLat: 0, rLon: 0 };
+
+  window.mostrarPlatoPro = (rId, rNom, plato, desc, baseP, imgD, opStr) => {
+    platoProState = { cnt: 1, baseP, grupos: [], rId, rNom, plato, imgD: imgD || "", rLat: dlgLat, rLon: dlgLon };
+    const src = resolverSrcImagen(imgD);
+    const sc = document.getElementById("platoScroll");
+
+    // Parsear grupos de opciones ("Tamaño:Personal,Familiar+50 / Bebida:Coca,Pepsi")
+    let gruposHtml = "";
+    if (opStr && opStr.trim()) {
+      opStr.split("/").forEach((g, gIdx) => {
+        const pt = g.split(":");
+        if (pt.length < 2) return;
+        const gNombre = pt[0].trim();
+        let items = [];
+        let tieneCosto = false;
+        pt[1].split(",").forEach(o => {
+          if (!o.trim()) return;
+          let nO = o.trim(), pOp = 0;
+          if (nO.includes("+")) {
+            const se = nO.split("+");
+            nO = se[0].trim();
+            pOp = parseFloat(se[1].replace(/[^0-9.]/g, "")) || 0;
+            if (pOp > 0) tieneCosto = true;
+          }
+          items.push({ nO, pOp });
+        });
+        if (tieneCosto) items.unshift({ nO: "No gracias", pOp: 0 });
+        platoProState.grupos.push({ nombre: gNombre, items, sel: 0 });
+
+        gruposHtml += `
+          <div class="card" style="margin:12px 14px 0; border-radius:18px; padding:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="font-size:16px; color:#0F172A;">${escHtml(gNombre)}</strong>
+              <span style="font-size:11px; background:#F1F5F9; color:#334155; padding:4px 10px; border-radius:8px; font-weight:700;">Obligatorio</span>
+            </div>
+            <div style="font-size:13px; color:#94A3B8; margin:4px 0 12px;">Selecciona una opción</div>
+            ${items.map((it, iIdx) => `
+              <label style="display:flex; align-items:center; padding:12px 0; border-bottom:${iIdx < items.length-1 ? '1px solid #F1F5F9' : 'none'}; cursor:pointer;" onclick="selOpcionPlato(${gIdx}, ${iIdx})">
+                <input type="radio" name="grp_${gIdx}" ${iIdx === 0 ? 'checked' : ''} style="accent-color:var(--c-primary); width:18px; height:18px;" />
+                <span style="flex:1; padding-left:12px; font-size:15px; color:#334155;">${escHtml(it.nO)}</span>
+                ${it.pOp > 0 ? `<strong style="font-size:14px; color:#64748B;">+ L. ${it.pOp.toFixed(2)}</strong>` : ''}
+              </label>
+            `).join("")}
+          </div>
+        `;
+      });
+    }
+
+    sc.innerHTML = `
+      <div style="height:310px; background:linear-gradient(135deg,var(--c-primary-deep),var(--c-primary)); border-radius:0 0 32px 32px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:72px; box-shadow:0 8px 24px rgba(59,7,100,0.25);">
+        🍽️
+        ${src ? `<img src="${src}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" />` : ''}
+        <div style="position:absolute; bottom:18px; left:16px; background:rgba(0,0,0,0.55); color:#fff; padding:6px 12px; border-radius:14px; font-size:13px; font-weight:800;">🏪 ${escHtml(rNom)}</div>
+      </div>
+      <div style="padding:20px 18px 6px;">
+        <div style="font-size:25px; font-weight:800; color:#0F172A; margin-bottom:6px;">${escHtml(plato)}</div>
+        ${desc ? `<div style="font-size:14px; color:#64748B; margin-bottom:10px;">${escHtml(desc)}</div>` : ''}
+        <div id="platoTvP" style="font-size:23px; font-weight:800; color:var(--c-primary-dark);"></div>
+      </div>
+      ${gruposHtml}
+    `;
+
+    document.getElementById("platoBotBar").innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:19px; font-weight:800; color:#0F172A;">
+        <span>Tu producto</span>
+        <span id="platoTpV">L. 0</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; margin-top:14px;">
+        <div style="display:flex; align-items:center; background:#F1F2F6; border-radius:29px; height:54px; padding:0 8px;">
+          <span class="pressable" onclick="cambiarCantPlato(-1)" style="font-size:22px; font-weight:800; padding:0 12px;">－</span>
+          <span id="platoCnt" style="font-size:18px; font-weight:800; min-width:26px; text-align:center;">1</span>
+          <span class="pressable" onclick="cambiarCantPlato(1)" style="font-size:22px; font-weight:800; padding:0 12px;">＋</span>
+        </div>
+        <button id="platoBtnPedir" class="btn-main pressable" style="flex:1; margin:0; height:54px; font-size:16px;" onclick="pedirDirectoDesdePlato()">Pedir</button>
+      </div>
+      <div class="pressable" onclick="agregarAlCarritoDesdePlato()" style="margin-top:10px; height:48px; border-radius:24px; background:var(--c-primary-light); border:2px solid var(--c-primary); color:var(--c-primary-dark); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;">🛒 Agregar al carrito</div>
+    `;
+
+    recalcularPlatoPro();
+    document.getElementById("layoutPlatoPro").classList.add("active");
+  };
+
+  window.cerrarPlatoPro = () => {
+    document.getElementById("layoutPlatoPro").classList.remove("active");
+  };
+
+  window.selOpcionPlato = (gIdx, iIdx) => {
+    platoProState.grupos[gIdx].sel = iIdx;
+    recalcularPlatoPro();
+  };
+
+  window.cambiarCantPlato = (delta) => {
+    if (platoProState.cnt + delta >= 1) {
+      platoProState.cnt += delta;
+      recalcularPlatoPro();
+    }
+  };
+
+  function recalcularPlatoPro() {
+    let ex = 0;
+    platoProState.grupos.forEach(g => { ex += g.items[g.sel].pOp; });
+    const u = platoProState.baseP + ex;
+    const sub = Math.round(u * platoProState.cnt);
+    const t = calcularTarifa(kmHacia(platoProState.rLat, platoProState.rLon), sub);
+    const productos = sub + t.aumento;
+    const total = productos + t.envio;
+
+    document.getElementById("platoCnt").textContent = platoProState.cnt;
+    document.getElementById("platoTvP").textContent = `L. ${(productos / platoProState.cnt).toFixed(2)}${platoProState.cnt > 1 ? ' c/u' : ''}`;
+    document.getElementById("platoTpV").textContent = `L. ${productos}`;
+    document.getElementById("platoBtnPedir").textContent = `Pedir • L. ${total}`;
+    platoProState.subtotalActual = u * platoProState.cnt;
+  }
+
+  function armarOpcionesTextoPlato() {
+    const partes = [];
+    platoProState.grupos.forEach(g => {
+      const elegida = g.items[g.sel].nO;
+      if (elegida.toLowerCase() !== "no gracias") partes.push(`${g.nombre}: ${elegida}`);
+    });
+    return partes.join(" / ");
+  }
+
+  window.agregarAlCarritoDesdePlato = () => {
+    const ops = armarOpcionesTextoPlato();
+    let la = platoProState.rLat, lo = platoProState.rLon;
+    if (!la || !lo) { la = miLat + 0.003; lo = miLon + 0.003; }
+    agregarAlCarritoDirecto(
+      platoProState.rId, platoProState.rNom, `${platoProState.cnt}x ${platoProState.plato}`,
+      platoProState.subtotalActual, ops, platoProState.imgD, la, lo
+    );
+    cerrarPlatoPro();
+  };
+
+  window.pedirDirectoDesdePlato = () => {
+    const ops = armarOpcionesTextoPlato();
+    carritoRestPendiente = null;
+    restIdSeleccionadoTemp = platoProState.rId;
+    rNombreTemp = platoProState.rNom;
+    imgPlatoTemp = platoProState.imgD;
+    platoTemp = `${platoProState.cnt}x ${platoProState.plato}${ops ? ` (${ops})` : ''}`;
+    precioPlatoTemp = platoProState.subtotalActual;
+    restauranteLatTemp = platoProState.rLat || (miLat + 0.003);
+    restauranteLonTemp = platoProState.rLon || (miLon + 0.003);
+    cerrarPlatoPro();
+    abrirPantallaTipoServicio();
+  };
+
+  // ==================== CARRITO DE COMPRAS ====================
+  function limpiarCampoCarrito(s) { return (s || "").replace(/\|/g, "/").replace(/;/g, ","); }
+
+  function agregarAlCarritoDirecto(rId, rNom, nombre, precioTotal, opciones, img, lat, lon) {
+    const imagen = (!img || img.length > 150000) ? "" : img;
+    const item = [
+      limpiarCampoCarrito(rId), limpiarCampoCarrito(rNom), limpiarCampoCarrito(nombre),
+      Number(precioTotal).toFixed(2), limpiarCampoCarrito(opciones), imagen, lat, lon
+    ].join("||");
+    const actual = localStorage.getItem("llevari_carrito") || "";
+    localStorage.setItem("llevari_carrito", actual + item + ";;");
+    actualizarBadgeCarrito();
+    mostrarToast("🛒 Agregado al carrito");
+  }
+
+  function actualizarBadgeCarrito() {
+    const c = (localStorage.getItem("llevari_carrito") || "").split(";;").filter(x => x.trim());
+    const lbl = document.getElementById("navLbl1");
+    if (lbl) lbl.textContent = c.length > 0 ? `Carrito (${c.length})` : "Carrito";
+  }
+
+  function dibujarCarrito() {
+    actualizarBadgeCarrito();
+    const cont = document.getElementById("contCarrito");
+    const car = localStorage.getItem("llevari_carrito") || "";
+    const itm = car.split(";;").filter(x => x.trim());
+
+    if (itm.length === 0) {
+      cont.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; padding:60px 24px; text-align:center;">
+          <div style="font-size:54px; animation:floatAnim 2s infinite ease-in-out;">🛒</div>
+          <div style="font-size:15px; color:var(--c-muted); margin-top:12px; line-height:1.4;">Tu carrito está vacío<br>Agrega platillos desde tus locales favoritos</div>
+        </div>
+      `;
+      return;
+    }
+
+    const grupos = new Map();
+    const nombres = new Map();
+    itm.forEach((raw, idx) => {
+      const p = raw.split("||");
+      if (p.length < 5) return;
+      const prc = parseFloat(p[3]) || 0;
+      const la = parseFloat(p[6]) || (miLat + 0.003);
+      const lo = parseFloat(p[7]) || (miLon + 0.003);
+      if (!grupos.has(p[0])) {
+        grupos.set(p[0], { sub: 0, la, lo, items: [] });
+        nombres.set(p[0], p[1]);
+      }
+      const g = grupos.get(p[0]);
+      g.sub += prc;
+      g.items.push({ idx, p, prc });
+    });
+
+    let html = `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:26px; font-weight:800; color:var(--c-text);">Tu carrito</div>
+        <div style="font-size:13px; color:var(--c-muted); margin-top:2px;">${itm.length} ${itm.length === 1 ? 'producto' : 'productos'}${grupos.size > 1 ? ` • ${grupos.size} locales` : ''}</div>
+      </div>
+    `;
+
+    for (const [gKey, g] of grupos.entries()) {
+      const tg = calcularTarifa(kmHacia(g.la, g.lo), Math.round(g.sub));
+      html += `
+        <div class="card" style="display:flex; align-items:center; padding:14px; border-radius:24px; margin-bottom:12px;">
+          <div style="width:52px; height:52px; border-radius:16px; background:var(--c-primary-light); display:flex; align-items:center; justify-content:center; font-size:24px;">🏪</div>
+          <div style="flex:1; padding:0 12px;">
+            <div style="font-size:16px; font-weight:800; color:var(--c-text);">${escHtml(nombres.get(gKey))}</div>
+            <div style="font-size:12px; color:var(--c-muted);">⏱ Recibes en 20-35 min</div>
+            <div style="font-size:12px; font-weight:800; color:var(--c-primary-dark);">🛵 Envío L. ${tg.envio}</div>
+          </div>
+          <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,var(--c-accent),var(--c-accent-dark)); display:flex; align-items:center; justify-content:center; font-size:24px;">🛵</div>
+        </div>
+      `;
+
+      for (const itemObj of g.items) {
+        const p = itemObj.p;
+        const visible = itemObj.prc + (g.sub > 0 ? (tg.aumento * itemObj.prc / g.sub) : 0);
+        const src = resolverSrcImagen(p[5]);
+        html += `
+          <div class="card" style="display:flex; align-items:center; padding:12px; border-radius:22px; margin-bottom:12px;">
+            <div style="width:84px; height:84px; border-radius:16px; background:var(--c-primary-light); position:relative; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:28px;">
+              🍽️
+              ${src ? `<img src="${src}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" />` : ''}
+            </div>
+            <div style="flex:1; padding:0 12px;">
+              <div style="font-size:15px; font-weight:800; color:var(--c-text);">${escHtml(p[2])}</div>
+              ${p[4] ? `<div style="font-size:12px; color:var(--c-muted); margin-top:3px;">${escHtml(p[4])}</div>` : ''}
+              <div style="font-size:16px; font-weight:800; color:var(--c-primary-dark); margin-top:6px;">L. ${visible.toFixed(2)}</div>
+            </div>
+            <div class="pressable" onclick="eliminarItemCarrito(${itemObj.idx})" style="width:42px; height:42px; border-radius:50%; background:#FEE2E2; display:flex; align-items:center; justify-content:center; font-size:18px;">🗑</div>
+          </div>
+        `;
+      }
+
+      const totLocal = (g.sub + tg.aumento + tg.envio).toFixed(2);
+      html += `
+        <button class="btn-main pressable" style="background:linear-gradient(90deg,var(--c-accent-dark),#C2410C);" onclick="irAEscogerServicioDesdeCarrito('${gKey}')">PEDIR ESTE LOCAL ➔ L. ${totLocal}</button>
+        <div class="pressable" onclick="cambiarTab(0); cargarMenu('${gKey}', '${escHtml(nombres.get(gKey))}', '');" style="background:var(--c-primary-light); color:var(--c-primary-dark); text-align:center; padding:14px; border-radius:26px; font-size:14px; font-weight:800; margin-bottom:24px;">➕  Agregar más de este local</div>
+      `;
+    }
+    cont.innerHTML = html;
+  }
+
+  window.eliminarItemCarrito = (idx) => {
+    const car = (localStorage.getItem("llevari_carrito") || "").split(";;").filter(x => x.trim());
+    car.splice(idx, 1);
+    localStorage.setItem("llevari_carrito", car.length ? car.join(";;") + ";;" : "");
+    dibujarCarrito();
+  };
+
+  window.irAEscogerServicioDesdeCarrito = (rId) => {
+    if (String(estadoLocales.get(rId) || "").toUpperCase() === "CERRADO") {
+      mostrarToast("🛑 Este local está cerrado ahora.");
+      return;
+    }
+    const car = (localStorage.getItem("llevari_carrito") || "").split(";;").filter(x => x.trim());
+    let sum = 0, la = 0, lo = 0, nom = "", img = "";
+    const platos = [];
+    car.forEach(it => {
+      const p = it.split("||");
+      if (p.length < 5 || p[0] !== rId) return;
+      if (!nom) { nom = p[1]; img = p[5] || ""; la = parseFloat(p[6]) || 0; lo = parseFloat(p[7]) || 0; }
+      sum += parseFloat(p[3]) || 0;
+      platos.push(p[2] + (p[4] ? ` (${p[4]})` : ""));
+    });
+    if (sum <= 0) return;
+    restIdSeleccionadoTemp = rId;
+    rNombreTemp = nom;
+    imgPlatoTemp = img;
+    platoTemp = platos.join("\n");
+    precioPlatoTemp = sum;
+    restauranteLatTemp = la || (miLat + 0.003);
+    restauranteLonTemp = lo || (miLon + 0.003);
+    carritoRestPendiente = rId;
+    abrirPantallaTipoServicio();
+  };
+
+  function quitarRestDelCarrito(rId) {
+    const car = (localStorage.getItem("llevari_carrito") || "").split(";;").filter(x => x.trim() && !x.startsWith(rId + "||"));
+    localStorage.setItem("llevari_carrito", car.length ? car.join(";;") + ";;" : "");
+    actualizarBadgeCarrito();
+  }
+
+  // ==================== PANTALLA TIPO DE SERVICIO (Tu pedido) ====================
+  function abrirPantallaTipoServicio() {
+    modalidadDelivery = true;
+    refrescarTipoServicioNuevo();
+    document.getElementById("layoutTipoServicio").classList.add("active");
+  }
+
+  window.cerrarTipoServicio = () => {
+    document.getElementById("layoutTipoServicio").classList.remove("active");
+  };
+
+  window.elegirModalidad = (deliv) => {
+    modalidadDelivery = deliv;
+    document.getElementById("btnModDeliv").style.background = deliv ? "var(--c-primary-light)" : "#fff";
+    document.getElementById("btnModDeliv").style.borderColor = deliv ? "var(--c-primary)" : "#E4DEF5";
+    document.getElementById("btnModPickup").style.background = !deliv ? "var(--c-primary-light)" : "#fff";
+    document.getElementById("btnModPickup").style.borderColor = !deliv ? "var(--c-primary)" : "#E4DEF5";
+    refrescarTipoServicioNuevo();
+  };
+
+  function refrescarTipoServicioNuevo() {
+    const del = modalidadDelivery;
+    const sub = Math.round(precioPlatoTemp);
+    const t = calcularTarifa(kmHacia(restauranteLatTemp, restauranteLonTemp), sub);
+    const productos = sub + t.aumento;
+    const total = del ? (productos + t.envio) : sub;
+
+    document.getElementById("svNombreRest").textContent = rNombreTemp;
+    document.getElementById("svInfo1").textContent = del ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo";
+    document.getElementById("svInfo2").textContent = del ? `🛵 Envío L. ${t.envio}` : "Sin costo de envío";
+    document.getElementById("svItemNombre").textContent = platoTemp;
+    document.getElementById("svItemPrecio").textContent = `L. ${del ? productos : sub}`;
+    document.getElementById("svValProd").textContent = `L. ${del ? productos : sub}`;
+    document.getElementById("svFilaEnvio").style.display = del ? "flex" : "none";
+    document.getElementById("svValEnvio").textContent = `L. ${t.envio}`;
+    document.getElementById("svLblTotal").textContent = del ? "Total a pagar al repartidor" : "Total a pagar en el local";
+    document.getElementById("svValTotal").textContent = `L. ${total}`;
+
+    const imSrc = resolverSrcImagen(imgPlatoTemp);
+    const elIm = document.getElementById("svImgItem");
+    if (imSrc) { elIm.src = imSrc; elIm.style.display = "block"; } else elIm.style.display = "none";
+
+    const falta = del && t.minimo > 0 && sub < t.minimo;
+    const av = document.getElementById("svAviso");
+    if (falta) {
+      av.textContent = `⚠️ Pedido mínimo para delivery: L. ${t.minimo} (te faltan L. ${t.minimo - sub})`;
+      av.style.display = "block";
+    } else av.style.display = "none";
+
+    const btn = document.getElementById("svBtnConfirmar");
+    btn.textContent = `Confirmar pedido • L. ${total}`;
+    btn.style.opacity = falta ? "0.55" : "1";
+  }
+
+  window.confirmarPedidoServicio = async () => {
+    const sub = Math.round(precioPlatoTemp);
+    const t = calcularTarifa(kmHacia(restauranteLatTemp, restauranteLonTemp), sub);
+    if (modalidadDelivery && t.minimo > 0 && sub < t.minimo) {
+      mostrarToast(`Pedido mínimo para delivery: L. ${t.minimo}. Te faltan L. ${t.minimo - sub}.`);
+      return;
+    }
+    tipoServicioElegido = modalidadDelivery ? "DELIVERY" : "PICKUP";
+    if (carritoRestPendiente) {
+      quitarRestDelCarrito(carritoRestPendiente);
+      carritoRestPendiente = null;
+    }
+    cerrarTipoServicio();
+    const anim = document.getElementById("layoutAnimacion");
+    anim.classList.add("active");
+
+    const deliv = tipoServicioElegido === "DELIVERY";
+    const envio = deliv ? t.envio : 0;
+    const aumento = deliv ? t.aumento : 0;
+    const tF = precioPlatoTemp + aumento + envio;
+    const ahora = new Date();
+    const fechaStr = ahora.toLocaleDateString("es-HN", { day:"2-digit", month:"short" }) + " " + ahora.toTimeString().slice(0,5);
+
+    const m = {
+      estado: "NUEVO", subtotal: precioPlatoTemp, costo_envio: envio, aumento, total: tF,
+      km_cobro: deliv ? t.kmCobro : 0, pago_motorista: deliv ? t.pago : 0, ganancia: deliv ? t.ganancia : 0,
+      nombre_plato: platoTemp, fecha: fechaStr, cliente_nombre: miNombre, cliente_telefono: miTelefono,
+      cliente_lat: miLat, cliente_lon: miLon, cliente_direccion_desc: miDireccionDesc,
+      restaurante_nombre: rNombreTemp, restaurante_lat: restauranteLatTemp, restaurante_lon: restauranteLonTemp,
+      tipo_servicio: tipoServicioElegido, metodo_pago: "EFECTIVO",
+      repartidor_nombre: "", repartidor_lat: 0, repartidor_lon: 0, repartidor_bearing: 0
+    };
+
+    if (db && miTelefono) {
+      try {
+        const resRef = doc(db, "restaurantes", restIdSeleccionadoTemp);
+        const colRef = collection(db, "restaurantes", restIdSeleccionadoTemp, "pedidos");
+        const nuevoRef = doc(colRef);
+        await runTransaction(db, async (tr) => {
+          const rDoc = await tr.get(resRef);
+          const c = rDoc.exists() ? (rDoc.data().contador_pedidos || 1000) : 1000;
+          const nuevoIdNum = c + 1;
+          tr.update(resRef, { contador_pedidos: nuevoIdNum });
+          tr.set(nuevoRef, { ...m, id_numerico: nuevoIdNum, timestamp: serverTimestamp() });
+        });
+        pedidoActivoId = nuevoRef.id;
+        await setDoc(doc(db, "clientes", miTelefono, "mis_pedidos", pedidoActivoId), {
+          ...m, rId: restIdSeleccionadoTemp, pId: pedidoActivoId
+        });
+      } catch (e) {
+        pedidoActivoId = "ped_" + Date.now();
+      }
+    } else {
+      pedidoActivoId = "ped_" + Date.now();
+    }
+
+    localStorage.setItem("llevari_pedidoActivoId", pedidoActivoId);
+    localStorage.setItem("llevari_restIdActivo", restIdSeleccionadoTemp);
+    localStorage.setItem("llevari_rNombreActivo", rNombreTemp);
+    localStorage.setItem("llevari_restLatActivo", restauranteLatTemp);
+    localStorage.setItem("llevari_restLonActivo", restauranteLonTemp);
+
+    setTimeout(() => {
+      anim.classList.remove("active");
+      abrirPantallaSeguimientoEnVivo();
+    }, 2200);
+  };
+
+  // ==================== SEGUIMIENTO EN VIVO CON MAPLIBRE ====================
+  let mapTrack = null, mkRest = null, mkCli = null, mkDrv = null, trackUserMoved = false;
+
+  window.abrirPantallaSeguimientoEnVivo = () => {
+    document.getElementById("layoutSeguimiento").classList.add("active");
+    document.getElementById("tvNombreRestauranteSeguimiento").textContent = rNombreTemp || "Restaurante";
+    iniciarMapaSeguimiento();
+
+    if (seguimientoUnsub) seguimientoUnsub();
+    if (db && restIdSeleccionadoTemp && pedidoActivoId && !pedidoActivoId.startsWith("ped_")) {
+      seguimientoUnsub = onSnapshot(doc(db, "restaurantes", restIdSeleccionadoTemp, "pedidos", pedidoActivoId), (snap) => {
+        if (!snap.exists()) return;
+        procesarSnapshotSeguimiento(snap.data());
+      });
+    } else {
+      // Estado inicial si está en modo local
+      procesarSnapshotSeguimiento({
+        estado: "NUEVO", subtotal: precioPlatoTemp,
+        aumento: calcularTarifa(kmHacia(restauranteLatTemp, restauranteLonTemp), Math.round(precioPlatoTemp)).aumento,
+        costo_envio: envioPara(restauranteLatTemp, restauranteLonTemp),
+        total: precioPlatoTemp + precioVisible(0, restauranteLatTemp, restauranteLonTemp) + envioPara(restauranteLatTemp, restauranteLonTemp),
+        tipo_servicio: tipoServicioElegido
+      });
+    }
+  };
+
+  function procesarSnapshotSeguimiento(d) {
+    const es = String(d.estado || d.status || "NUEVO").toUpperCase();
+    if (["ENTREGADO","COMPLETADO","FINALIZADO","CANCELADO","CANCELADA"].includes(es)) {
+      localStorage.removeItem("llevari_pedidoActivoId");
+      pedidoActivoId = "";
+      mostrarToast(es.includes("CANCEL") ? "❌ Pedido Cancelado" : "🎉 ¡Pedido finalizado!");
+      cerrarPantallaSeguimiento();
+      return;
+    }
+
+    const sb = Number(d.subtotal || 0), au = Number(d.aumento || 0), en = Number(d.costo_envio || 0), to = Number(d.total || 0);
+    const pick = String(d.tipo_servicio || "").toUpperCase() === "PICKUP";
+    document.getElementById("tvCobroSeguimiento").textContent = pick
+      ? `💵 Pagas en el local: L. ${to.toFixed(2)}`
+      : `💵 Pagas al repartidor: L. ${to.toFixed(2)}\n(productos L. ${(sb+au).toFixed(2)} + envío L. ${en.toFixed(2)})`;
+
+    const rN = d.repartidor_nombre || "";
+    const repAsignado = rN && rN.toLowerCase() !== "buscando...";
+    document.getElementById("btnAbrirChat").style.display = repAsignado ? "block" : "none";
+
+    const rLa = Number(d.repartidor_lat || 0), rLo = Number(d.repartidor_lon || 0);
+    const tieneGps = rLa !== 0 && rLo !== 0;
+    const enNuevo = es === "NUEVO" || es === "PENDIENTE";
+    const haciaCliente = es === "EN_CAMINO" || es === "DESPACHADO";
+
+    actualizarMarcadoresTracking(restauranteLatTemp, restauranteLonTemp, miLat, miLon, rLa, rLo, rN, repAsignado && tieneGps && !enNuevo, haciaCliente);
+
+    const tvEst = document.getElementById("tvEstadoSeguimiento");
+    const tvInf = document.getElementById("tvInfoRepartidor");
+    if (enNuevo) {
+      tvEst.textContent = "Enviado al local"; tvEst.style.color = "#E11D48";
+      tvInf.textContent = "Esperando confirmación...";
+    } else if (es === "ACEPTADO") {
+      tvEst.textContent = "Preparando tu pedido"; tvEst.style.color = "#D97706";
+      tvInf.textContent = "Cocinando 👨‍🍳 (El repartidor llegará pronto)";
+    } else if (repAsignado && !haciaCliente) {
+      tvEst.textContent = "Repartidor asignado"; tvEst.style.color = "#2563EB";
+      tvInf.textContent = `${rN} va en camino al local.`;
+    } else if (haciaCliente) {
+      tvEst.textContent = "🛵 En camino"; tvEst.style.color = "#059669";
+      tvInf.textContent = `${rN} está llevando tu pedido`;
+    }
+  }
+
+  function iniciarMapaSeguimiento() {
+    if (!mapTrack) {
+      mapTrack = new maplibregl.Map({
+        container: "mapTracking",
+        style: "https://tiles.openfreemap.org/styles/positron",
+        center: [miLon, miLat],
+        zoom: 14.5,
+        attributionControl: false
+      });
+      mapTrack.on("dragstart", () => trackUserMoved = true);
+      mapTrack.on("load", () => {
+        mapTrack.addSource("route", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } });
+        mapTrack.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 10 } });
+        mapTrack.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#7C3AED", "line-width": 6 } });
+        actualizarMarcadoresTracking(restauranteLatTemp, restauranteLonTemp, miLat, miLon, 0, 0, "", false, false);
+      });
+    } else {
+      setTimeout(() => mapTrack.resize(), 100);
+    }
+  }
+
+  function crearSvgPinTracking(emoji, label) {
+    const el = document.createElement("div");
+    el.style.cssText = "width:140px; height:84px; display:flex; align-items:center; justify-content:center; pointer-events:none;";
+    const lbl = label ? `<rect x="5" y="4" width="130" height="26" rx="6" fill="#1E1E1E" stroke="#E91E63" stroke-width="1.5"/><text x="70" y="21" fill="#FFF" font-size="11" font-weight="bold" text-anchor="middle">${escHtml(label)}</text>` : "";
+    el.innerHTML = `<svg width="140" height="84" viewBox="0 0 140 84">${lbl}<circle cx="70" cy="60" r="16" fill="#FFF" stroke="#E91E63" stroke-width="3"/><text x="70" y="66" font-size="15" text-anchor="middle">${emoji}</text></svg>`;
+    return el;
+  }
+
+  async function actualizarMarcadoresTracking(rLa, rLo, cLa, cLo, dLa, dLo, dN, showD, toC) {
+    if (!mapTrack) return;
+    if (rLa && rLo) {
+      if (!mkRest) mkRest = new maplibregl.Marker({ element: crearSvgPinTracking("🏪", "") }).setLngLat([rLo, rLa]).addTo(mapTrack);
+      else mkRest.setLngLat([rLo, rLa]);
+    }
+    if (cLa && cLo) {
+      if (!mkCli) mkCli = new maplibregl.Marker({ element: crearSvgPinTracking("🏠", "Tú") }).setLngLat([cLo, cLa]).addTo(mapTrack);
+      else mkCli.setLngLat([cLo, cLa]);
+    }
+    let aLa = rLa, aLo = rLo, bLa = cLa, bLo = cLo;
+    if (showD && dLa && dLo) {
+      const nm = (dN || "REPARTIDOR").split(" ")[0].toUpperCase();
+      if (!mkDrv) mkDrv = new maplibregl.Marker({ element: crearSvgPinTracking("🛵", nm) }).setLngLat([dLo, dLa]).addTo(mapTrack);
+      else mkDrv.setLngLat([dLo, dLa]);
+      aLa = dLa; aLo = dLo;
+      if (!toC) { bLa = rLa; bLo = rLo
