@@ -67,10 +67,8 @@ const ETIQUETA = {
   RECHAZADO: "🛑 Pedido rechazado" 
 };
 
-/* Subcolecciones de menú */
 const SUBCOLECCIONES_MENU = ["productos", "menu", "platos", "menus"];
 
-/* Tarifas dinámicas */
 const cfg = { 
   topePct: 35, envioMax: 30, ganancia: 5, extraPct: 3, minimoLargo: 100, kmMinimo: 5,
   pagoKm: [40, 50, 55, 60, 64, 70, 76, 82, 88, 95, 102, 109, 116, 123, 130, 137, 144, 151, 158] 
@@ -92,7 +90,6 @@ const S = {
 };
 const me = () => S.me || { lat: 13.3024, lon: -87.1921, ciudad: "Choluteca" };
 
-/* Sanitizador de URLs e Imágenes */
 const sanitizeUrl = u => u ? String(u).trim().replace(/^http:\/\//i, "https://") : "";
 
 /* ================= Utilidades ================= */
@@ -432,13 +429,6 @@ function vInicio() {
     lista = lista.filter(r => normTxt(r.nombre + " " + r.categoria).includes(q) || idsPlatos.has(r.id));
   }
   lista.sort((a, b) => (a.estado === "CERRADO") - (b.estado === "CERRADO") || haversine(m.lat, m.lon, a.lat || 0, a.lon || 0) - haversine(m.lat, m.lon, b.lat || 0, b.lon || 0));
-
-  const img = (r, cls) => {
-    const src = sanitizeUrl(r.logo);
-    return src 
-      ? `<img src="${esc(src)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` 
-      : `<span class="${cls}">🏪</span>`;
-  };
 
   const tarjeta = r => {
     const cerr = r.estado === "CERRADO", t = calcularTarifa(kmHacia(r.lat, r.lon), 0);
