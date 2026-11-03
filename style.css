@@ -31,7 +31,7 @@ body {
   max-width: 480px;
   min-height: 100vh;
   background-color: var(--white);
-  padding: 16px 16px 95px 16px; /* 95px evita que el menú inferior tape el contenido */
+  padding: 16px 16px 95px 16px;
   position: relative;
   box-shadow: 0 0 20px rgba(0,0,0,0.05);
 }
@@ -702,8 +702,7 @@ body {
 
 /* ================= Ocultar broken img automáticamente ================= */
 img.img-broken {
-  opacity: 0 !important;
-  visibility: hidden !important;
+  display: none !important;
 }
 
 .loader { text-align: center; padding: 40px; color: var(--mu); }
