@@ -1,26 +1,340 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Llevari</title>
-<meta name="theme-color" content="#7C3AED">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Llevari">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-192.png">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inicio</title>
+<style>
+/* ================= VARIABLES Y GENERAL ================= */
+:root {
+  --p: #6D28D9;
+  --p-dark: #4C1D95;
+  --p-light: #EDE9FE;
+  --bg: #F6F4FB;
+  --card: #FFFFFF;
+  --text: #1F2937;
+  --text-mu: #6B7280;
+  --pd: #D97706;
+  --orange: #F97316;
+  --red: #DC2626;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+#app { max-width: 480px; margin: 0 auto; padding-bottom: 96px; min-height: 100vh; position: relative; }
+.scroll { display: flex; overflow-x: auto; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ================= ENCABEZADO ================= */
+.header {
+  background: linear-gradient(135deg, var(--p-dark), var(--p) 85%, #7C3AED);
+  border-bottom-left-radius: 32px;
+  border-bottom-right-radius: 32px;
+  padding: 20px 15px 15px;
+  color: #fff;
+}
+.header-top { display: flex; align-items: center; justify-content: space-between; padding: 0 0 0 0; }
+.hi { font-size: 14px; color: #EDE9FE; display: flex; gap: 6px; align-items: center; }
+.loc { font-size: 20px; font-weight: 700; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.loc .pin { font-size: 16px; }
+.loc .arrow { font-size: 12px; }
+.hbtns { display: flex; gap: 12px; }
+.hbtn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; border: none; color: #fff;
+}
+.search { position: relative; margin-top: 22px; }
+.search input {
+  width: 100%; height: 50px; border: none; outline: none;
+  border-radius: 30px; background: #fff;
+  padding: 0 64px 0 24px; font-size: 16px; color: var(--text);
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  font-family: inherit;
+}
+.search input::placeholder { color: #9CA3AF; }
+.search .go {
+  position: absolute; right: 6px; top: 6px;
+  width: 38px; height: 38px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #F97316, #EA580C);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+  box-shadow: 0 3px 8px rgba(249,115,22,.4);
+}
+
+/* ================= BANNER ================= */
+.hero {
+  margin: 15px 15px 0;
+  height: 170px; border-radius: 28px;
+  background: linear-gradient(135deg, #4C1D95, #6D28D9 60%, #7C3AED);
+  padding: 20px 18px; color: #fff; position: relative; overflow: hidden;
+  box-shadow: 0 6px 18px rgba(109,40,217,.25);
+}
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: linear-gradient(90deg, #F97316, #FB923C);
+  color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .3px;
+  padding: 5px 12px; border-radius: 14px;
+}
+.hero h2 { margin: 12px 0 2px; font-size: 22px; font-weight: 800; }
+.hero p { margin: 0; font-size: 14px; color: #EDE9FE; line-height: 1.25; }
+.hero .cta {
+  position: absolute; left: 18px; top: 112px;
+  background: #fff; color: var(--p); border: none; font-weight: 800; font-size: 14px;
+  padding: 10px 20px; border-radius: 22px; font-family: inherit;
+}
+.dots { position: absolute; left: 18px; bottom: 10px; display: flex; gap: 8px; align-items: center; }
+.dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.55); transition: all .25s; }
+.dots i.on { width: 19px; background: var(--orange); }
+
+/* ================= CATEGORÍAS GRANDES ================= */
+.big { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 19px 15px 0; }
+.bigcard {
+  height: 126px; border-radius: 26px; padding: 12px 0 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  box-shadow: 0 6px 14px rgba(0,0,0,.06);
+}
+.bigcard.super { background: linear-gradient(135deg, #FDEBD3, #FFD9A8); }
+.bigcard.rest  { background: linear-gradient(135deg, #EDE9FE, #D2C4FA); }
+.bigcard .circ {
+  width: 74px; height: 74px; border-radius: 50%; background: rgba(255,255,255,.5);
+  display: flex; align-items: center; justify-content: center; font-size: 40px;
+}
+.bigcard b { font-size: 16px; font-weight: 700; }
+
+/* ================= CATEGORÍAS PEQUEÑAS ================= */
+.mini { gap: 12px; padding: 15px 15px 12px; }
+.minicard {
+  flex: 0 0 78px; height: 87px; border-radius: 22px; background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+.minicard .circ {
+  width: 48px; height: 48px; border-radius: 50%; background: var(--p-light);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+.minicard b { font-size: 13px; font-weight: 700; }
+
+/* ================= LOCALES (círculos) ================= */
+.stores { gap: 12px; padding: 12px 15px 0; }
+.store { flex: 0 0 80px; text-align: center; }
+.store .ring {
+  width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 6px;
+  background: #fff; border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,.14);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  color: #D1D5DB; font-size: 22px;
+}
+.store .ring img { width: 100%; height: 100%; object-fit: cover; }
+.store span {
+  display: block; font-size: 12px; font-weight: 600; color: var(--text-mu);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ================= SECCIONES ================= */
+.sec { display: flex; align-items: center; justify-content: space-between; padding: 0 15px; margin: 28px 0 14px; }
+.sec h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.sec a { color: var(--p); font-weight: 700; font-size: 15px; text-decoration: none; margin-right: 6px; }
+
+/* Tarjetas de restaurante */
+.rests { gap: 13px; padding: 0 15px 6px; }
+.rcard {
+  flex: 0 0 270px; border-radius: 28px; background: #fff; overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,.07);
+}
+.rcard .img { height: 143px; position: relative; background: #CBD5E1; }
+.rcard .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.closed {
+  position: absolute; left: 12px; top: 12px;
+  background: var(--red); color: #fff; font-size: 12px; font-weight: 700;
+  padding: 6px 10px; border-radius: 14px; display: flex; align-items: center; gap: 5px;
+}
+.closed::before { content: ""; width: 10px; height: 10px; border: 1.5px solid #fff; border-radius: 3px; transform: rotate(45deg); }
+.fee {
+  position: absolute; right: 12px; bottom: 12px;
+  background: #fff; font-weight: 700; font-size: 14px;
+  padding: 6px 12px; border-radius: 16px; box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+.rinfo { display: flex; align-items: center; gap: 12px; padding: 12px 14px 14px; }
+.rinfo .lg { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex: 0 0 44px; background: #E5E7EB; }
+.rinfo .lg img { width: 100%; height: 100%; object-fit: cover; }
+.rinfo b { display: block; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.rinfo small { font-size: 13px; color: var(--red); }
+.rinfo small.ok { color: #16A34A; }
+
+/* Favoritos */
+.fav {
+  margin: 0 15px; padding: 16px 28px 16px 15px; border-radius: 24px;
+  background: #fff; border: 1.5px solid #E4DCFA; font-size: 15px; width: 286px;
+  max-width: calc(100% - 30px); line-height: 1.3;
+}
+
+/* Antojos */
+.antojos {
+  margin: 30px 11px 0; padding: 18px 0 18px 17px;
+  background: linear-gradient(160deg, #7C3AED, #5B21B6);
+  border-radius: 32px; color: #fff;
+}
+.antojos h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.antojos p { margin: 4px 0 14px; font-size: 15px; color: #E9E1FF; }
+.dishes { gap: 12px; padding-right: 15px; }
+.dish {
+  flex: 0 0 150px; height: 150px; border-radius: 22px;
+  background: rgba(255,255,255,.55);
+  display: flex; align-items: center; justify-content: center; font-size: 40px; opacity: .85;
+}
+
+/* ================= NAVEGACIÓN INFERIOR ================= */
+.nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: rgba(255,255,255,.97);
+  border-top-left-radius: 24px; border-top-right-radius: 24px;
+  display: flex; padding: 6px 6px max(6px, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(0,0,0,.08); z-index: 100;
+}
+.nav button {
+  flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; font-size: 12px; color: var(--text-mu); font-weight: 500; font-family: inherit; padding: 4px 0;
+}
+.nav button .i { font-size: 22px; padding: 2px 0; width: 95px; height: 29px; line-height: 25px; border-radius: 16px; text-align: center; }
+.nav button.on { color: var(--p); font-weight: 700; }
+.nav button.on .i { background: var(--p-light); }
+</style>
 </head>
 <body>
-<div id="app"></div>
-<nav id="nav" class="nav hidden"></nav>
-<div id="layer"></div>
-<div id="toast" class="toast"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="app.js"></script>
+<div id="app">
+
+  <!-- Encabezado -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="hi">Hola, Brayan 👋 <span>•</span> <span>Entregar en</span></div>
+        <div class="loc"><span class="pin">📍</span> Choluteca • dunking <span class="arrow">⌄</span></div>
+      </div>
+      <div class="hbtns">
+        <button class="hbtn">⚙️</button>
+        <button class="hbtn">🛒</button>
+      </div>
+    </div>
+    <div class="search">
+      <input type="search" placeholder="Locales, platos y productos">
+      <button class="go">🔍</button>
+    </div>
+  </div>
+
+  <!-- Banner destacado -->
+  <div class="hero">
+    <span class="tag">⚡ DESTACADO</span>
+    <h2 id="hTitle">¡Pídelo ahora! ✨</h2>
+    <p id="hSub">Chai Sabores • L. 88<br>Descubre sabor.</p>
+    <button class="cta">Pedir ahora →</button>
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <!-- Categorías grandes -->
+  <div class="big">
+    <div class="bigcard super"><div class="circ">🛒</div><b>Súper</b></div>
+    <div class="bigcard rest"><div class="circ">🍔</div><b>Restaurantes</b></div>
+  </div>
+
+  <!-- Categorías pequeñas -->
+  <div class="scroll mini">
+    <div class="minicard"><div class="circ">🛍️</div><b>Tiendas</b></div>
+    <div class="minicard"><div class="circ">💊</div><b>Farmacias</b></div>
+    <div class="minicard"><div class="circ">📦</div><b>Envíos</b></div>
+    <div class="minicard"><div class="circ">🍰</div><b>Postres</b></div>
+    <div class="minicard"><div class="circ">🥤</div><b>Bebidas</b></div>
+  </div>
+
+  <!-- Locales (círculos). Para poner foto: img: "url" -->
+  <div class="scroll stores" id="stores"></div>
+
+  <!-- Los mejores restaurantes -->
+  <div class="sec"><h2>Los mejores restaurantes</h2><a href="#">Ver todo →</a></div>
+  <div class="scroll rests" id="rests"></div>
+
+  <!-- Favoritos -->
+  <div class="sec"><h2>Tus favoritos recientes <span style="font-size:20px">⚡</span></h2></div>
+  <div class="fav">Aún no has visitado locales. ¡Explora y empieza a pedir! 🍽️</div>
+
+  <!-- Antojos -->
+  <div class="antojos">
+    <h2>Antojos para hoy 🔥</h2>
+    <p>Platillos que se te van a antojar</p>
+    <div class="scroll dishes">
+      <div class="dish">🍽️</div><div class="dish">🍽️</div><div class="dish">🍽️</div>
+    </div>
+  </div>
+</div>
+
+<!-- Menú inferior -->
+<div class="nav">
+  <button class="on"><span class="i">🏠</span>Inicio</button>
+  <button><span class="i" style="width:auto">🛒</span>Carrito</button>
+  <button><span class="i" style="width:auto">🧾</span>Pedidos</button>
+  <button><span class="i" style="width:auto">🚪</span>Salir</button>
+</div>
+
+<script>
+/* ====== DATOS (edita aquí; img = URL de la foto, o null para el ícono) ====== */
+const stores = [
+  { name: "Birriería El Parien…", img: null },
+  { name: "Cabro Blanco",         img: null },
+  { name: "Domino's Cholute…",    img: null },
+  { name: "Dunkin' (choluteca)",  img: null },
+  { name: "Expresso Americano",   img: null },
+];
+const rests = [
+  { name: "Dunkin' (choluteca)",        img: null, logo: null, closed: true, fee: "L. 30" },
+  { name: "Expresso Americano (Cholu…", img: null, logo: null, closed: true, fee: "L. 30" },
+];
+const slides = [
+  { t: "¡Pídelo ahora! ✨", s: "Chai Sabores • L. 88<br>Descubre sabor." },
+  { t: "¡Antójate hoy! 🔥", s: "Los mejores locales<br>de Choluteca." },
+  { t: "¡Pídelo ahora! ✨", s: "Chai Sabores • L. 88<br>Descubre sabor." },
+  { t: "Envío rápido 🛵",   s: "Directo a tu puerta.<br>Pide en minutos." },
+  { t: "Súper a domicilio 🛒", s: "Todo lo que necesitas<br>en un solo lugar." },
+];
+
+/* Locales */
+document.getElementById("stores").innerHTML = stores.map(s => `
+  <div class="store">
+    <div class="ring">${s.img ? `<img src="${s.img}" alt="">` : "🍴"}</div>
+    <span>${s.name}</span>
+  </div>`).join("");
+
+/* Restaurantes */
+document.getElementById("rests").innerHTML = rests.map(r => `
+  <div class="rcard">
+    <div class="img">
+      ${r.img ? `<img src="${r.img}" alt="">` : ""}
+      ${r.closed ? `<span class="closed">CERRADO</span>` : ""}
+      <span class="fee">🛵 ${r.fee}</span>
+    </div>
+    <div class="rinfo">
+      <div class="lg">${r.logo ? `<img src="${r.logo}" alt="">` : ""}</div>
+      <div>
+        <b>${r.name}</b>
+        <small class="${r.closed ? "" : "ok"}">${r.closed ? "No disponible temporalmente" : "Abierto ahora"}</small>
+      </div>
+    </div>
+  </div>`).join("");
+
+/* Banner rotativo */
+let cur = 2;
+const dots = document.getElementById("dots");
+function paint() {
+  dots.innerHTML = slides.map((_, i) => `<i class="${i === cur ? "on" : ""}"></i>`).join("");
+  document.getElementById("hTitle").innerHTML = slides[cur].t;
+  document.getElementById("hSub").innerHTML = slides[cur].s;
+}
+paint();
+setInterval(() => { cur = (cur + 1) % slides.length; paint(); }, 4000);
+</script>
 </body>
 </html>
