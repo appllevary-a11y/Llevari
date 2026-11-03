@@ -1080,5 +1080,4 @@ document.addEventListener("click", async ev => {
 });
 
 /* ================= Arranque ================= */
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 consentimiento();
