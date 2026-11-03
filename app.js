@@ -1,6 +1,36 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, getDocFromServer, setDoc, updateDoc, addDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, runTransaction, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  signOut, 
+  reauthenticateWithCredential, 
+  EmailAuthProvider, 
+  deleteUser 
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  getDocFromServer, 
+  setDoc, 
+  updateDoc, 
+  addDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  runTransaction, 
+  serverTimestamp, 
+  Timestamp 
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { POLITICA, TERMINOS, CORREO } from "./legal.js";
 
@@ -21,15 +51,30 @@ const EMOJIS = [
   ["🍕","🍔","🍟","🌭","🍿","🌮","🌯","🥗","🍗","🥩","🍱","🍣","🍦","🍰","☕","🥤","🧃","🍺","🍩","🥐"],
   ["✅","❌","⚠️","‼️","❓","💬","🔴","🟢","🔵","💛","💖","🔥","✨","⭐","💯","🎉","🆗","🆒"]];
 const EMO_NOMBRES = ["😀 Gestos", "🛵 Reparto", "🍕 Comida", "✨ Símbolos"];
-const ESTADOS_FIN = ["ENTREGADO", "CANCELADO", "FINALIZADO", "RECHAZADO", "COMPLETADO"];
-const ETIQUETA = { NUEVO: "⏳ Esperando que el local acepte", PENDIENTE: "⏳ Esperando que el local acepte", ACEPTADO: "👨‍🍳 El local aceptó tu pedido", PREPARANDO: "👨‍🍳 Preparando tu pedido", LISTO: "✅ Tu pedido está listo", ASIGNADO: "🛵 Repartidor asignado", EN_CAMINO: "🛵 Tu pedido va en camino", RECOGIDO: "🛵 Tu pedido va en camino", ENTREGADO: "🎉 Pedido entregado", CANCELADO: "🛑 Pedido cancelado", RECHAZADO: "🛑 Pedido rechazado" };
+const ESTADOS_FIN = ["ENTREGADO", "CANCELADO", "FINALIZADO", "RECHAZADO", "COMPLETADO", "TERMINADO", "CANCELADA", "ENTREGADA"];
+const ETIQUETA = { 
+  NUEVO: "⏳ Esperando confirmación del restaurante", 
+  PENDIENTE: "⏳ Esperando confirmación del restaurante", 
+  ACEPTADO: "👨‍🍳 Preparando tu pedido", 
+  PREPARANDO: "👨‍🍳 Preparando tu pedido", 
+  LISTO: "✅ Tu pedido está listo", 
+  ASIGNADO: "🛵 Repartidor asignado", 
+  EN_CAMINO: "🛵 Tu pedido va en camino", 
+  DESPACHADO: "🛵 Tu pedido va en camino", 
+  RECOGIDO: "🛵 Tu pedido va en camino", 
+  ENTREGADO: "🎉 Pedido entregado", 
+  CANCELADO: "🛑 Pedido cancelado", 
+  RECHAZADO: "🛑 Pedido rechazado" 
+};
 
-/* Ajustes de esquema (si tus colecciones se llaman distinto, cámbialo aquí) */
-const SUBCOLECCIONES_MENU = ["menu", "platos", "productos", "menus"];
+/* Subcolecciones de menú (se prioriza 'productos' como en Android) */
+const SUBCOLECCIONES_MENU = ["productos", "menu", "platos", "menus"];
 
-/* Tarifas (se sobreescriben desde configuracion/tarifas en tiempo real) */
-const cfg = { topePct: 35, envioMax: 30, ganancia: 5, extraPct: 3, minimoLargo: 100, kmMinimo: 5,
-  pagoKm: [40, 50, 55, 60, 64, 70, 76, 82, 88, 95, 102, 109, 116, 123, 130, 137, 144, 151, 158] };
+/* Tarifas dinámicas */
+const cfg = { 
+  topePct: 35, envioMax: 30, ganancia: 5, extraPct: 3, minimoLargo: 100, kmMinimo: 5,
+  pagoKm: [40, 50, 55, 60, 64, 70, 76, 82, 88, 95, 102, 109, 116, 123, 130, 137, 144, 151, 158] 
+};
 
 /* ================= Estado ================= */
 const $ = (s, r = document) => r.querySelector(s);
@@ -49,7 +94,7 @@ const me = () => S.me || { lat: 13.3024, lon: -87.1921, ciudad: "Choluteca" };
 
 /* ================= Utilidades ================= */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const L = n => "L. " + n;
+const L = n => "L. " + Math.round(n);
 const L2 = n => "L. " + Number(n).toFixed(2);
 function toast(m, ms = 2600) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), ms); }
 const pick = (d, ks) => { for (const k of ks) if (d[k] !== undefined && d[k] !== null && d[k] !== "") return d[k]; return ""; };
@@ -161,9 +206,19 @@ async function cargarPerfil(user) {
   }
   if (!snap) return null;
   const d = snap.data();
-  return { id: snap.id, telefono: d.telefono || snap.id, nombre: d.nombre || "", correo: user.email, ciudad: d.ciudad || "Choluteca", idioma: d.idioma || "Español",
-    lat: num(d, "lat") || num(d, "latitud") || 13.3024, lon: num(d, "lon") || num(d, "longitud") || -87.1921,
-    dir_desc: d.dir_desc || d.direccion || "", direcciones: Array.isArray(d.direcciones) ? d.direcciones : [] };
+  const lat = num(d, "latitud") || num(d, "lat") || 13.3024;
+  const lon = num(d, "longitud") || num(d, "lon") || -87.1921;
+  return { 
+    id: snap.id, 
+    telefono: d.telefono || snap.id, 
+    nombre: d.nombre || "", 
+    correo: user.email, 
+    ciudad: d.ciudad || "Choluteca", 
+    idioma: d.idioma || "Español",
+    lat, lon,
+    dir_desc: d.direccion_desc || d.dir_desc || d.direccion || "", 
+    direcciones: Array.isArray(d.direcciones) ? d.direcciones : [] 
+  };
 }
 onAuthStateChanged(auth, async user => {
   S.user = user;
@@ -250,7 +305,7 @@ function regPaso1() {
   S.regTmp = d; vAuth("registro2");
 }
 async function regFinal() {
-  const d = S.regTmp, tel = d.tel, dir = S.regDirs[0];
+  const d = S.regTmp, tel = d.pais + d.tel, dir = S.regDirs[0];
   const btn = $("[data-a=regfinal]"); btn.disabled = true; btn.textContent = "Creando cuenta...";
   try {
     const ex = await getDoc(doc(db, "clientes", tel));
@@ -258,7 +313,7 @@ async function regFinal() {
     const cred = await createUserWithEmailAndPassword(auth, d.correo, d.pass);
     await setDoc(doc(db, "clientes", tel), {
       nombre: d.nombre, correo: d.correo, telefono: tel, pais: d.pais, ciudad: d.ciudad, idioma: d.idioma, uid: cred.user.uid,
-      lat: dir.lat, lon: dir.lon, dir_desc: dir.desc, direcciones: S.regDirs,
+      latitud: dir.lat, longitud: dir.lon, direccion_desc: dir.desc, direcciones: S.regDirs, indice_dir_activa: 0,
       terminos_aceptados: true, terminos_version: VERSION_TERMINOS, terminos_fecha: serverTimestamp(), mayor_de_18: true, plataforma: "web"
     });
     S.regTmp = {}; S.regDirs = [];
@@ -275,7 +330,7 @@ function unaSucursalPorMarca(docs) {
     let mejor = null, mejorKm = Infinity, mejorAb = false;
     for (const d of lista) {
       const x = d.data(); if (x.ciudad && x.ciudad.toLowerCase() !== (m.ciudad || "").toLowerCase()) continue;
-      const ab = String(x.estado).toUpperCase() !== "CERRADO"; const la = num(x, "latitud"), lo = num(x, "longitud");
+      const ab = String(x.estado).toUpperCase() !== "CERRADO"; const la = num(x, "latitud") || num(x, "lat"), lo = num(x, "longitud") || num(x, "lon");
       const km = (!la || !lo) ? 1e9 : haversine(m.lat, m.lon, la, lo);
       if (!mejor || (ab && !mejorAb) || (ab === mejorAb && km < mejorKm)) { mejor = d; mejorKm = km; mejorAb = ab; }
     }
@@ -288,7 +343,20 @@ function escucharLocales() {
   if (S.unsub.locales) return;
   S.unsub.locales = onSnapshot(collection(db, "restaurantes"), snap => {
     const antes = new Map(S.restaurantes.map(r => [r.id, r.estado]));
-    S.restaurantes = unaSucursalPorMarca(snap.docs).map(d => { const x = d.data(); return { id: d.id, nombre: x.nombre || x.nombre_local || d.id, estado: String(x.estado || "").toUpperCase(), ciudad: x.ciudad || "", lat: num(x, "latitud"), lon: num(x, "longitud"), logo: x.logoUrl || "", categoria: x.categoria || x.tipo || "", marca: x.marca_id || "" }; });
+    S.restaurantes = unaSucursalPorMarca(snap.docs).map(d => { 
+      const x = d.data(); 
+      return { 
+        id: d.id, 
+        nombre: x.nombre || x.nombre_local || d.id, 
+        estado: String(x.estado || "").toUpperCase(), 
+        ciudad: x.ciudad || "", 
+        lat: num(x, "latitud") || num(x, "lat"), 
+        lon: num(x, "longitud") || num(x, "lon"), 
+        logo: x.logoUrl || "", 
+        categoria: x.categoria || x.tipo || "", 
+        marca: x.marca_id || "" 
+      }; 
+    });
     const cambio = !primeraLocales && S.restaurantes.some(r => antes.get(r.id) !== r.estado);
     primeraLocales = false;
     if (S.view === "inicio" || (cambio && S.view === "menu")) {
@@ -297,7 +365,8 @@ function escucharLocales() {
     }
   }, err => { console.error(err); S.errLocales = true; if (S.view === "inicio") render(); });
 }
-/* ================= Inicio (diseño nuevo, responsive) ================= */
+
+/* ================= Inicio ================= */
 const CATS_HOME = [
   ["tiendas", "🛍️", "Tiendas", ["tienda", "boutique", "ropa"]],
   ["farmacias", "💊", "Farmacias", ["farmacia"]],
@@ -415,7 +484,6 @@ function vInicio() {
       </section>
     </main>`;
 
-  // Si nada cambió, no se vuelve a dibujar: así no se pierde el deslizamiento de las filas ni el toque del dedo.
   if (S.hmHtml === html && $(".hm-head")) return;
   S.hmHtml = html;
   app.innerHTML = html;
@@ -427,15 +495,27 @@ function vInicio() {
 
 /* ================= Menú ================= */
 function normItem(d, id) {
-  const p = pick(d, ["p", "nombre", "plato", "pNom", "titulo"]);
-  return { id, p: String(p), pr: parseFloat(pick(d, ["pr", "precio", "pPrec"])) || 0, de: String(pick(d, ["de", "descripcion", "desc", "pDesc"])), im: String(pick(d, ["im", "imagen", "img", "pImg", "foto", "imagenUrl"])), op: String(pick(d, ["op", "opciones", "pOps"])), cat: String(pick(d, ["categoria", "cat"])), disp: d.disponible !== false && d.activo !== false };
+  const p = pick(d, ["nombre", "p", "plato", "pNom", "titulo"]);
+  return { 
+    id, 
+    p: String(p), 
+    pr: parseFloat(pick(d, ["precio", "pr", "pPrec"])) || 0, 
+    de: String(pick(d, ["descripcion", "de", "desc", "pDesc"])), 
+    im: String(pick(d, ["imagenUrl", "im", "imagen", "img", "pImg", "foto"])), 
+    op: String(pick(d, ["opciones", "op", "pOps"])), 
+    cat: String(pick(d, ["categoria", "cat"])), 
+    disp: d.disponible !== false && d.activo !== false 
+  };
 }
 async function cargarMenuItems(rId) {
   for (const sub of SUBCOLECCIONES_MENU) {
-    try { const s = await getDocs(collection(db, "restaurantes", rId, sub)); if (!s.empty) return s.docs.map(d => normItem(d.data(), d.id)); } catch {}
+    try { 
+      const s = await getDocs(collection(db, "restaurantes", rId, sub)); 
+      if (!s.empty) return s.docs.map(d => normItem(d.data(), d.id)); 
+    } catch {}
   }
   const r = await getDoc(doc(db, "restaurantes", rId)); const d = r.data() || {};
-  for (const k of ["menu", "platos", "productos"]) if (Array.isArray(d[k])) return d[k].map((x, i) => normItem(x, String(i)));
+  for (const k of ["productos", "menu", "platos"]) if (Array.isArray(d[k])) return d[k].map((x, i) => normItem(x, String(i)));
   return [];
 }
 async function abrirLocal(id) {
@@ -488,7 +568,7 @@ function abrirPlato(item) {
     const t = calcularTarifa(kmHacia(M.lat, M.lon), sub), productos = sub + t.aumento, total = productos + t.envio;
     return { u, sub, t, productos, total };
   };
-  const sugeridos = S.menu.items.filter(x => x.p !== item.p).slice(0, 4);
+  const sugeridos = S.menu.items ? S.menu.items.filter(x => x.p !== item.p).slice(0, 4) : [];
   layer.innerHTML = `<div class="full" id="plato">
     <div class="hero">🍽️${item.im ? `<img src="${esc(item.im)}" alt="">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
     <button class="back floatback" data-a="cerrarPlato">❮</button>
@@ -546,7 +626,7 @@ function pedirDesdeCarrito(rId) {
   go("servicio");
 }
 
-/* ================= Tipo de servicio / confirmar pedido ================= */
+/* ================= Confirmar Pedido ================= */
 function vServicio() {
   const C = S.checkout; if (!C) { go("inicio", {}, true); return; }
   const del = S.modalidad === "DELIVERY", sub = Math.round(C.subtotal), t = calcularTarifa(kmHacia(C.lat, C.lon), sub);
@@ -562,6 +642,7 @@ function vServicio() {
       <div class="r t"><span>${del ? "Total a pagar al repartidor" : "Total a pagar en el local"}</span><b>${L(total)}</b></div>${falta ? `<div class="warn">⚠️ Pedido mínimo para delivery: ${L(t.minimo)} (te faltan ${L(t.minimo - sub)})</div>` : ""}</div>
     <button class="btn" id="confirmar" style="${falta ? "opacity:.55" : ""}">Confirmar pedido • ${L(total)}</button>`;
 }
+
 async function confirmarPedido() {
   const C = S.checkout, del = S.modalidad === "DELIVERY";
   if (S.enviando) return; if (!C) return;
@@ -575,18 +656,62 @@ async function confirmarPedido() {
   } catch (e) { S.enviando = false; return avisoServidor(); }
   overlay();
   const m = me();
-  const base = { estado: "NUEVO", cliente_nombre: m.nombre, cliente_telefono: m.telefono, cliente_lat: m.lat, cliente_lon: m.lon, cliente_direccion_desc: m.dir_desc,
-    restaurante_nombre: C.rNom, pedido: C.texto, plato: C.texto, detalle: C.texto, items: C.items, tipo_servicio: S.modalidad, tipo: S.modalidad, pago: "EFECTIVO",
-    productos: C.productos, envio: C.envio, total: C.total, subtotal_local: sub, origen: "web", hora_creacion: fmtHora(), timestamp: Timestamp.now() };
+  
+  /* Formato idéntico al de Android MainActivity.java */
+  const dNow = new Date();
+  const meses = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fechaAndroid = `${String(dNow.getDate()).padStart(2,"0")}/${meses[dNow.getMonth()]} ${String(dNow.getHours()).padStart(2,"0")}:${String(dNow.getMinutes()).padStart(2,"0")}`;
+
+  const base = { 
+    estado: "NUEVO", 
+    subtotal: sub,
+    costo_envio: del ? t.envio : 0,
+    aumento: del ? t.aumento : 0,
+    total: C.total,
+    km_cobro: del ? t.kmCobro : 0,
+    pago_motorista: del ? t.pago : 0,
+    ganancia: del ? t.ganancia : 0,
+    nombre_plato: C.texto,
+    fecha: fechaAndroid,
+    hora_creacion: fmtHora(), 
+    timestamp: Timestamp.now(),
+    cliente_nombre: m.nombre, 
+    cliente_telefono: m.telefono, 
+    cliente_lat: m.lat, 
+    cliente_lon: m.lon, 
+    cliente_direccion_desc: m.dir_desc,
+    restaurante_nombre: C.rNom, 
+    restaurante_lat: C.lat,
+    restaurante_lon: C.lon,
+    tipo_servicio: S.modalidad, 
+    metodo_pago: "EFECTIVO", 
+    repartidor_nombre: "",
+    repartidor_lat: 0.0,
+    repartidor_lon: 0.0,
+    repartidor_bearing: 0.0,
+    pedido: C.texto, 
+    plato: C.texto, 
+    detalle: C.texto, 
+    items: C.items, 
+    origen: "web"
+  };
+
   try {
     const { ref, n } = await crearPedidoConId(C.rId, base);
-    await setDoc(doc(db, "clientes", m.telefono, "mis_pedidos", ref.id), { rId: C.rId, pId: ref.id, id_numerico: n, rNombre: C.rNom, estado: "NUEVO", total: C.total, tipo_servicio: S.modalidad, pedido: C.texto, hora_creacion: base.hora_creacion, timestamp: base.timestamp });
+    await setDoc(doc(db, "clientes", m.telefono, "mis_pedidos", ref.id), { 
+      ...base,
+      rId: C.rId, 
+      pId: ref.id, 
+      id_numerico: n, 
+      rNombre: C.rNom 
+    });
     ls.set("pedidoActivoId", ref.id); ls.set("restIdActivo", C.rId); ls.set("rNombreActivo", C.rNom);
     if (C.desdeCarrito) setCarrito(getCarrito().filter(i => i.rId !== C.rId));
     S.checkout = null; S.enviando = false;
     setTimeout(() => { quitarOverlay(); go("seguimiento", { rId: C.rId, pId: ref.id }, true); }, 1400);
   } catch (e) { console.error(e); S.enviando = false; quitarOverlay(); toast("No se pudo enviar el pedido: " + e.message, 5000); }
 }
+
 async function crearPedidoConId(rId, m) {
   const col = collection(db, "restaurantes", rId, "pedidos"), resRef = doc(db, "restaurantes", rId), pedRef = doc(col);
   let base = 1000;
@@ -626,14 +751,18 @@ function vSeguimiento() {
     $("#sgEstado").textContent = ETIQUETA[es] || ("📦 " + es);
     $("#sgInfo").textContent = `Pedido #${d.id_numerico || ""} · ${d.restaurante_nombre || ""}`;
     const rn = d.repartidor_nombre || d.repartidor || ""; const rt = d.repartidor_telefono || "";
-    $("#sgDet").innerHTML = rn ? `🛵 ${esc(rn)}${rt ? ` · <a href="tel:${esc(rt)}">${esc(rt)}</a>` : ""}` : esc(d.pedido || "");
+    const platoNombre = d.nombre_plato || d.pedido || "";
+    $("#sgDet").innerHTML = rn ? `🛵 ${esc(rn)}${rt ? ` · <a href="tel:${esc(rt)}">${esc(rt)}</a>` : ""}` : esc(platoNombre);
     $("#sgCobro").textContent = d.total ? `${d.tipo_servicio === "PICKUP" ? "Pagas en el local" : "Pagas al repartidor"}: ${L(d.total)}` : "";
-    $("#btnchat").style.display = (rn || ["ASIGNADO", "EN_CAMINO", "RECOGIDO"].includes(es)) ? "" : "none";
+    $("#btnchat").style.display = (rn || ["ASIGNADO", "EN_CAMINO", "RECOGIDO", "DESPACHADO"].includes(es)) ? "" : "none";
     const cancelable = es === "NUEVO" || es === "PENDIENTE";
     $("#sgAcc").innerHTML = cancelable ? `<button class="btn red" data-a="cancelar">Cancelar pedido</button>` : "";
-    // mapa
+    
+    // Mapa
     const cl = [num(d, "cliente_lat"), num(d, "cliente_lon")], rs = S.restaurantes.find(x => x.id === rId);
-    const rl = rs && rs.lat ? [rs.lat, rs.lon] : null, rp = (d.repartidor_lat && d.repartidor_lon) ? [num(d, "repartidor_lat"), num(d, "repartidor_lon")] : (d.repartidor_ubicacion && d.repartidor_ubicacion.latitude ? [d.repartidor_ubicacion.latitude, d.repartidor_ubicacion.longitude] : null);
+    const rl = rs && rs.lat ? [rs.lat, rs.lon] : [num(d, "restaurante_lat"), num(d, "restaurante_lon")];
+    const rp = (d.repartidor_lat && d.repartidor_lon) ? [num(d, "repartidor_lat"), num(d, "repartidor_lon")] : (d.repartidor_ubicacion && d.repartidor_ubicacion.latitude ? [d.repartidor_ubicacion.latitude, d.repartidor_ubicacion.longitude] : null);
+    
     if (!mapa && window.L && $("#sgMapa")) {
       mapa = L_.map("sgMapa").setView(cl[0] ? cl : [me().lat, me().lon], 14);
       L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(mapa);
@@ -642,9 +771,9 @@ function vSeguimiento() {
     if (mapa) {
       const ic = e => L_.divIcon({ html: `<div style="font-size:30px;transform:translate(-50%,-100%)">${e}</div>`, className: "", iconSize: [0, 0] });
       if (cl[0]) { if (!mc) mc = L_.marker(cl, { icon: ic("🏠") }).addTo(mapa); }
-      if (rl && !mr) mr = L_.marker(rl, { icon: ic("🏪") }).addTo(mapa);
+      if (rl[0] && !mr) mr = L_.marker(rl, { icon: ic("🏪") }).addTo(mapa);
       if (rp) { if (!mrep) mrep = L_.marker(rp, { icon: ic("🛵") }).addTo(mapa); else mrep.setLatLng(rp); }
-      const pts = [cl[0] && cl, rl, rp].filter(Boolean); if (pts.length > 1) mapa.fitBounds(pts, { padding: [40, 40], maxZoom: 16 });
+      const pts = [cl[0] && cl, rl[0] && rl, rp].filter(Boolean); if (pts.length > 1) mapa.fitBounds(pts, { padding: [40, 40], maxZoom: 16 });
     }
     S.pedidoEstado = es;
     if (ESTADOS_FIN.includes(es)) {
@@ -679,7 +808,6 @@ async function cancelarPedido() {
 let chatPrevio = -1, emoCat = 0, emoOn = false;
 function abrirChat() {
   const { rId, pId } = S.params; chatPrevio = -1; emoOn = false;
-  const nombre = me().nombre || "Cliente";
   layer.innerHTML = `<div class="chat"><div class="h"><button class="back" data-a="cerrarChat">❮</button><div class="col"><div class="b" style="font-size:17px">Chat con Repartidor</div><div class="small mu">Pedido en curso</div></div></div>
     <div class="sug">${SUGERENCIAS.map(s => `<span data-a="chatSug">${esc(s)}</span>`).join("")}</div><div class="msgs" id="msgs"></div>
     <div class="emo hidden" id="emo"></div>
@@ -729,14 +857,14 @@ function verImagen(src) { const d = document.createElement("div"); d.className =
 
 /* ================= Pedidos (historial) ================= */
 async function vPedidos() {
-  app.innerHTML = `<h1>Mis pedidos</h1><div id="fp">${["Todos", "En curso", "Finalizados"].map((n, i) => `<span class="chip ${S.filtroPedidos === i ? "on" : ""}" data-a="fpedidos" data-i="${i}">${n}</span>`).join("")}</div><div id="hist" class="loader">Cargando...</div>`;
+  app.innerHTML = `<h1>Mis pedidos</h1><div id="fp">${["En curso", "Finalizados"].map((n, i) => `<span class="chip ${S.filtroPedidos === i ? "on" : ""}" data-a="fpedidos" data-i="${i}">${n}</span>`).join("")}</div><div id="hist" class="loader">Cargando...</div>`;
   try {
     const q = await getDocs(collection(db, "clientes", me().telefono, "mis_pedidos"));
     let l = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => ((b.timestamp && b.timestamp.seconds) || 0) - ((a.timestamp && a.timestamp.seconds) || 0));
     const fin = x => ESTADOS_FIN.includes(String(x.estado || "").toUpperCase());
-    if (S.filtroPedidos === 1) l = l.filter(x => !fin(x)); else if (S.filtroPedidos === 2) l = l.filter(fin);
+    if (S.filtroPedidos === 0) l = l.filter(x => !fin(x)); else if (S.filtroPedidos === 1) l = l.filter(fin);
     const h = $("#hist"); if (!h || S.view !== "pedidos") return; h.className = "";
-    h.innerHTML = l.length ? l.map(x => { const e = String(x.estado || "").toUpperCase(); return `<div class="card row" ${!fin(x) ? `data-a="verPedido" data-r="${esc(x.rId)}" data-p="${esc(x.pId || x.id)}" style="cursor:pointer"` : ""}><div class="logo">${fin(x) ? (e === "CANCELADO" ? "🛑" : "✅") : "🛵"}</div><div class="col"><h3>${esc(x.rNombre || "Pedido")} ${x.id_numerico ? "#" + x.id_numerico : ""}</h3><div class="small mu">${esc(x.hora_creacion || "")}</div><div class="small">${esc(ETIQUETA[e] || e)}</div></div><div class="price">${x.total ? L(x.total) : ""}</div></div>`; }).join("") : `<div class="empty"><div class="e">🧾</div>Aún no tienes pedidos</div>`;
+    h.innerHTML = l.length ? l.map(x => { const e = String(x.estado || "").toUpperCase(); return `<div class="card row" ${!fin(x) ? `data-a="verPedido" data-r="${esc(x.rId)}" data-p="${esc(x.pId || x.id)}" style="cursor:pointer"` : ""}><div class="logo">${fin(x) ? (e.includes("CANCEL") ? "🛑" : "✅") : "🛵"}</div><div class="col"><h3>${esc(x.rNombre || x.restaurante_nombre || "Pedido")} ${x.id_numerico ? "#" + x.id_numerico : ""}</h3><div class="small mu">${esc(x.fecha || x.hora_creacion || "")}</div><div class="small">${esc(ETIQUETA[e] || e)}</div></div><div class="price">${x.total ? L(x.total) : ""}</div></div>`; }).join("") : `<div class="empty"><div class="e">🧾</div>Aún no tienes pedidos</div>`;
   } catch (e) { const h = $("#hist"); if (h) h.innerHTML = `<div class="empty"><div class="e">📡</div>No pudimos cargar tus pedidos</div>`; }
 }
 
@@ -749,7 +877,7 @@ function vCuenta() {
     <button class="btn" data-a="legal" data-v="terminos">📜 Términos y Condiciones</button>
     <a class="btn sky" style="text-decoration:none;text-align:center" href="mailto:${CORREO}?subject=Soporte%20Llevari">✉️ Contacto y soporte</a>
     <button class="btn mut" data-a="logout">Cerrar sesión</button>
-    <p class="mu small" style="margin-top:20px">Si eliminas tu cuenta se borran tu perfil, direcciones, historial de pedidos y mensajes del chat. Los pedidos en los registros del local se conservan solo de forma anonimizada (sin tu nombre, teléfono ni ubicación).</p>
+    <p class="mu small" style="margin-top:20px">Si eliminas tu cuenta se borran tu perfil, direcciones, historial de pedidos y mensajes del chat. Los pedidos en los registros del local se conservan solo de forma anonimizada.</p>
     <button class="btn red" data-a="eliminar">🗑 Eliminar mi cuenta</button>`;
 }
 function vLegal() {
@@ -766,12 +894,14 @@ function vDirecciones() {
   nav.classList.add("hidden"); app.className = "noNav";
   const dirs = m.direcciones.length ? m.direcciones : (m.dir_desc ? [{ desc: m.dir_desc, lat: m.lat, lon: m.lon }] : []);
   app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><h2 style="margin:0">Mis direcciones</h2></div>
-    ${dirs.map((d, i) => `<div class="card row"><div class="col" data-a="usarDir" data-i="${i}" style="cursor:pointer">📍 ${esc(d.desc)}${d.desc === m.dir_desc ? ` <span class="badge ok">En uso</span>` : ""}</div><button class="back" style="color:#DC2626" data-a="delDir" data-i="${i}">✕</button></div>`).join("") || `<div class="empty">Aún no tienes direcciones</div>`}
+    ${dirs.map((d, i) => `<div class="card row"><div class="col" data-a="usarDir" data-i="${i}" style="cursor:pointer">📍 ${esc(d.desc || d.etiqueta)}${d.desc === m.dir_desc ? ` <span class="badge ok">En uso</span>` : ""}</div><button class="back" style="color:#DC2626" data-a="delDir" data-i="${i}">✕</button></div>`).join("") || `<div class="empty">Aún no tienes direcciones</div>`}
     <button class="btn sky" data-a="mapaNuevaDir" data-v="perfil">+ Agregar Nueva Dirección en Mapa</button>`;
 }
 async function guardarDirs(dirs, activa) {
   const m = me(), a = activa || dirs[0];
-  const upd = { direcciones: dirs }; if (a) { upd.lat = a.lat; upd.lon = a.lon; upd.dir_desc = a.desc; }
+  const idx = dirs.indexOf(a);
+  const upd = { direcciones: dirs }; 
+  if (a) { upd.latitud = a.lat; upd.longitud = a.lon; upd.direccion_desc = a.desc; upd.indice_dir_activa = idx >= 0 ? idx : 0; }
   await updateDoc(doc(db, "clientes", m.id || m.telefono), upd);
   m.direcciones = dirs; if (a) { m.lat = a.lat; m.lon = a.lon; m.dir_desc = a.desc; }
 }
@@ -803,7 +933,7 @@ async function buscarDir() {
 async function confirmarUbi(destino) {
   const c = S.mapa.getCenter(), desc = $("#mdesc").value.trim();
   if (!desc) return toast("Describe tu dirección para el repartidor");
-  const dir = { desc, lat: c.lat, lon: c.lng };
+  const dir = { desc, etiqueta: "Otro", lat: c.lat, lon: c.lng };
   S.mapa.remove(); S.mapa = null; layer.innerHTML = "";
   if (destino === "reg") { S.regDirs.push(dir); vAuth("registro2"); }
   else try { const dirs = [...(me().direcciones || []), dir]; await guardarDirs(dirs, dir); toast("Dirección guardada"); render(); } catch { toast("No se pudo guardar la dirección"); }
