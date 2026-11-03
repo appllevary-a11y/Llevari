@@ -1,11 +1,9 @@
-// Pega aquí la configuración de tu app WEB de Firebase.
-// Firebase Console > Configuración del proyecto (⚙️) > General > "Tus apps" > Agregar app > Web (</>)
-// Copia el objeto firebaseConfig que te muestra y reemplaza los valores de abajo.
 export const firebaseConfig = {
-  apiKey: "PEGAR_AQUI",
-  authDomain: "PEGAR_AQUI.firebaseapp.com",
-  projectId: "PEGAR_AQUI",
-  storageBucket: "PEGAR_AQUI.appspot.com",
-  messagingSenderId: "PEGAR_AQUI",
-  appId: "PEGAR_AQUI"
+  apiKey: "AIzaSyCFse23B_GRlRq_jBRy3I24Kg9Bhj5aHVs",
+  authDomain: "llevari.firebaseapp.com",
+  projectId: "llevari",
+  storageBucket: "llevari.firebasestorage.app",
+  messagingSenderId: "219910137529",
+  appId: "1:219910137529:web:e5f693b239195dea9add68",
+  measurementId: "G-9Q7BEZETBW"
 };
