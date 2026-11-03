@@ -386,7 +386,7 @@ function vInicio() {
       <div class="hm-sec" id="hmRest"><h2>Los mejores restaurantes</h2><a data-a="hmall">${S.hmAll ? "Ver menos ↑" : "Ver todo →"}</a></div>
       <div class="hm-scroll hm-bleed hm-rests ${S.hmAll ? "all" : ""}">${lista.slice(0, 40).map(tarjeta).join("")}</div>`;
 
-  app.innerHTML = `<header class="hm-head"><div class="hm-wrap">
+  const html = `<header class="hm-head"><div class="hm-wrap">
       <div class="hm-top">
         <div class="hm-who"><div class="hm-hi"><span>Hola, ${esc((m.nombre || "").split(" ")[0])} 👋</span><span>•</span><span>Entregar en</span></div>
           <div class="hm-loc" data-a="irDirs"><span class="hm-pin">📍</span><span class="txt">${esc(m.dir_desc || m.ciudad)}</span><span class="arr">⌄</span></div></div>
@@ -414,6 +414,11 @@ function vInicio() {
         <div class="hm-scroll hm-dishes">${platos}</div>
       </section>
     </main>`;
+
+  // Si nada cambió, no se vuelve a dibujar: así no se pierde el deslizamiento de las filas ni el toque del dedo.
+  if (S.hmHtml === html && $(".hm-head")) return;
+  S.hmHtml = html;
+  app.innerHTML = html;
 
   const b = $("#buscar"); b.oninput = () => { S.filtro = b.value; const pos = b.selectionStart; vInicio(); const n2 = $("#buscar"); n2.focus(); n2.setSelectionRange(pos, pos); };
   hmBanner(slides);
