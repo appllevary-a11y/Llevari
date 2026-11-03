@@ -48,6 +48,7 @@ const S = {
 const me = () => S.me || { lat: 13.3024, lon: -87.1921, ciudad: "Choluteca" };
 
 /* ================= Utilidades ================= */
+const IMG = s => !s ? "" : /^(https?:|data:|blob:)/.test(s) ? s : "data:image/jpeg;base64," + String(s).replace(/\s/g, "");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const L = n => "L. " + n;
 const L2 = n => "L. " + Number(n).toFixed(2);
@@ -304,7 +305,7 @@ function vInicio() {
   lista.sort((a, b) => (a.estado === "CERRADO") - (b.estado === "CERRADO") || haversine(m.lat, m.lon, a.lat || 0, a.lon || 0) - haversine(m.lat, m.lon, b.lat || 0, b.lon || 0));
   const tarjetas = lista.map(r => {
     const t = calcularTarifa(kmHacia(r.lat, r.lon), 0), cerr = r.estado === "CERRADO";
-    return `<div class="card row" data-a="abrirLocal" data-id="${esc(r.id)}" style="${cerr ? "opacity:.6" : ""}"><div class="logo">${r.logo ? `<img src="${esc(r.logo)}" loading="lazy" alt="">` : "🏪"}</div>
+    return `<div class="card row" data-a="abrirLocal" data-id="${esc(r.id)}" style="${cerr ? "opacity:.6" : ""}"><div class="logo">${r.logo ? `<img src="${esc(IMG(r.logo))}" loading="lazy" alt="">` : "🏪"}</div>
       <div class="col"><h3>${esc(r.nombre)}</h3><div class="small mu">⏱ 20-35 min${r.categoria ? " · " + esc(r.categoria) : ""}</div><div class="small b" style="color:var(--pd)">🛵 Envío ${L(t.envio)}</div></div>
       <span class="badge ${cerr ? "" : "ok"}">${cerr ? "Cerrado" : "Abierto"}</span></div>`;
   }).join("");
@@ -348,7 +349,7 @@ function vMenu() {
   app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><div class="col"><h2 style="margin:0">${esc(M.rNom)}</h2><div class="small mu">⏱ 20-35 min · 🛵 Envío ${L(t.envio)}</div></div></div>
     ${cats.length ? `<div style="margin-bottom:8px"><span class="chip ${!f ? "on" : ""}" data-a="cat" data-v="">Todo</span>${cats.map(c => `<span class="chip ${f === c ? "on" : ""}" data-a="cat" data-v="${esc(c)}">${esc(c)}</span>`).join("")}</div>` : ""}
     ${it === null ? `<div class="loader">Cargando menú...</div>` : !lista.length ? `<div class="empty"><div class="e">🍽️</div>Este local aún no tiene productos</div>` :
-      lista.map((i, n) => `<div class="card row" data-a="plato" data-i="${it.indexOf(i)}"><div class="thumb">${i.im ? `<img src="${esc(i.im)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(i.p)}</div>${i.de ? `<div class="small mu" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.de)}</div>` : ""}<div class="price" style="margin-top:4px">${L(Math.round(precioVisible(i.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}`;
+      lista.map((i, n) => `<div class="card row" data-a="plato" data-i="${it.indexOf(i)}"><div class="thumb">${i.im ? `<img src="${esc(IMG(i.im))}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(i.p)}</div>${i.de ? `<div class="small mu" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.de)}</div>` : ""}<div class="price" style="margin-top:4px">${L(Math.round(precioVisible(i.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}`;
 }
 
 /* ---- Hoja de producto ---- */
@@ -380,12 +381,12 @@ function abrirPlato(item) {
   };
   const sugeridos = S.menu.items.filter(x => x.p !== item.p).slice(0, 4);
   layer.innerHTML = `<div class="full" id="plato">
-    <div class="hero">🍽️${item.im ? `<img src="${esc(item.im)}" alt="">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
+    <div class="hero">🍽️${item.im ? `<img src="${esc(IMG(item.im))}" alt="">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
     <button class="back floatback" data-a="cerrarPlato">❮</button>
     <div style="padding:20px 18px 6px"><h1 style="font-size:26px">${esc(item.p)}</h1>${item.de ? `<p class="mu">${esc(item.de)}</p>` : ""}<div class="price" style="font-size:24px" id="pp"></div></div>
     ${grupos.map((g, gi) => `<div class="grp"><div class="row"><h3 class="col">${esc(g.n)}</h3><span class="badge" style="background:#F1F5F9;color:#334155">Obligatorio</span></div><div class="small mu" style="margin:4px 0 6px">Selecciona una opción</div>
       ${g.ops.map((o, oi) => `<label class="opt"><input type="radio" name="g${gi}" data-g="${gi}" data-o="${oi}" ${oi === 0 ? "checked" : ""}><span class="col">${esc(o.n)}</span>${o.p > 0 ? `<span class="mu b small">+ ${L2(o.p)}</span>` : ""}</label>`).join("")}</div>`).join("")}
-    ${sugeridos.length ? `<h2 style="padding:20px 18px 0">Otras personas lo combinaron con</h2>${sugeridos.map(s => `<div class="row" style="padding:8px 18px;cursor:pointer" data-a="otroPlato" data-i="${S.menu.items.indexOf(s)}"><div class="thumb">${s.im ? `<img src="${esc(s.im)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col">${esc(s.p)}<div class="b" style="margin-top:4px">${L(Math.round(precioVisible(s.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}` : ""}
+    ${sugeridos.length ? `<h2 style="padding:20px 18px 0">Otras personas lo combinaron con</h2>${sugeridos.map(s => `<div class="row" style="padding:8px 18px;cursor:pointer" data-a="otroPlato" data-i="${S.menu.items.indexOf(s)}"><div class="thumb">${s.im ? `<img src="${esc(IMG(s.im))}" loading="lazy" alt="">` : "🍽️"}</div><div class="col">${esc(s.p)}<div class="b" style="margin-top:4px">${L(Math.round(precioVisible(s.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}` : ""}
     <div class="sheetbot"><div class="row"><h2 class="col" style="margin:0">Tu producto</h2><h2 id="tp" style="margin:0"></h2></div>
       <div class="row" style="margin-top:14px"><div class="qty"><button id="qm">－</button><b id="qc" style="min-width:24px;text-align:center">1</b><button id="qp">＋</button></div><button class="btn" id="pedir" style="margin:0;flex:1;height:56px"></button></div>
       <button class="btn soft" id="alcarro" style="border:2px solid var(--p);margin-top:10px">🛒 Agregar al carrito</button></div></div>`;
@@ -424,7 +425,7 @@ function vCarrito() {
     gs.map(g => {
       const t = calcularTarifa(kmHacia(g.lat, g.lon), Math.round(g.sub));
       return `<div class="card row"><div class="logo">🏪</div><div class="col"><h3>${esc(g.rNom)}</h3><div class="small mu">⏱ Recibes en 20-35 min</div><div class="small b" style="color:var(--pd)">🛵 Envío ${L(t.envio)}</div></div></div>
-      ${g.items.map(it => { const vis = it.precio + (g.sub > 0 ? t.aumento * it.precio / g.sub : 0); return `<div class="card row"><div class="thumb">${it.img ? `<img src="${esc(it.img)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(it.nombre)}</div>${it.opciones ? `<div class="small mu">${esc(it.opciones)}</div>` : ""}<div class="price" style="margin-top:4px">${L2(vis)}</div></div><button class="back" style="background:#FEE2E2" data-a="quitar" data-i="${it.idx}">🗑</button></div>`; }).join("")}
+      ${g.items.map(it => { const vis = it.precio + (g.sub > 0 ? t.aumento * it.precio / g.sub : 0); return `<div class="card row"><div class="thumb">${it.img ? `<img src="${esc(IMG(it.img))}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(it.nombre)}</div>${it.opciones ? `<div class="small mu">${esc(it.opciones)}</div>` : ""}<div class="price" style="margin-top:4px">${L2(vis)}</div></div><button class="back" style="background:#FEE2E2" data-a="quitar" data-i="${it.idx}">🗑</button></div>`; }).join("")}
       ${t.minimo > 0 && Math.round(g.sub) < t.minimo ? `<div class="warn">⚠️ Pedido mínimo ${L(t.minimo)} en este local (te faltan ${L(t.minimo - Math.round(g.sub))})</div>` : ""}
       <button class="btn ac" data-a="pedirLocal" data-id="${esc(g.rId)}">PEDIR ESTE LOCAL ➔ ${L2(g.sub + t.aumento + t.envio)}</button>
       <button class="btn soft" data-a="masLocal" data-id="${esc(g.rId)}">➕ Agregar más de este local</button><div style="height:14px"></div>`;
@@ -444,7 +445,7 @@ function vServicio() {
   C.total = total; C.envio = del ? t.envio : 0; C.productos = del ? productos : sub;
   const r = S.restaurantes.find(x => x.id === C.rId);
   app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><h2 class="col c" style="margin:0">Tu pedido</h2><span style="width:42px"></span></div>
-    <div class="card row"><div class="logo">${r && r.logo ? `<img src="${esc(r.logo)}" alt="">` : "🏪"}</div><div class="col"><h3>${esc(C.rNom)}</h3><div class="small mu">Pago en efectivo · 💳 Tarjeta: próximamente</div></div><div style="font-size:30px">🛵</div></div>
+    <div class="card row"><div class="logo">${r && r.logo ? `<img src="${esc(IMG(r.logo))}" alt="">` : "🏪"}</div><div class="col"><h3>${esc(C.rNom)}</h3><div class="small mu">Pago en efectivo · 💳 Tarjeta: próximamente</div></div><div style="font-size:30px">🛵</div></div>
     <div class="seg"><button data-a="modal" data-v="DELIVERY" class="${del ? "on" : ""}">🛵 Delivery</button><button data-a="modal" data-v="PICKUP" class="${!del ? "on" : ""}">🏪 Retiro en local</button></div>
     <div style="padding:0 4px 14px">${del ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo"}<div class="b" style="color:var(--pd);margin-top:6px">${del ? "🛵 Envío " + L(t.envio) : "Sin costo de envío"}</div>${del ? `<div class="small mu" style="margin-top:6px">📍 ${esc(me().dir_desc || me().ciudad)} · <span class="link" style="display:inline;padding:0" data-a="irDirs">cambiar</span></div>` : ""}</div>
     <div class="card"><div class="b">${esc(C.texto)}</div></div>
