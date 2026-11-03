@@ -4,9 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>LLEVARI - Delivery & Pickup</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- MapLibre GL CSS -->
+  <link rel="stylesheet" href="styles.css?v=2" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <script>
+    // Detector visual de errores para saber exactamente qué pasa en el teléfono
+    window.onerror = function(msg, url, line) {
+      alert("⚠️ Error detectado: " + msg + "\nLínea: " + line);
+    };
+  </script>
 </head>
 <body>
 
@@ -30,9 +35,9 @@
           <div class="input-group">
             <input type="password" id="etLogPin" placeholder="Contraseña" />
           </div>
-          <button id="btnIniciarSesion" class="btn btn-primary">ENTRAR AHORA</button>
-          <a href="#" id="lnkOlvidoPin" class="text-link center">¿Olvidaste tu contraseña?</a>
-          <a href="#" id="lnkIrRegistro" class="text-link center">¿No tienes cuenta? Regístrate aquí</a>
+          <button id="btnIniciarSesion" class="btn btn-primary" onclick="if(window.iniciarSesion) iniciarSesion(); else alert('El archivo app.js no se ha cargado correctamente.');">ENTRAR AHORA</button>
+          <a href="javascript:void(0)" id="lnkOlvidoPin" class="text-link center" onclick="document.getElementById('layoutLogin').classList.add('hidden'); document.getElementById('layoutRecuperar').classList.remove('hidden');">¿Olvidaste tu contraseña?</a>
+          <a href="javascript:void(0)" id="lnkIrRegistro" class="text-link center" onclick="document.getElementById('layoutLogin').classList.add('hidden'); document.getElementById('layoutRegistro').classList.remove('hidden');">¿No tienes cuenta? Regístrate aquí</a>
         </div>
 
         <!-- RECUPERAR CONTRASEÑA -->
@@ -43,8 +48,8 @@
             <input type="email" id="etRecCorreo" placeholder="Correo electrónico" />
           </div>
           <div id="tvRecEstado" class="msg-alert success hidden"></div>
-          <button id="btnRecEnviar" class="btn btn-primary">ENVIAR ENLACE</button>
-          <a href="#" id="lnkVolverLogin" class="text-link center">❮ Volver a iniciar sesión</a>
+          <button id="btnRecEnviar" class="btn btn-primary" onclick="if(window.enviarRecuperacion) enviarRecuperacion();">ENVIAR ENLACE</button>
+          <a href="javascript:void(0)" id="lnkVolverLogin" class="text-link center" onclick="document.getElementById('layoutRecuperar').classList.add('hidden'); document.getElementById('layoutLogin').classList.remove('hidden');">❮ Volver a iniciar sesión</a>
         </div>
 
         <!-- REGISTRO: PASO 1 -->
@@ -82,8 +87,8 @@
               <input type="checkbox" id="cbAcepto" />
               <span>Soy mayor de 18 años y acepto los Términos y Condiciones y la Política de Privacidad</span>
             </label>
-            <button id="btnRegPasoSiguiente" class="btn btn-warning">SIGUIENTE ➔</button>
-            <a href="#" id="lnkRegVolverLog" class="text-link center">¿Ya tienes una cuenta? Inicia sesión</a>
+            <button id="btnRegPasoSiguiente" class="btn btn-warning" onclick="if(window.validarPaso1Registro) validarPaso1Registro();">SIGUIENTE ➔</button>
+            <a href="javascript:void(0)" id="lnkRegVolverLog" class="text-link center" onclick="document.getElementById('layoutRegistro').classList.add('hidden'); document.getElementById('layoutLogin').classList.remove('hidden');">¿Ya tienes una cuenta? Inicia sesión</a>
           </div>
 
           <!-- REGISTRO: PASO 2 -->
@@ -91,9 +96,9 @@
             <h3>Tus Direcciones 📍</h3>
             <p class="card-desc">Agrega al menos una dirección para entregas.</p>
             <div id="contDireccionesReg" class="address-list"></div>
-            <button id="btnRegNuevaDirMapa" class="btn btn-blue">+ Agregar Nueva Dirección en Mapa</button>
-            <button id="btnRegistrarmeFinal" class="btn btn-success" disabled>FINALIZAR REGISTRO ✅</button>
-            <a href="#" id="lnkRegVolverPaso1" class="text-link center">❮ Volver a datos</a>
+            <button id="btnRegNuevaDirMapa" class="btn btn-blue" onclick="if(window.abrirMapaNuevaDireccion) abrirMapaNuevaDireccion();">+ Agregar Nueva Dirección en Mapa</button>
+            <button id="btnRegistrarmeFinal" class="btn btn-success" disabled onclick="if(window.finalizarRegistro) finalizarRegistro();">FINALIZAR REGISTRO ✅</button>
+            <a href="javascript:void(0)" id="lnkRegVolverPaso1" class="text-link center" onclick="document.getElementById('layoutRegPaso2').classList.add('hidden'); document.getElementById('layoutRegPaso1').classList.remove('hidden');">❮ Volver a datos</a>
           </div>
         </div>
 
@@ -103,7 +108,7 @@
     <!-- PANTALLA: SELECTOR DE UBICACIÓN / MAPA -->
     <div id="layoutMapa" class="screen full-screen hidden">
       <div class="map-topbar">
-        <button id="btnCerrarMapa" class="btn-text">❮ Volver</button>
+        <button id="btnCerrarMapa" class="btn-text" onclick="if(window.volverDeMapa) volverDeMapa();">❮ Volver</button>
         <span class="map-title">Ubica tu dirección</span>
       </div>
       <div id="mapContainerPick" class="map-view"></div>
@@ -122,14 +127,12 @@
 
       <div class="map-card-confirm">
         <p class="confirm-title">📍 Mueve el mapa para centrar el pin</p>
-        <button id="btnConfirmarUbiMapa" class="btn btn-success">CONFIRMAR UBICACIÓN ✅</button>
+        <button id="btnConfirmarUbiMapa" class="btn btn-success" onclick="document.getElementById('modalDetalleDir').classList.remove('hidden');">CONFIRMAR UBICACIÓN ✅</button>
       </div>
     </div>
 
     <!-- PANTALLA: APP PRINCIPAL -->
     <div id="layoutAppMain" class="screen main-app hidden">
-      
-      <!-- HEADER -->
       <header id="headerBar" class="header-bar">
         <div class="header-top">
           <div id="colUbi" class="header-location">
@@ -148,20 +151,13 @@
         </div>
       </header>
 
-      <!-- CONTENEDOR DE TABS -->
       <main id="contV" class="content-viewport">
-
-        <!-- TAB 0: INICIO -->
         <section id="tabInicio" class="tab-view active">
           <div id="contRestaurantes" class="scroll-content"></div>
         </section>
-
-        <!-- TAB 1: CARRITO -->
         <section id="tabCarrito" class="tab-view">
           <div id="contCarrito" class="scroll-content pad-16"></div>
         </section>
-
-        <!-- TAB 2: PEDIDOS / HISTORIAL -->
         <section id="tabPedidos" class="tab-view">
           <div id="contHistorial" class="scroll-content">
             <div class="tab-filter-row">
@@ -171,10 +167,8 @@
             <div id="listContHistorial" class="pad-16"></div>
           </div>
         </section>
-
       </main>
 
-      <!-- BARRA DE NAVEGACIÓN INFERIOR -->
       <nav id="navBar" class="bottom-nav">
         <button class="nav-item active" data-tab="0">
           <div class="nav-pill"><span class="nav-icon">🏠</span></div>
@@ -193,10 +187,9 @@
           <span class="nav-label">Salir</span>
         </button>
       </nav>
-
     </div>
 
-    <!-- PANTALLA: MODALIDAD DE SERVICIO (DELIVERY / PICKUP) -->
+    <!-- PANTALLA: MODALIDAD DE SERVICIO -->
     <div id="layoutTipoServicio" class="screen full-screen hidden">
       <div class="service-top">
         <button id="btnVolverServicio" class="circle-btn back-btn">❮</button>
@@ -217,7 +210,6 @@
           <div class="moto-badge">🛵</div>
         </div>
 
-        <!-- TOGGLE DELIVERY / PICKUP -->
         <div id="svSeg" class="seg-control">
           <div id="svInd" class="seg-indicator"></div>
           <button id="svLblDelivery" class="seg-btn active">💵 Efectivo</button>
@@ -298,7 +290,7 @@
       <button id="bCancelarPedido" class="btn btn-danger btn-cancel-fixed">✖ Cancelar pedido</button>
     </div>
 
-    <!-- DIÁLOGO / MODAL PRO DE DETALLE DE PLATO -->
+    <!-- MODAL DETALLE DE PLATO -->
     <div id="modalPlatoPro" class="modal-backdrop hidden">
       <div class="modal-sheet">
         <button id="btnCloseModalPlato" class="circle-btn modal-close-btn">❮</button>
@@ -315,10 +307,6 @@
             <div id="modalDishPrice" class="dish-price">L. 0.00</div>
           </div>
           <div id="modalDishOptions"></div>
-          <div id="modalDishSuggestions" class="dish-sug-block hidden">
-            <h4>Otras personas lo combinaron con</h4>
-            <div id="modalDishSugList"></div>
-          </div>
         </div>
 
         <div class="modal-bottom-bar">
@@ -339,7 +327,7 @@
       </div>
     </div>
 
-    <!-- DIÁLOGO: CONFIRMAR DETALLE DE DIRECCIÓN (ETIQUETA) -->
+    <!-- DIÁLOGO: CONFIRMAR DETALLE DE DIRECCIÓN -->
     <div id="modalDetalleDir" class="modal-backdrop-alert hidden">
       <div class="dialog-card">
         <h3>Detalles de Ubicación</h3>
@@ -368,14 +356,10 @@
 
   </div>
 
-  <!-- MapLibre GL JS -->
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-
-  <!-- Firebase Compat v10 (para Firestore y Auth) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
