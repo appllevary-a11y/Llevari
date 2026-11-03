@@ -48,7 +48,6 @@ const S = {
 const me = () => S.me || { lat: 13.3024, lon: -87.1921, ciudad: "Choluteca" };
 
 /* ================= Utilidades ================= */
-const IMG = s => !s ? "" : /^(https?:|data:|blob:)/.test(s) ? s : "data:image/jpeg;base64," + String(s).replace(/\s/g, "");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const L = n => "L. " + n;
 const L2 = n => "L. " + Number(n).toFixed(2);
@@ -298,23 +297,127 @@ function escucharLocales() {
     }
   }, err => { console.error(err); S.errLocales = true; if (S.view === "inicio") render(); });
 }
+/* ================= Inicio (diseño nuevo, responsive) ================= */
+const CATS_HOME = [
+  ["tiendas", "🛍️", "Tiendas", ["tienda", "boutique", "ropa"]],
+  ["farmacias", "💊", "Farmacias", ["farmacia"]],
+  ["envios", "📦", "Envíos", ["envio", "paquete", "mensajer"]],
+  ["postres", "🍰", "Postres", ["postre", "pastel", "helado", "repost", "dulce"]],
+  ["bebidas", "🥤", "Bebidas", ["bebida", "cafe", "jugo", "batido", "licor"]]
+];
+const SUPER_KW = ["super", "mercado", "abarrot"];
+const normTxt = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const coincide = (r, kws) => { const t = normTxt(r.categoria + " " + r.nombre); return kws.some(k => t.includes(k)); };
+const kwsDe = k => k === "super" ? SUPER_KW : ((CATS_HOME.find(c => c[0] === k) || [])[3] || []);
+
+function hmCategoria(k) {
+  if (!k || S.hmCat === k) { S.hmCat = ""; vInicio(); return; }
+  if (!S.restaurantes.some(r => coincide(r, kwsDe(k)))) return toast("Pronto habrá locales en esta categoría 🙌");
+  S.hmCat = k; vInicio();
+}
+
+function hmSlides(lista) {
+  const ab = lista.filter(r => r.estado !== "CERRADO").slice(0, 5);
+  if (!ab.length) return [{ t: "¡Pídelo ahora! ✨", s: "Descubre los mejores<br>locales de tu ciudad.", id: "" }];
+  const titulos = ["¡Pídelo ahora! ✨", "¡Antójate hoy! 🔥", "Envío rápido 🛵"];
+  return ab.map((r, n) => ({ t: titulos[n % titulos.length], s: `${esc(r.nombre)} • Envío ${L(calcularTarifa(kmHacia(r.lat, r.lon), 0).envio)}<br>Descubre sabor.`, id: r.id }));
+}
+function hmPuntos(n, cur) { return Array.from({ length: n }, (_, i) => `<i class="${i === cur ? "on" : ""}"></i>`).join(""); }
+function hmBanner(slides) {
+  clearInterval(S.hmTimer); S.hmTimer = null;
+  if (slides.length < 2) return;
+  S.hmTimer = setInterval(() => {
+    const t = $("#hmT"); if (!t || S.view !== "inicio") { clearInterval(S.hmTimer); S.hmTimer = null; return; }
+    S.hmCur = ((S.hmCur || 0) + 1) % slides.length;
+    const s = slides[S.hmCur];
+    t.innerHTML = s.t; $("#hmS").innerHTML = s.s; $("#hmCta").dataset.id = s.id; $("#hmDots").innerHTML = hmPuntos(slides.length, S.hmCur);
+  }, 4000);
+}
+
+async function cargarAntojos() {
+  if (S.antojos !== undefined || S.antLoading) return;
+  S.antLoading = true;
+  const out = [];
+  for (const r of S.restaurantes.filter(x => x.estado !== "CERRADO").slice(0, 3)) {
+    try {
+      const its = (await cargarMenuItems(r.id)).filter(i => i.p && i.pr > 0 && i.disp);
+      const conFoto = its.filter(i => i.im);
+      (conFoto.length ? conFoto : its).slice(0, 2).forEach(i => out.push({ ...i, rId: r.id, rNom: r.nombre, lat: r.lat, lon: r.lon }));
+    } catch {}
+  }
+  S.antojos = out; S.antLoading = false;
+  const b = $("#buscar");
+  if (S.view === "inicio" && !$(".full") && !$(".mapfull") && !(b && document.activeElement === b)) vInicio();
+}
+
 function vInicio() {
-  const m = me(), q = S.filtro.toLowerCase();
+  const m = me(), q = normTxt(S.filtro);
+  app.classList.add("home");
   let lista = S.restaurantes.filter(r => !r.ciudad || r.ciudad.toLowerCase() === (m.ciudad || "").toLowerCase());
-  if (q) lista = lista.filter(r => (r.nombre + " " + r.categoria).toLowerCase().includes(q));
+  if (S.hmCat) lista = lista.filter(r => coincide(r, kwsDe(S.hmCat)));
+  if (q) {
+    const idsPlatos = new Set((S.antojos || []).filter(i => normTxt(i.p).includes(q)).map(i => i.rId));
+    lista = lista.filter(r => normTxt(r.nombre + " " + r.categoria).includes(q) || idsPlatos.has(r.id));
+  }
   lista.sort((a, b) => (a.estado === "CERRADO") - (b.estado === "CERRADO") || haversine(m.lat, m.lon, a.lat || 0, a.lon || 0) - haversine(m.lat, m.lon, b.lat || 0, b.lon || 0));
-  const tarjetas = lista.map(r => {
-    const t = calcularTarifa(kmHacia(r.lat, r.lon), 0), cerr = r.estado === "CERRADO";
-    return `<div class="card row" data-a="abrirLocal" data-id="${esc(r.id)}" style="${cerr ? "opacity:.6" : ""}"><div class="logo">${r.logo ? `<img src="${esc(IMG(r.logo))}" loading="lazy" alt="">` : "🏪"}</div>
-      <div class="col"><h3>${esc(r.nombre)}</h3><div class="small mu">⏱ 20-35 min${r.categoria ? " · " + esc(r.categoria) : ""}</div><div class="small b" style="color:var(--pd)">🛵 Envío ${L(t.envio)}</div></div>
-      <span class="badge ${cerr ? "" : "ok"}">${cerr ? "Cerrado" : "Abierto"}</span></div>`;
-  }).join("");
-  app.innerHTML = `<div class="row" style="margin-bottom:6px"><div class="col"><h1>Hola, ${esc((m.nombre || "").split(" ")[0])} 👋</h1><div class="small mu" data-a="irDirs" style="cursor:pointer">📍 ${esc(m.dir_desc || m.ciudad)} ▾</div></div></div>
-    <div class="search"><input id="buscar" type="search" placeholder="🔍 Buscar locales..." value="${esc(S.filtro)}"></div>
-    ${S.errLocales ? `<div class="empty"><div class="e">📡</div>No pudimos cargar los locales\nRevisa tu señal e intenta de nuevo</div><button class="btn" data-a="reintentar">REINTENTAR</button>`
-      : !S.restaurantes.length ? `<div class="loader">Cargando locales...</div>`
-      : tarjetas || `<div class="empty"><div class="e">🔎</div>No hay locales para mostrar</div>`}`;
-  const b = $("#buscar"); b.oninput = () => { S.filtro = b.value; const pos = b.selectionStart; vInicio(); const n = $("#buscar"); n.focus(); n.setSelectionRange(pos, pos); };
+
+  const img = (r, cls) => r.logo ? `<img src="${esc(r.logo)}" loading="lazy" alt="">` : `<span class="${cls}">🏪</span>`;
+  const tarjeta = r => {
+    const cerr = r.estado === "CERRADO", t = calcularTarifa(kmHacia(r.lat, r.lon), 0);
+    return `<div class="hm-rc" data-a="abrirLocal" data-id="${esc(r.id)}">
+      <div class="hm-img">${img(r, "hm-ph")}${cerr ? `<span class="hm-closed">CERRADO</span>` : ""}<span class="hm-fee">🛵 ${L(t.envio)}</span></div>
+      <div class="hm-ri"><div class="hm-lg">${img(r, "")}</div><div class="hm-rt"><b>${esc(r.nombre)}</b><small class="${cerr ? "" : "ok"}">${cerr ? "No disponible temporalmente" : "⏱ 20-35 min" + (r.categoria ? " · " + esc(r.categoria) : "")}</small></div></div></div>`;
+  };
+  const circulo = r => `<div class="hm-st" data-a="abrirLocal" data-id="${esc(r.id)}"><div class="hm-ring">${r.logo ? `<img src="${esc(r.logo)}" loading="lazy" alt="">` : "🍴"}</div><span>${esc(r.nombre)}</span></div>`;
+
+  const slides = hmSlides(lista), cur = (S.hmCur || 0) % slides.length, sl = slides[cur];
+  let rec = []; try { rec = JSON.parse(ls.get("recientes", "[]")).map(id => S.restaurantes.find(r => r.id === id)).filter(Boolean); } catch {}
+  const an = S.antojos || [];
+  const platos = an.length
+    ? an.map(i => `<div class="hm-dish" data-a="abrirLocal" data-id="${esc(i.rId)}">${i.im ? `<img src="${esc(i.im)}" loading="lazy" alt="">` : `<span class="hm-ph">🍽️</span>`}<div class="hm-dn"><b>${esc(i.p)}</b><small>${L(Math.round(precioVisible(i.pr, i.lat, i.lon)))}</small></div></div>`).join("")
+    : Array.from({ length: 3 }, () => `<div class="hm-dish"><span class="hm-ph">🍽️</span></div>`).join("");
+  const n = contarCarrito();
+
+  const cuerpo = S.errLocales
+    ? `<div class="empty"><div class="e">📡</div>No pudimos cargar los locales\nRevisa tu señal e intenta de nuevo</div><button class="btn" data-a="reintentar">REINTENTAR</button>`
+    : !S.restaurantes.length ? `<div class="loader">Cargando locales...</div>`
+    : !lista.length ? `<div class="empty"><div class="e">🔎</div>No hay locales para mostrar</div>`
+    : `<div class="hm-scroll hm-bleed hm-stores">${lista.slice(0, 20).map(circulo).join("")}</div>
+      <div class="hm-sec" id="hmRest"><h2>Los mejores restaurantes</h2><a data-a="hmall">${S.hmAll ? "Ver menos ↑" : "Ver todo →"}</a></div>
+      <div class="hm-scroll hm-bleed hm-rests ${S.hmAll ? "all" : ""}">${lista.slice(0, 40).map(tarjeta).join("")}</div>`;
+
+  app.innerHTML = `<header class="hm-head"><div class="hm-wrap">
+      <div class="hm-top">
+        <div class="hm-who"><div class="hm-hi"><span>Hola, ${esc((m.nombre || "").split(" ")[0])} 👋</span><span>•</span><span>Entregar en</span></div>
+          <div class="hm-loc" data-a="irDirs"><span class="hm-pin">📍</span><span class="txt">${esc(m.dir_desc || m.ciudad)}</span><span class="arr">⌄</span></div></div>
+        <div class="hm-btns"><button class="hm-btn" data-a="tab" data-v="cuenta" aria-label="Cuenta">⚙️</button><button class="hm-btn" data-a="tab" data-v="carrito" aria-label="Carrito">🛒${n ? `<i class="hm-n">${n}</i>` : ""}</button></div>
+      </div>
+      <div class="hm-search"><input id="buscar" type="search" placeholder="Locales, platos y productos" value="${esc(S.filtro)}" autocomplete="off"><button class="hm-go" data-a="hmfocus" aria-label="Buscar">🔍</button></div>
+    </div></header>
+    <main class="hm-wrap">
+      <section class="hm-hero">
+        <span class="hm-tag">⚡ DESTACADO</span>
+        <h2 id="hmT">${sl.t}</h2><p id="hmS">${sl.s}</p>
+        <button class="hm-cta" id="hmCta" data-a="abrirLocal" data-id="${esc(sl.id)}">Pedir ahora →</button>
+        <div class="hm-dots" id="hmDots">${hmPuntos(slides.length, cur)}</div>
+      </section>
+      <section class="hm-big">
+        <button class="hm-bc sup ${S.hmCat === "super" ? "on" : ""}" data-a="hmcat" data-v="super"><div class="circ">🛒</div><b>Súper</b></button>
+        <button class="hm-bc res" data-a="hmrest"><div class="circ">🍔</div><b>Restaurantes</b></button>
+      </section>
+      <div class="hm-scroll hm-bleed hm-mini">${CATS_HOME.map(([k, e, t]) => `<div class="hm-mc ${S.hmCat === k ? "on" : ""}" data-a="hmcat" data-v="${k}"><div class="circ">${e}</div><b>${t}</b></div>`).join("")}</div>
+      ${cuerpo}
+      <div class="hm-sec"><h2>Tus favoritos recientes <span>⚡</span></h2></div>
+      ${rec.length ? `<div class="hm-scroll hm-bleed hm-stores">${rec.map(circulo).join("")}</div>` : `<div class="hm-fav">Aún no has visitado locales. ¡Explora y empieza a pedir! 🍽️</div>`}
+      <section class="hm-ant">
+        <h2>Antojos para hoy 🔥</h2><p>Platillos que se te van a antojar</p>
+        <div class="hm-scroll hm-dishes">${platos}</div>
+      </section>
+    </main>`;
+
+  const b = $("#buscar"); b.oninput = () => { S.filtro = b.value; const pos = b.selectionStart; vInicio(); const n2 = $("#buscar"); n2.focus(); n2.setSelectionRange(pos, pos); };
+  hmBanner(slides);
+  if (S.restaurantes.length) cargarAntojos();
 }
 
 /* ================= Menú ================= */
@@ -333,6 +436,7 @@ async function cargarMenuItems(rId) {
 async function abrirLocal(id) {
   const r = S.restaurantes.find(x => x.id === id); if (!r) return;
   if (r.estado === "CERRADO") return toast("🛑 Este local está cerrado ahora");
+  try { const rec = JSON.parse(ls.get("recientes", "[]")).filter(x => x !== id); rec.unshift(id); ls.set("recientes", JSON.stringify(rec.slice(0, 8))); } catch {}
   S.menu = { rId: id, rNom: r.nombre, items: null, logo: r.logo, lat: r.lat, lon: r.lon };
   go("menu", { id });
   try { S.menu.items = (await cargarMenuItems(id)).filter(i => i.p && i.pr > 0 && i.disp); } catch (e) { console.error(e); S.menu.items = []; toast("No se pudo cargar el menú"); }
@@ -349,7 +453,7 @@ function vMenu() {
   app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><div class="col"><h2 style="margin:0">${esc(M.rNom)}</h2><div class="small mu">⏱ 20-35 min · 🛵 Envío ${L(t.envio)}</div></div></div>
     ${cats.length ? `<div style="margin-bottom:8px"><span class="chip ${!f ? "on" : ""}" data-a="cat" data-v="">Todo</span>${cats.map(c => `<span class="chip ${f === c ? "on" : ""}" data-a="cat" data-v="${esc(c)}">${esc(c)}</span>`).join("")}</div>` : ""}
     ${it === null ? `<div class="loader">Cargando menú...</div>` : !lista.length ? `<div class="empty"><div class="e">🍽️</div>Este local aún no tiene productos</div>` :
-      lista.map((i, n) => `<div class="card row" data-a="plato" data-i="${it.indexOf(i)}"><div class="thumb">${i.im ? `<img src="${esc(IMG(i.im))}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(i.p)}</div>${i.de ? `<div class="small mu" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.de)}</div>` : ""}<div class="price" style="margin-top:4px">${L(Math.round(precioVisible(i.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}`;
+      lista.map((i, n) => `<div class="card row" data-a="plato" data-i="${it.indexOf(i)}"><div class="thumb">${i.im ? `<img src="${esc(i.im)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(i.p)}</div>${i.de ? `<div class="small mu" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.de)}</div>` : ""}<div class="price" style="margin-top:4px">${L(Math.round(precioVisible(i.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}`;
 }
 
 /* ---- Hoja de producto ---- */
@@ -381,12 +485,12 @@ function abrirPlato(item) {
   };
   const sugeridos = S.menu.items.filter(x => x.p !== item.p).slice(0, 4);
   layer.innerHTML = `<div class="full" id="plato">
-    <div class="hero">🍽️${item.im ? `<img src="${esc(IMG(item.im))}" alt="">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
+    <div class="hero">🍽️${item.im ? `<img src="${esc(item.im)}" alt="">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
     <button class="back floatback" data-a="cerrarPlato">❮</button>
     <div style="padding:20px 18px 6px"><h1 style="font-size:26px">${esc(item.p)}</h1>${item.de ? `<p class="mu">${esc(item.de)}</p>` : ""}<div class="price" style="font-size:24px" id="pp"></div></div>
     ${grupos.map((g, gi) => `<div class="grp"><div class="row"><h3 class="col">${esc(g.n)}</h3><span class="badge" style="background:#F1F5F9;color:#334155">Obligatorio</span></div><div class="small mu" style="margin:4px 0 6px">Selecciona una opción</div>
       ${g.ops.map((o, oi) => `<label class="opt"><input type="radio" name="g${gi}" data-g="${gi}" data-o="${oi}" ${oi === 0 ? "checked" : ""}><span class="col">${esc(o.n)}</span>${o.p > 0 ? `<span class="mu b small">+ ${L2(o.p)}</span>` : ""}</label>`).join("")}</div>`).join("")}
-    ${sugeridos.length ? `<h2 style="padding:20px 18px 0">Otras personas lo combinaron con</h2>${sugeridos.map(s => `<div class="row" style="padding:8px 18px;cursor:pointer" data-a="otroPlato" data-i="${S.menu.items.indexOf(s)}"><div class="thumb">${s.im ? `<img src="${esc(IMG(s.im))}" loading="lazy" alt="">` : "🍽️"}</div><div class="col">${esc(s.p)}<div class="b" style="margin-top:4px">${L(Math.round(precioVisible(s.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}` : ""}
+    ${sugeridos.length ? `<h2 style="padding:20px 18px 0">Otras personas lo combinaron con</h2>${sugeridos.map(s => `<div class="row" style="padding:8px 18px;cursor:pointer" data-a="otroPlato" data-i="${S.menu.items.indexOf(s)}"><div class="thumb">${s.im ? `<img src="${esc(s.im)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col">${esc(s.p)}<div class="b" style="margin-top:4px">${L(Math.round(precioVisible(s.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}` : ""}
     <div class="sheetbot"><div class="row"><h2 class="col" style="margin:0">Tu producto</h2><h2 id="tp" style="margin:0"></h2></div>
       <div class="row" style="margin-top:14px"><div class="qty"><button id="qm">－</button><b id="qc" style="min-width:24px;text-align:center">1</b><button id="qp">＋</button></div><button class="btn" id="pedir" style="margin:0;flex:1;height:56px"></button></div>
       <button class="btn soft" id="alcarro" style="border:2px solid var(--p);margin-top:10px">🛒 Agregar al carrito</button></div></div>`;
@@ -425,7 +529,7 @@ function vCarrito() {
     gs.map(g => {
       const t = calcularTarifa(kmHacia(g.lat, g.lon), Math.round(g.sub));
       return `<div class="card row"><div class="logo">🏪</div><div class="col"><h3>${esc(g.rNom)}</h3><div class="small mu">⏱ Recibes en 20-35 min</div><div class="small b" style="color:var(--pd)">🛵 Envío ${L(t.envio)}</div></div></div>
-      ${g.items.map(it => { const vis = it.precio + (g.sub > 0 ? t.aumento * it.precio / g.sub : 0); return `<div class="card row"><div class="thumb">${it.img ? `<img src="${esc(IMG(it.img))}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(it.nombre)}</div>${it.opciones ? `<div class="small mu">${esc(it.opciones)}</div>` : ""}<div class="price" style="margin-top:4px">${L2(vis)}</div></div><button class="back" style="background:#FEE2E2" data-a="quitar" data-i="${it.idx}">🗑</button></div>`; }).join("")}
+      ${g.items.map(it => { const vis = it.precio + (g.sub > 0 ? t.aumento * it.precio / g.sub : 0); return `<div class="card row"><div class="thumb">${it.img ? `<img src="${esc(it.img)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(it.nombre)}</div>${it.opciones ? `<div class="small mu">${esc(it.opciones)}</div>` : ""}<div class="price" style="margin-top:4px">${L2(vis)}</div></div><button class="back" style="background:#FEE2E2" data-a="quitar" data-i="${it.idx}">🗑</button></div>`; }).join("")}
       ${t.minimo > 0 && Math.round(g.sub) < t.minimo ? `<div class="warn">⚠️ Pedido mínimo ${L(t.minimo)} en este local (te faltan ${L(t.minimo - Math.round(g.sub))})</div>` : ""}
       <button class="btn ac" data-a="pedirLocal" data-id="${esc(g.rId)}">PEDIR ESTE LOCAL ➔ ${L2(g.sub + t.aumento + t.envio)}</button>
       <button class="btn soft" data-a="masLocal" data-id="${esc(g.rId)}">➕ Agregar más de este local</button><div style="height:14px"></div>`;
@@ -445,7 +549,7 @@ function vServicio() {
   C.total = total; C.envio = del ? t.envio : 0; C.productos = del ? productos : sub;
   const r = S.restaurantes.find(x => x.id === C.rId);
   app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><h2 class="col c" style="margin:0">Tu pedido</h2><span style="width:42px"></span></div>
-    <div class="card row"><div class="logo">${r && r.logo ? `<img src="${esc(IMG(r.logo))}" alt="">` : "🏪"}</div><div class="col"><h3>${esc(C.rNom)}</h3><div class="small mu">Pago en efectivo · 💳 Tarjeta: próximamente</div></div><div style="font-size:30px">🛵</div></div>
+    <div class="card row"><div class="logo">${r && r.logo ? `<img src="${esc(r.logo)}" alt="">` : "🏪"}</div><div class="col"><h3>${esc(C.rNom)}</h3><div class="small mu">Pago en efectivo · 💳 Tarjeta: próximamente</div></div><div style="font-size:30px">🛵</div></div>
     <div class="seg"><button data-a="modal" data-v="DELIVERY" class="${del ? "on" : ""}">🛵 Delivery</button><button data-a="modal" data-v="PICKUP" class="${!del ? "on" : ""}">🏪 Retiro en local</button></div>
     <div style="padding:0 4px 14px">${del ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo"}<div class="b" style="color:var(--pd);margin-top:6px">${del ? "🛵 Envío " + L(t.envio) : "Sin costo de envío"}</div>${del ? `<div class="small mu" style="margin-top:6px">📍 ${esc(me().dir_desc || me().ciudad)} · <span class="link" style="display:inline;padding:0" data-a="irDirs">cambiar</span></div>` : ""}</div>
     <div class="card"><div class="b">${esc(C.texto)}</div></div>
@@ -768,6 +872,10 @@ document.addEventListener("click", async ev => {
     case "cerrarModal": cerrarModal(); break;
     case "reintentar": S.errLocales = false; render(); break;
     case "abrirLocal": abrirLocal(id); break;
+    case "hmcat": hmCategoria(v); break;
+    case "hmrest": S.hmCat = ""; vInicio(); { const s = $("#hmRest"); if (s) s.scrollIntoView({ behavior: "smooth", block: "start" }); } break;
+    case "hmall": S.hmAll = !S.hmAll; vInicio(); break;
+    case "hmfocus": { const bb = $("#buscar"); if (bb) bb.focus(); } break;
     case "cat": S.catSel = v; vMenu(); break;
     case "plato": abrirPlato(S.menu.items[+i]); break;
     case "otroPlato": abrirPlato(S.menu.items[+i]); break;
