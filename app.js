@@ -67,7 +67,7 @@ const ETIQUETA = {
   RECHAZADO: "🛑 Pedido rechazado" 
 };
 
-/* Subcolecciones de menú (se prioriza 'productos' como en Android) */
+/* Subcolecciones de menú */
 const SUBCOLECCIONES_MENU = ["productos", "menu", "platos", "menus"];
 
 /* Tarifas dinámicas */
@@ -92,11 +92,14 @@ const S = {
 };
 const me = () => S.me || { lat: 13.3024, lon: -87.1921, ciudad: "Choluteca" };
 
+/* Sanitizador de URLs e Imágenes */
+const sanitizeUrl = u => u ? String(u).trim().replace(/^http:\/\//i, "https://") : "";
+
 /* ================= Utilidades ================= */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const L = n => "L. " + Math.round(n);
 const L2 = n => "L. " + Number(n).toFixed(2);
-function toast(m, ms = 2600) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), ms); }
+function toast(m, ms = 2600) { const t = $("#toast"); if(!t) return; t.textContent = m; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), ms); }
 const pick = (d, ks) => { for (const k of ks) if (d[k] !== undefined && d[k] !== null && d[k] !== "") return d[k]; return ""; };
 const num = (d, k) => { const v = d[k]; return typeof v === "number" ? v : parseFloat(v) || 0; };
 function haversine(a, b, c, d) { const R = 6371, r = x => x * Math.PI / 180; const dl = r(c - a), dn = r(d - b); const h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
@@ -352,7 +355,7 @@ function escucharLocales() {
         ciudad: x.ciudad || "", 
         lat: num(x, "latitud") || num(x, "lat"), 
         lon: num(x, "longitud") || num(x, "lon"), 
-        logo: x.logoUrl || "", 
+        logo: sanitizeUrl(x.logoUrl || x.logo || ""), 
         categoria: x.categoria || x.tipo || "", 
         marca: x.marca_id || "" 
       }; 
@@ -430,21 +433,62 @@ function vInicio() {
   }
   lista.sort((a, b) => (a.estado === "CERRADO") - (b.estado === "CERRADO") || haversine(m.lat, m.lon, a.lat || 0, a.lon || 0) - haversine(m.lat, m.lon, b.lat || 0, b.lon || 0));
 
-  const img = (r, cls) => r.logo ? `<img src="${esc(r.logo)}" loading="lazy" alt="">` : `<span class="${cls}">🏪</span>`;
+  const img = (r, cls) => {
+    const src = sanitizeUrl(r.logo);
+    return src 
+      ? `<img src="${esc(src)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` 
+      : `<span class="${cls}">🏪</span>`;
+  };
+
   const tarjeta = r => {
     const cerr = r.estado === "CERRADO", t = calcularTarifa(kmHacia(r.lat, r.lon), 0);
+    const logo = sanitizeUrl(r.logo);
     return `<div class="hm-rc" data-a="abrirLocal" data-id="${esc(r.id)}">
-      <div class="hm-img">${img(r, "hm-ph")}${cerr ? `<span class="hm-closed">CERRADO</span>` : ""}<span class="hm-fee">🛵 ${L(t.envio)}</span></div>
-      <div class="hm-ri"><div class="hm-lg">${img(r, "")}</div><div class="hm-rt"><b>${esc(r.nombre)}</b><small class="${cerr ? "" : "ok"}">${cerr ? "No disponible temporalmente" : "⏱ 20-35 min" + (r.categoria ? " · " + esc(r.categoria) : "")}</small></div></div></div>`;
+      <div class="hm-img">
+        🏪
+        ${logo ? `<img src="${esc(logo)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : ""}
+        ${cerr ? `<span class="hm-closed">CERRADO</span>` : ""}
+        <span class="hm-fee">🛵 ${L(t.envio)}</span>
+      </div>
+      <div class="hm-ri">
+        <div class="hm-lg">
+          ${logo ? `<img src="${esc(logo)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : "🏪"}
+        </div>
+        <div class="hm-rt">
+          <b>${esc(r.nombre)}</b>
+          <small class="${cerr ? "" : "ok"}">${cerr ? "No disponible temporalmente" : "⏱ 20-35 min" + (r.categoria ? " · " + esc(r.categoria) : "")}</small>
+        </div>
+      </div>
+    </div>`;
   };
-  const circulo = r => `<div class="hm-st" data-a="abrirLocal" data-id="${esc(r.id)}"><div class="hm-ring">${r.logo ? `<img src="${esc(r.logo)}" loading="lazy" alt="">` : "🍴"}</div><span>${esc(r.nombre)}</span></div>`;
+
+  const circulo = r => {
+    const logo = sanitizeUrl(r.logo);
+    return `<div class="hm-st" data-a="abrirLocal" data-id="${esc(r.id)}">
+      <div class="hm-ring">
+        ${logo ? `<img src="${esc(logo)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : "🍴"}
+      </div>
+      <span>${esc(r.nombre)}</span>
+    </div>`;
+  };
 
   const slides = hmSlides(lista), cur = (S.hmCur || 0) % slides.length, sl = slides[cur];
   let rec = []; try { rec = JSON.parse(ls.get("recientes", "[]")).map(id => S.restaurantes.find(r => r.id === id)).filter(Boolean); } catch {}
   const an = S.antojos || [];
+  
   const platos = an.length
-    ? an.map(i => `<div class="hm-dish" data-a="abrirLocal" data-id="${esc(i.rId)}">${i.im ? `<img src="${esc(i.im)}" loading="lazy" alt="">` : `<span class="hm-ph">🍽️</span>`}<div class="hm-dn"><b>${esc(i.p)}</b><small>${L(Math.round(precioVisible(i.pr, i.lat, i.lon)))}</small></div></div>`).join("")
-    : Array.from({ length: 3 }, () => `<div class="hm-dish"><span class="hm-ph">🍽️</span></div>`).join("");
+    ? an.map(i => {
+        const foto = sanitizeUrl(i.im);
+        return `<div class="hm-dish" data-a="abrirLocal" data-id="${esc(i.rId)}">
+          ${foto ? `<img src="${esc(foto)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : `<div class="hm-ph">🍽️</div>`}
+          <div class="hm-dn">
+            <b>${esc(i.p)}</b>
+            <small>${L(Math.round(precioVisible(i.pr, i.lat, i.lon)))}</small>
+          </div>
+        </div>`;
+      }).join("")
+    : Array.from({ length: 3 }, () => `<div class="hm-dish"><div class="hm-ph">🍽️</div></div>`).join("");
+
   const n = contarCarrito();
 
   const cuerpo = S.errLocales
@@ -477,7 +521,7 @@ function vInicio() {
       <div class="hm-scroll hm-bleed hm-mini">${CATS_HOME.map(([k, e, t]) => `<div class="hm-mc ${S.hmCat === k ? "on" : ""}" data-a="hmcat" data-v="${k}"><div class="circ">${e}</div><b>${t}</b></div>`).join("")}</div>
       ${cuerpo}
       <div class="hm-sec"><h2>Tus favoritos recientes <span>⚡</span></h2></div>
-      ${rec.length ? `<div class="hm-scroll hm-bleed hm-stores">${rec.map(circulo).join("")}</div>` : `<div class="hm-fav">Aún no has visitado locales. ¡Explora y empieza a pedir! 🍽️</div>`}
+      ${rec.length ? `<div class="hm-scroll hm-bleed hm-stores">${rec.map(circulo).join("")}</div>` : `<div class="card mu small">Aún no has visitado locales. ¡Explora y empieza a pedir! 🍽️</div>`}
       <section class="hm-ant">
         <h2>Antojos para hoy 🔥</h2><p>Platillos que se te van a antojar</p>
         <div class="hm-scroll hm-dishes">${platos}</div>
@@ -488,7 +532,7 @@ function vInicio() {
   S.hmHtml = html;
   app.innerHTML = html;
 
-  const b = $("#buscar"); b.oninput = () => { S.filtro = b.value; const pos = b.selectionStart; vInicio(); const n2 = $("#buscar"); n2.focus(); n2.setSelectionRange(pos, pos); };
+  const b = $("#buscar"); if (b) b.oninput = () => { S.filtro = b.value; const pos = b.selectionStart; vInicio(); const n2 = $("#buscar"); if (n2) { n2.focus(); n2.setSelectionRange(pos, pos); } };
   hmBanner(slides);
   if (S.restaurantes.length) cargarAntojos();
 }
@@ -501,7 +545,7 @@ function normItem(d, id) {
     p: String(p), 
     pr: parseFloat(pick(d, ["precio", "pr", "pPrec"])) || 0, 
     de: String(pick(d, ["descripcion", "de", "desc", "pDesc"])), 
-    im: String(pick(d, ["imagenUrl", "im", "imagen", "img", "pImg", "foto"])), 
+    im: sanitizeUrl(pick(d, ["imagenUrl", "im", "imagen", "img", "pImg", "foto"])), 
     op: String(pick(d, ["opciones", "op", "pOps"])), 
     cat: String(pick(d, ["categoria", "cat"])), 
     disp: d.disponible !== false && d.activo !== false 
@@ -538,7 +582,7 @@ function vMenu() {
   app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><div class="col"><h2 style="margin:0">${esc(M.rNom)}</h2><div class="small mu">⏱ 20-35 min · 🛵 Envío ${L(t.envio)}</div></div></div>
     ${cats.length ? `<div style="margin-bottom:8px"><span class="chip ${!f ? "on" : ""}" data-a="cat" data-v="">Todo</span>${cats.map(c => `<span class="chip ${f === c ? "on" : ""}" data-a="cat" data-v="${esc(c)}">${esc(c)}</span>`).join("")}</div>` : ""}
     ${it === null ? `<div class="loader">Cargando menú...</div>` : !lista.length ? `<div class="empty"><div class="e">🍽️</div>Este local aún no tiene productos</div>` :
-      lista.map((i, n) => `<div class="card row" data-a="plato" data-i="${it.indexOf(i)}"><div class="thumb">${i.im ? `<img src="${esc(i.im)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(i.p)}</div>${i.de ? `<div class="small mu" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.de)}</div>` : ""}<div class="price" style="margin-top:4px">${L(Math.round(precioVisible(i.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}`;
+      lista.map((i, n) => `<div class="card row" data-a="plato" data-i="${it.indexOf(i)}"><div class="thumb">${i.im ? `<img src="${esc(i.im)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : "🍽️"}</div><div class="col"><div class="b">${esc(i.p)}</div>${i.de ? `<div class="small mu" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.de)}</div>` : ""}<div class="price" style="margin-top:4px">${L(Math.round(precioVisible(i.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}`;
 }
 
 /* ---- Hoja de producto ---- */
@@ -570,12 +614,12 @@ function abrirPlato(item) {
   };
   const sugeridos = S.menu.items ? S.menu.items.filter(x => x.p !== item.p).slice(0, 4) : [];
   layer.innerHTML = `<div class="full" id="plato">
-    <div class="hero">🍽️${item.im ? `<img src="${esc(item.im)}" alt="">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
+    <div class="hero">🍽️${item.im ? `<img src="${esc(item.im)}" alt="" onerror="this.classList.add('img-broken')">` : ""}<span class="rn">🏪 ${esc(M.rNom)}</span></div>
     <button class="back floatback" data-a="cerrarPlato">❮</button>
     <div style="padding:20px 18px 6px"><h1 style="font-size:26px">${esc(item.p)}</h1>${item.de ? `<p class="mu">${esc(item.de)}</p>` : ""}<div class="price" style="font-size:24px" id="pp"></div></div>
-    ${grupos.map((g, gi) => `<div class="grp"><div class="row"><h3 class="col">${esc(g.n)}</h3><span class="badge" style="background:#F1F5F9;color:#334155">Obligatorio</span></div><div class="small mu" style="margin:4px 0 6px">Selecciona una opción</div>
-      ${g.ops.map((o, oi) => `<label class="opt"><input type="radio" name="g${gi}" data-g="${gi}" data-o="${oi}" ${oi === 0 ? "checked" : ""}><span class="col">${esc(o.n)}</span>${o.p > 0 ? `<span class="mu b small">+ ${L2(o.p)}</span>` : ""}</label>`).join("")}</div>`).join("")}
-    ${sugeridos.length ? `<h2 style="padding:20px 18px 0">Otras personas lo combinaron con</h2>${sugeridos.map(s => `<div class="row" style="padding:8px 18px;cursor:pointer" data-a="otroPlato" data-i="${S.menu.items.indexOf(s)}"><div class="thumb">${s.im ? `<img src="${esc(s.im)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col">${esc(s.p)}<div class="b" style="margin-top:4px">${L(Math.round(precioVisible(s.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}` : ""}
+    ${grupos.map((g, gi) => `<div class="grp" style="padding:0 18px 12px"><div class="row"><h3 class="col">${esc(g.n)}</h3><span class="badge" style="background:#F1F5F9;color:#334155;padding:2px 8px;border-radius:6px;font-size:11px">Obligatorio</span></div><div class="small mu" style="margin:4px 0 6px">Selecciona una opción</div>
+      ${g.ops.map((o, oi) => `<label class="opt" style="display:flex;align-items:center;padding:8px 0;gap:8px"><input type="radio" name="g${gi}" data-g="${gi}" data-o="${oi}" ${oi === 0 ? "checked" : ""}><span class="col">${esc(o.n)}</span>${o.p > 0 ? `<span class="mu b small">+ ${L2(o.p)}</span>` : ""}</label>`).join("")}</div>`).join("")}
+    ${sugeridos.length ? `<h2 style="padding:20px 18px 0">Otras personas lo combinaron con</h2>${sugeridos.map(s => `<div class="row" style="padding:8px 18px;cursor:pointer" data-a="otroPlato" data-i="${S.menu.items.indexOf(s)}"><div class="thumb">${s.im ? `<img src="${esc(s.im)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : "🍽️"}</div><div class="col">${esc(s.p)}<div class="b" style="margin-top:4px">${L(Math.round(precioVisible(s.pr, M.lat, M.lon)))}</div></div><span class="back" style="display:flex;align-items:center;justify-content:center">+</span></div>`).join("")}` : ""}
     <div class="sheetbot"><div class="row"><h2 class="col" style="margin:0">Tu producto</h2><h2 id="tp" style="margin:0"></h2></div>
       <div class="row" style="margin-top:14px"><div class="qty"><button id="qm">－</button><b id="qc" style="min-width:24px;text-align:center">1</b><button id="qp">＋</button></div><button class="btn" id="pedir" style="margin:0;flex:1;height:56px"></button></div>
       <button class="btn soft" id="alcarro" style="border:2px solid var(--p);margin-top:10px">🛒 Agregar al carrito</button></div></div>`;
@@ -614,7 +658,7 @@ function vCarrito() {
     gs.map(g => {
       const t = calcularTarifa(kmHacia(g.lat, g.lon), Math.round(g.sub));
       return `<div class="card row"><div class="logo">🏪</div><div class="col"><h3>${esc(g.rNom)}</h3><div class="small mu">⏱ Recibes en 20-35 min</div><div class="small b" style="color:var(--pd)">🛵 Envío ${L(t.envio)}</div></div></div>
-      ${g.items.map(it => { const vis = it.precio + (g.sub > 0 ? t.aumento * it.precio / g.sub : 0); return `<div class="card row"><div class="thumb">${it.img ? `<img src="${esc(it.img)}" loading="lazy" alt="">` : "🍽️"}</div><div class="col"><div class="b">${esc(it.nombre)}</div>${it.opciones ? `<div class="small mu">${esc(it.opciones)}</div>` : ""}<div class="price" style="margin-top:4px">${L2(vis)}</div></div><button class="back" style="background:#FEE2E2" data-a="quitar" data-i="${it.idx}">🗑</button></div>`; }).join("")}
+      ${g.items.map(it => { const vis = it.precio + (g.sub > 0 ? t.aumento * it.precio / g.sub : 0); return `<div class="card row"><div class="thumb">${it.img ? `<img src="${esc(it.img)}" loading="lazy" alt="" onerror="this.classList.add('img-broken')">` : "🍽️"}</div><div class="col"><div class="b">${esc(it.nombre)}</div>${it.opciones ? `<div class="small mu">${esc(it.opciones)}</div>` : ""}<div class="price" style="margin-top:4px">${L2(vis)}</div></div><button class="back" style="background:#FEE2E2" data-a="quitar" data-i="${it.idx}">🗑</button></div>`; }).join("")}
       ${t.minimo > 0 && Math.round(g.sub) < t.minimo ? `<div class="warn">⚠️ Pedido mínimo ${L(t.minimo)} en este local (te faltan ${L(t.minimo - Math.round(g.sub))})</div>` : ""}
       <button class="btn ac" data-a="pedirLocal" data-id="${esc(g.rId)}">PEDIR ESTE LOCAL ➔ ${L2(g.sub + t.aumento + t.envio)}</button>
       <button class="btn soft" data-a="masLocal" data-id="${esc(g.rId)}">➕ Agregar más de este local</button><div style="height:14px"></div>`;
@@ -633,13 +677,13 @@ function vServicio() {
   const productos = sub + t.aumento, total = del ? productos + t.envio : sub, falta = del && t.minimo > 0 && sub < t.minimo;
   C.total = total; C.envio = del ? t.envio : 0; C.productos = del ? productos : sub;
   const r = S.restaurantes.find(x => x.id === C.rId);
-  app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><h2 class="col c" style="margin:0">Tu pedido</h2><span style="width:42px"></span></div>
-    <div class="card row"><div class="logo">${r && r.logo ? `<img src="${esc(r.logo)}" alt="">` : "🏪"}</div><div class="col"><h3>${esc(C.rNom)}</h3><div class="small mu">Pago en efectivo · 💳 Tarjeta: próximamente</div></div><div style="font-size:30px">🛵</div></div>
-    <div class="seg"><button data-a="modal" data-v="DELIVERY" class="${del ? "on" : ""}">🛵 Delivery</button><button data-a="modal" data-v="PICKUP" class="${!del ? "on" : ""}">🏪 Retiro en local</button></div>
-    <div style="padding:0 4px 14px">${del ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo"}<div class="b" style="color:var(--pd);margin-top:6px">${del ? "🛵 Envío " + L(t.envio) : "Sin costo de envío"}</div>${del ? `<div class="small mu" style="margin-top:6px">📍 ${esc(me().dir_desc || me().ciudad)} · <span class="link" style="display:inline;padding:0" data-a="irDirs">cambiar</span></div>` : ""}</div>
+  app.innerHTML = `<div class="top" style="display:flex;align-items:center;margin-bottom:12px"><button class="back" data-a="back">❮</button><h2 class="col c" style="margin:0;text-align:center">Tu pedido</h2><span style="width:42px"></span></div>
+    <div class="card row"><div class="logo">${r && r.logo ? `<img src="${esc(r.logo)}" alt="" onerror="this.classList.add('img-broken')">` : "🏪"}</div><div class="col"><h3>${esc(C.rNom)}</h3><div class="small mu">Pago en efectivo · 💳 Tarjeta: próximamente</div></div><div style="font-size:30px">🛵</div></div>
+    <div class="seg" style="display:flex;gap:8px;margin-bottom:12px"><button data-a="modal" data-v="DELIVERY" class="btn ${del ? "" : "soft"}" style="flex:1">🛵 Delivery</button><button data-a="modal" data-v="PICKUP" class="btn ${!del ? "" : "soft"}" style="flex:1">🏪 Retiro en local</button></div>
+    <div style="padding:0 4px 14px">${del ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo"}<div class="b" style="color:var(--pd);margin-top:6px">${del ? "🛵 Envío " + L(t.envio) : "Sin costo de envío"}</div>${del ? `<div class="small mu" style="margin-top:6px">📍 ${esc(me().dir_desc || me().ciudad)} · <span class="link" style="color:var(--p);cursor:pointer" data-a="irDirs">cambiar</span></div>` : ""}</div>
     <div class="card"><div class="b">${esc(C.texto)}</div></div>
-    <div class="card sum"><h2>Resumen</h2><div class="r"><span>Productos</span><b>${L(C.productos)}</b></div>${del ? `<div class="r"><span>Envío</span><b>${L(t.envio)}</b></div>` : ""}
-      <div class="r t"><span>${del ? "Total a pagar al repartidor" : "Total a pagar en el local"}</span><b>${L(total)}</b></div>${falta ? `<div class="warn">⚠️ Pedido mínimo para delivery: ${L(t.minimo)} (te faltan ${L(t.minimo - sub)})</div>` : ""}</div>
+    <div class="card sum"><h2>Resumen</h2><div class="row" style="justify-content:space-between;margin-top:6px"><span>Productos</span><b>${L(C.productos)}</b></div>${del ? `<div class="row" style="justify-content:space-between;margin-top:6px"><span>Envío</span><b>${L(t.envio)}</b></div>` : ""}
+      <div class="row" style="justify-content:space-between;margin-top:10px;border-top:1px solid var(--border);padding-top:10px"><span>${del ? "Total a pagar al repartidor" : "Total a pagar en el local"}</span><b class="price" style="font-size:18px">${L(total)}</b></div>${falta ? `<div class="warn">⚠️ Pedido mínimo para delivery: ${L(t.minimo)} (te faltan ${L(t.minimo - sub)})</div>` : ""}</div>
     <button class="btn" id="confirmar" style="${falta ? "opacity:.55" : ""}">Confirmar pedido • ${L(total)}</button>`;
 }
 
@@ -657,7 +701,6 @@ async function confirmarPedido() {
   overlay();
   const m = me();
   
-  /* Formato idéntico al de Android MainActivity.java */
   const dNow = new Date();
   const meses = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const fechaAndroid = `${String(dNow.getDate()).padStart(2,"0")}/${meses[dNow.getMonth()]} ${String(dNow.getHours()).padStart(2,"0")}:${String(dNow.getMinutes()).padStart(2,"0")}`;
@@ -740,7 +783,7 @@ function vSeguimiento() {
   const { rId, pId } = S.params;
   if (!rId || !pId) { go("inicio", {}, true); return; }
   nav.classList.add("hidden"); app.className = "noNav";
-  app.innerHTML = `<div class="top"><button class="back" data-a="cerrarSeg">❮</button><h2 class="col" style="margin:0">Tu pedido</h2><button class="btn ac" style="width:auto;margin:0;padding:10px 16px;font-size:14px;display:none" id="btnchat" data-a="abrirChat">💬 Chat Repartidor</button></div>
+  app.innerHTML = `<div class="top" style="display:flex;align-items:center;margin-bottom:12px"><button class="back" data-a="cerrarSeg">❮</button><h2 class="col" style="margin:0 12px">Tu pedido</h2><button class="btn sky" style="width:auto;margin:0;padding:8px 14px;font-size:13px;display:none" id="btnchat" data-a="abrirChat">💬 Chat Repartidor</button></div>
     <div class="card"><div class="b" id="sgEstado" style="font-size:17px">Cargando...</div><div class="small mu" id="sgInfo"></div><div class="small mu" id="sgDet" style="margin-top:6px"></div><div class="b" id="sgCobro" style="margin-top:8px;color:var(--pd)"></div></div>
     <div id="sgMapa" class="map"></div><div id="sgAcc"></div>`;
   unsubAll(["seg"]);
@@ -758,7 +801,6 @@ function vSeguimiento() {
     const cancelable = es === "NUEVO" || es === "PENDIENTE";
     $("#sgAcc").innerHTML = cancelable ? `<button class="btn red" data-a="cancelar">Cancelar pedido</button>` : "";
     
-    // Mapa
     const cl = [num(d, "cliente_lat"), num(d, "cliente_lon")], rs = S.restaurantes.find(x => x.id === rId);
     const rl = rs && rs.lat ? [rs.lat, rs.lon] : [num(d, "restaurante_lat"), num(d, "restaurante_lon")];
     const rp = (d.repartidor_lat && d.repartidor_lon) ? [num(d, "repartidor_lat"), num(d, "repartidor_lon")] : (d.repartidor_ubicacion && d.repartidor_ubicacion.latitude ? [d.repartidor_ubicacion.latitude, d.repartidor_ubicacion.longitude] : null);
@@ -826,7 +868,7 @@ function abrirChat() {
       const x = d.data(), cli = x.remitente === "cliente", visto = x.visto === true, pend = d.metadata.hasPendingWrites;
       if (!cli && !visto) updateDoc(d.ref, { visto: true }).catch(() => {});
       const txt = x.texto || x.mensaje || "", img = x.imagen_base64, nom = x.remitente_nombre || x.nombre || "Repartidor";
-      return `<div class="bub ${cli ? "me" : ""}">${!cli ? `<div class="n">${esc(nom)}</div>` : ""}${txt ? `<div>${esc(txt)}</div>` : ""}${img ? `<img src="data:image/jpeg;base64,${img.replace(/\s/g, "")}" data-a="verImg" alt="">` : ""}${cli ? `<div class="ck ${visto && !pend ? "v" : ""}">${pend ? "✓" : "✓✓"}</div>` : ""}</div>`;
+      return `<div class="bub ${cli ? "me" : ""}">${!cli ? `<div class="n" style="font-weight:bold;font-size:11px;margin-bottom:2px">${esc(nom)}</div>` : ""}${txt ? `<div>${esc(txt)}</div>` : ""}${img ? `<img src="data:image/jpeg;base64,${img.replace(/\s/g, "")}" data-a="verImg" alt="" style="max-width:100%;border-radius:8px;margin-top:4px">` : ""}${cli ? `<div style="font-size:10px;text-align:right;margin-top:2px;opacity:0.8">${pend ? "✓" : "✓✓"}</div>` : ""}</div>`;
     }).join("");
     box.scrollTop = box.scrollHeight;
   }, err => console.error(err));
@@ -834,7 +876,7 @@ function abrirChat() {
 function sonido() { try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.setValueAtTime(.15, c.currentTime); g.gain.exponentialRampToValueAtTime(.001, c.currentTime + .35); o.start(); o.stop(c.currentTime + .35); if (navigator.vibrate) navigator.vibrate(120); } catch {} }
 function pintarEmojis() {
   const e = $("#emo"); if (!e) return;
-  e.innerHTML = `<div class="tabs">${EMO_NOMBRES.map((n, i) => `<span class="${i === emoCat ? "on" : ""}" data-a="emoCat" data-i="${i}">${n}</span>`).join("")}</div><div class="g">${EMOJIS[emoCat].map(x => `<span data-a="emo">${x}</span>`).join("")}</div>`;
+  e.innerHTML = `<div class="tabs" style="display:flex;gap:8px;padding:8px;overflow-x:auto;border-bottom:1px solid var(--border)">${EMO_NOMBRES.map((n, i) => `<span class="${i === emoCat ? "b" : "mu"}" style="cursor:pointer;font-size:12px" data-a="emoCat" data-i="${i}">${n}</span>`).join("")}</div><div class="g" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:12px;max-height:160px;overflow-y:auto;font-size:20px;text-align:center">${EMOJIS[emoCat].map(x => `<span style="cursor:pointer" data-a="emo">${x}</span>`).join("")}</div>`;
 }
 async function chatMsg(extra) {
   const { rId, pId } = S.params;
@@ -857,7 +899,7 @@ function verImagen(src) { const d = document.createElement("div"); d.className =
 
 /* ================= Pedidos (historial) ================= */
 async function vPedidos() {
-  app.innerHTML = `<h1>Mis pedidos</h1><div id="fp">${["En curso", "Finalizados"].map((n, i) => `<span class="chip ${S.filtroPedidos === i ? "on" : ""}" data-a="fpedidos" data-i="${i}">${n}</span>`).join("")}</div><div id="hist" class="loader">Cargando...</div>`;
+  app.innerHTML = `<h1>Mis pedidos</h1><div id="fp" style="margin:12px 0">${["En curso", "Finalizados"].map((n, i) => `<span class="chip ${S.filtroPedidos === i ? "on" : ""}" data-a="fpedidos" data-i="${i}">${n}</span>`).join("")}</div><div id="hist" class="loader">Cargando...</div>`;
   try {
     const q = await getDocs(collection(db, "clientes", me().telefono, "mis_pedidos"));
     let l = q.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => ((b.timestamp && b.timestamp.seconds) || 0) - ((a.timestamp && a.timestamp.seconds) || 0));
@@ -883,18 +925,18 @@ function vCuenta() {
 function vLegal() {
   const d = S.params.doc;
   nav.classList.add("hidden"); app.className = "noNav";
-  app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><h2 style="margin:0">${d === "terminos" ? "Términos y Condiciones" : "Política de Privacidad"}</h2></div><pre class="legal">${esc(d === "terminos" ? TERMINOS : POLITICA)}</pre>`;
+  app.innerHTML = `<div class="top" style="display:flex;align-items:center;margin-bottom:12px"><button class="back" data-a="back">❮</button><h2 style="margin:0 12px">${d === "terminos" ? "Términos y Condiciones" : "Política de Privacidad"}</h2></div><pre class="legal" style="white-space:pre-wrap;font-family:sans-serif;font-size:13px;line-height:1.5;color:var(--mu);background:#F8FAFC;padding:16px;border-radius:12px">${esc(d === "terminos" ? TERMINOS : POLITICA)}</pre>`;
 }
 function legalPublico(doc_) {
   if (doc_ === "menu") return modal(`<h2>Cuenta y legal</h2><button class="btn" data-a="legalPub" data-v="politica">📄 Política de Privacidad</button><button class="btn" data-a="legalPub" data-v="terminos">📜 Términos y Condiciones</button><button class="btn mut" data-a="cerrarModal">Cerrar</button>`);
-  modal(`<h2>${doc_ === "terminos" ? "Términos y Condiciones" : "Política de Privacidad"}</h2><pre class="legal">${esc(doc_ === "terminos" ? TERMINOS : POLITICA)}</pre><button class="btn mut" data-a="cerrarModal">Cerrar</button>`);
+  modal(`<h2>${doc_ === "terminos" ? "Términos y Condiciones" : "Política de Privacidad"}</h2><pre class="legal" style="white-space:pre-wrap;font-family:sans-serif;font-size:12px;max-height:300px;overflow-y:auto">${esc(doc_ === "terminos" ? TERMINOS : POLITICA)}</pre><button class="btn mut" data-a="cerrarModal">Cerrar</button>`);
 }
 function vDirecciones() {
   const m = me();
   nav.classList.add("hidden"); app.className = "noNav";
   const dirs = m.direcciones.length ? m.direcciones : (m.dir_desc ? [{ desc: m.dir_desc, lat: m.lat, lon: m.lon }] : []);
-  app.innerHTML = `<div class="top"><button class="back" data-a="back">❮</button><h2 style="margin:0">Mis direcciones</h2></div>
-    ${dirs.map((d, i) => `<div class="card row"><div class="col" data-a="usarDir" data-i="${i}" style="cursor:pointer">📍 ${esc(d.desc || d.etiqueta)}${d.desc === m.dir_desc ? ` <span class="badge ok">En uso</span>` : ""}</div><button class="back" style="color:#DC2626" data-a="delDir" data-i="${i}">✕</button></div>`).join("") || `<div class="empty">Aún no tienes direcciones</div>`}
+  app.innerHTML = `<div class="top" style="display:flex;align-items:center;margin-bottom:12px"><button class="back" data-a="back">❮</button><h2 style="margin:0 12px">Mis direcciones</h2></div>
+    ${dirs.map((d, i) => `<div class="card row"><div class="col" data-a="usarDir" data-i="${i}" style="cursor:pointer">📍 ${esc(d.desc || d.etiqueta)}${d.desc === m.dir_desc ? ` <span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">En uso</span>` : ""}</div><button class="back" style="color:#DC2626" data-a="delDir" data-i="${i}">✕</button></div>`).join("") || `<div class="empty">Aún no tienes direcciones</div>`}
     <button class="btn sky" data-a="mapaNuevaDir" data-v="perfil">+ Agregar Nueva Dirección en Mapa</button>`;
 }
 async function guardarDirs(dirs, activa) {
@@ -911,8 +953,8 @@ function mapaNuevaDir(destino) {
   const m = S.me || { lat: 13.3024, lon: -87.1921 };
   layer.innerHTML = `<div class="mapfull"><div id="pm"></div><div class="pin">📍</div>
     <div class="maptop"><button class="back" data-a="cerrarMapa">❮</button><input id="mq" type="search" placeholder="Buscar dirección..."><button class="back" data-a="buscarDir">🔍</button></div>
-    <button class="locate" data-a="locate">🎯</button>
-    <div class="mapcard"><div class="b" style="margin-bottom:6px">📍 Mueve el mapa para centrar el pin</div><input id="mdesc" placeholder="Describe tu dirección (colonia, casa, referencia)"><button class="btn gr" data-a="confirmarUbi" data-v="${destino}">CONFIRMAR UBICACIÓN ✅</button></div></div>`;
+    <button class="back" style="position:absolute;bottom:160px;right:16px;z-index:2001;background:white;box-shadow:0 4px 12px rgba(0,0,0,0.15)" data-a="locate">🎯</button>
+    <div class="mapcard"><div class="b" style="margin-bottom:6px">📍 Mueve el mapa para centrar el pin</div><input id="mdesc" placeholder="Describe tu dirección (colonia, casa, referencia)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px"><button class="btn gr" data-a="confirmarUbi" data-v="${destino}">CONFIRMAR UBICACIÓN ✅</button></div></div>`;
   S.mapa = L_.map("pm", { zoomControl: false }).setView([m.lat, m.lon], 16);
   L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(S.mapa);
   $("#mq").onkeydown = e => { if (e.key === "Enter") buscarDir(); };
@@ -925,7 +967,7 @@ function locate(silencioso) {
 async function buscarDir() {
   const q = $("#mq").value.trim(); if (!q) return;
   try {
-    const c = S.mapa.getCenter(), r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=hn&q=${encodeURIComponent(q)}`, { headers: { "Accept-Language": "es" } });
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=hn&q=${encodeURIComponent(q)}`, { headers: { "Accept-Language": "es" } });
     const j = await r.json(); if (!j.length) return toast("No encontramos esa dirección");
     S.mapa.setView([+j[0].lat, +j[0].lon], 17);
   } catch { toast("No se pudo buscar. Revisa tu conexión."); }
@@ -942,7 +984,7 @@ async function confirmarUbi(destino) {
 /* ---- Eliminar cuenta ---- */
 function eliminarCuentaDialogo() {
   if (ls.get("pedidoActivoId")) return toast("Tienes un pedido en curso. Espera a que termine o cancélalo antes de eliminar tu cuenta.", 4500);
-  modal(`<h2>¿Eliminar tu cuenta?</h2><p class="mu">Se borrarán tu perfil, teléfono, correo, contraseña, direcciones, historial de pedidos y mensajes del chat. Los pedidos en el local quedan anonimizados. Esta acción no se puede deshacer.</p><p class="b">Escribe tu contraseña para confirmar.</p><input id="delpass" type="password" placeholder="Tu contraseña" autocomplete="current-password"><button class="btn red" data-a="eliminarOk">Sí, eliminar</button><button class="btn mut" data-a="cerrarModal">Cancelar</button>`);
+  modal(`<h2>¿Eliminar tu cuenta?</h2><p class="mu">Se borrarán tu perfil, teléfono, correo, contraseña, direcciones, historial de pedidos y mensajes del chat. Los pedidos en el local quedan anonimizados. Esta acción no se puede deshacer.</p><p class="b">Escribe tu contraseña para confirmar.</p><input id="delpass" type="password" placeholder="Tu contraseña" autocomplete="current-password" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;margin:10px 0"><button class="btn red" data-a="eliminarOk">Sí, eliminar</button><button class="btn mut" data-a="cerrarModal">Cancelar</button>`);
 }
 async function eliminarCuenta() {
   const pass = $("#delpass").value, u = auth.currentUser;
@@ -980,8 +1022,9 @@ function consentimiento() {
     <p><b>📍 Ubicación</b><br><span class="mu">Para calcular la distancia y el costo de envío, y para que el repartidor llegue a tu dirección. Solo se usa mientras tienes la app abierta.</span></p>
     <p><b>📷 Cámara y 🖼️ Fotos</b><br><span class="mu">Para tomar o elegir una foto y enviarla en el chat con el repartidor. Solo accede a la foto que tú eliges.</span></p>
     <p class="mu small">Guardamos tu nombre, teléfono, correo, direcciones y pedidos para darte el servicio. Puedes eliminar tu cuenta cuando quieras desde la pestaña Cuenta.</p>
-    <span class="link" data-a="legalPub" data-v="terminos">📜 Leer Términos y Condiciones</span><span class="link" data-a="legalPub" data-v="politica">📄 Leer Política de Privacidad</span>
-    <label class="chk"><input type="checkbox" id="cons"><span>Soy mayor de 18 años y acepto los Términos y Condiciones, la Política de Privacidad y el uso de ubicación, cámara y fotos como se explica arriba.</span></label>
+    <span class="link" style="color:var(--p);cursor:pointer;display:block;margin:4px 0" data-a="legalPub" data-v="terminos">📜 Leer Términos y Condiciones</span>
+    <span class="link" style="color:var(--p);cursor:pointer;display:block;margin:4px 0" data-a="legalPub" data-v="politica">📄 Leer Política de Privacidad</span>
+    <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin:12px 0"><input type="checkbox" id="cons"><span class="small">Soy mayor de 18 años y acepto los Términos y Condiciones, la Política de Privacidad y el uso de ubicación, cámara y fotos.</span></label>
     <button class="btn" id="consok" disabled>Aceptar y continuar</button>`);
   const ck = $("#cons"), ok = $("#consok");
   ck.onchange = () => ok.disabled = !ck.checked;
@@ -1038,7 +1081,7 @@ document.addEventListener("click", async ev => {
     case "adjuntar": $("#cfile").click(); break;
     case "emoToggle": emoOn = !emoOn; $("#emo").classList.toggle("hidden", !emoOn); break;
     case "emoCat": emoCat = +i; pintarEmojis(); break;
-    case "emo": { const inp = $("#cmsg"); inp.value += el.textContent; } break;
+    case "emo": { const inp = $("#cmsg"); if (inp) inp.value += el.textContent; } break;
     case "verImg": verImagen(el.src); break;
     case "eliminar": eliminarCuentaDialogo(); break;
     case "eliminarOk": eliminarCuenta(); break;
