@@ -1,26 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Llevari</title>
-<meta name="theme-color" content="#7C3AED">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Llevari">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-192.png">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Llevari</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6D28D9">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  
+  <!-- Leaflet Maps CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Estilos de la Aplicación -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="app"></div>
-<nav id="nav" class="nav hidden"></nav>
-<div id="layer"></div>
-<div id="toast" class="toast"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="app.js?v=2"></script>
+
+  <!-- Contenedor Principal de la App -->
+  <div id="app"></div>
+
+  <!-- Capa para Modales y Hojas Deslizantes -->
+  <div id="layer"></div>
+
+  <!-- Barra de Navegación Inferior -->
+  <div id="nav" class="hidden"></div>
+
+  <!-- Notificaciones Toast -->
+  <div id="toast"></div>
+
+  <!-- Lógica Principal -->
+  <script type="module" src="app.js"></script>
+
 </body>
 </html>
