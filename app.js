@@ -568,7 +568,13 @@ async function cargarInicioPrincipal() {
     }
   }
 
-  const snapR = await db.collection("restaurantes").get();
+  let snapR;
+  try {
+    snapR = await db.collection("restaurantes").get();
+  } catch (e) {
+    cont.innerHTML = '<div class="empty-box"><div class="empty-emoji">⚠️</div><p style="font-weight:700">No se pudieron cargar los locales</p><p class="empty-text">' + e.message + '</p></div>';
+    return;
+  }
   cont.innerHTML = "";
 
   if (pedidoActivoId) {
