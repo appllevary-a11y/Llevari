@@ -544,20 +544,24 @@ async function cargarInicioPrincipal() {
     try {
       const snapMisp = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
       let hayActivo = false;
-      for (const d of snapMisp.docs) {
+      const finales = ["ENTREGADO", "COMPLETADO", "FINALIZADO", "CANCELADO"];
+      const res = await Promise.all(snapMisp.docs.map(async d => {
         const p = d.data();
-        if (!p.rId || !p.pId) continue;
-        const rDoc = await db.collection("restaurantes").doc(p.rId).collection("pedidos").doc(p.pId).get();
-        if (rDoc.exists) {
+        if (!p.rId || !p.pId) return null;
+        try {
+          const rDoc = await db.collection("restaurantes").doc(p.rId).collection("pedidos").doc(p.pId).get();
+          if (!rDoc.exists) return null;
           const est = (rDoc.data().estado || "").toUpperCase();
-          if (est && !["ENTREGADO", "COMPLETADO", "FINALIZADO", "CANCELADO"].includes(est)) {
-            hayActivo = true;
-            pedidoActivoId = p.pId;
-            restIdSeleccionadoTemp = p.rId;
-            rNombreTemp = rDoc.data().restaurante_nombre || "Restaurante";
-            break;
-          }
-        }
+          if (est && !finales.includes(est)) return { p, nombre: rDoc.data().restaurante_nombre || "Restaurante" };
+        } catch (e) {}
+        return null;
+      }));
+      const act = res.find(x => x);
+      if (act) {
+        hayActivo = true;
+        pedidoActivoId = act.p.pId;
+        restIdSeleccionadoTemp = act.p.rId;
+        rNombreTemp = act.nombre;
       }
       if (!hayActivo) {
         pedidoActivoId = "";
