@@ -581,6 +581,7 @@ async function cargarInicioPrincipal() {
     </div>
   `;
   cont.appendChild(heroSlider);
+  iniciarSliderPublicitario();
   revisarPedidoActivo();
 
   const bigRow = document.createElement("div");
@@ -1301,4 +1302,135 @@ async function revisarPedidoActivo() {
     b.onclick = abrirPantallaSeguimientoEnVivo;
     cont.insertBefore(b, cont.firstChild);
   } catch (e) {}
+}
+
+// ===== BANNER PUBLICITARIO INTELIGENTE =====
+function slogansPlato(n) {
+  n = (n || "").toLowerCase();
+  if (n.includes("hamburguesa") || n.includes("burger")) return ["¡Gran antojo! 🍔", "Jugosa maravilla."];
+  if (n.includes("pizza")) return ["¡Para compartir! 🍕", "Con mucho queso."];
+  if (n.includes("pollo") || n.includes("alitas")) return ["¡Crujiente! 🍗", "Perfecto hoy."];
+  if (n.includes("taco") || n.includes("nacho")) return ["¡Sabor! 🌮", "Explosión en tu boca."];
+  if (n.includes("postre") || n.includes("pastel") || n.includes("helado")) return ["¡Endulza tu día! 🍰", "Toque dulce."];
+  return ["¡Pídelo ahora! ✨", "Descubre sabor."];
+}
+
+function mezclar(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function armarListaPublicitaria() {
+  const base = todosLosProductosCache.filter(p => !p.rCerrado && p.pPrec > 0);
+  const grupos = {};
+  base.forEach(p => { (grupos[p.rId] = grupos[p.rId] || []).push(p); });
+  const cols = mezclar(Object.keys(grupos).map(k => mezclar(grupos[k].slice())));
+  const platos = [];
+  let hay = true;
+  while (hay && platos.length < 12) {
+    hay = false;
+    for (const g of cols) {
+      if (g.length && platos.length < 12) { platos.push(g.shift()); hay = true; }
+    }
+  }
+  const lista = platos.map(p => {
+    const sl = slogansPlato(p.pNom);
+    const precio = Math.round(precioVisible(p.pPrec, p.rLat, p.rLon));
+    return { tipo: "plato", titulo: sl[0], sub1: p.pNom + " • L. " + precio, sub2: sl[1] + " " + p.rNom, img: p.pImg, datos: p };
+  });
+  const porPrecio = {};
+  base.forEach(p => { (porPrecio[p.pPrec] = porPrecio[p.pPrec] || []).push(p); });
+  const combos = mezclar(Object.keys(porPrecio).filter(k => porPrecio[k].length >= 2)).slice(0, 2);
+  combos.forEach(k => {
+    const p = porPrecio[k][0];
+    const it = { tipo: "precio", precio: parseFloat(k), titulo: "¡Super Combo! 🌟", sub1: "Descubre platillos desde L. " + Math.round(parseFloat(k)), sub2: "", img: p.pImg };
+    lista.splice(Math.floor(Math.random() * (lista.length + 1)), 0, it);
+  });
+  return lista;
+}
+
+function pintarBanner(wrap, it, idx, total) {
+  wrap.innerHTML = "";
+  if (it.img) {
+    const im = document.createElement("img");
+    im.className = "hero-bg-img";
+    im.onerror = () => im.remove();
+    im.src = it.img;
+    wrap.appendChild(im);
+    im.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }], { duration: 6000, fill: "forwards" });
+  }
+  const ov = document.createElement("div");
+  ov.className = "hero-overlay";
+  wrap.appendChild(ov);
+  const c = document.createElement("div");
+  c.className = "hero-content";
+  const tag = document.createElement("span"); tag.className = "hero-tag"; tag.textContent = "⚡ DESTACADO";
+  const t = document.createElement("div"); t.className = "hero-title"; t.textContent = it.titulo;
+  const s1 = document.createElement("div"); s1.className = "hero-sub"; s1.textContent = it.sub1;
+  c.appendChild(tag); c.appendChild(t); c.appendChild(s1);
+  if (it.sub2) {
+    const s2 = document.createElement("div"); s2.className = "hero-sub"; s2.style.opacity = "0.85"; s2.textContent = it.sub2;
+    c.appendChild(s2);
+  }
+  const cta = document.createElement("div"); cta.className = "hero-cta"; cta.textContent = "Pedir ahora ➔";
+  c.appendChild(cta);
+  wrap.appendChild(c);
+  const dots = document.createElement("div");
+  dots.style.cssText = "position:absolute;bottom:12px;left:18px;display:flex;gap:5px;z-index:3";
+  const n = Math.min(Math.max(total, 1), 6);
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement("span");
+    const act = i === (idx % n);
+    d.style.cssText = "height:6px;border-radius:4px;width:" + (act ? 20 : 6) + "px;background:" + (act ? "#FF8A00" : "rgba(255,255,255,0.5)");
+    dots.appendChild(d);
+  }
+  wrap.appendChild(dots);
+  wrap.onclick = () => {
+    if (it.tipo === "precio") mostrarPlatosPorPrecio(it.precio);
+    else {
+      const p = it.datos;
+      mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps, p.rLat, p.rLon);
+    }
+  };
+  wrap.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 450 });
+}
+
+function iniciarSliderPublicitario() {
+  if (sliderTimer) clearTimeout(sliderTimer);
+  sliderIndexActual = 0;
+  let lista = [], ultimoN = -1;
+  const tick = () => {
+    const wrap = document.querySelector(".hero-slider-wrap");
+    if (!wrap || !wrap.isConnected) { sliderTimer = null; return; }
+    if (wrap.offsetParent === null) { sliderTimer = setTimeout(tick, 1500); return; }
+    if (todosLosProductosCache.length !== ultimoN) {
+      ultimoN = todosLosProductosCache.length;
+      lista = armarListaPublicitaria();
+    }
+    if (!lista.length) { sliderTimer = setTimeout(tick, 800); return; }
+    const idx = sliderIndexActual % lista.length;
+    pintarBanner(wrap, lista[idx], idx, lista.length);
+    sliderIndexActual++;
+    sliderTimer = setTimeout(tick, 5000);
+  };
+  tick();
+}
+
+function mostrarPlatosPorPrecio(pO) {
+  const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
+  cont.innerHTML = '<div class="section-header"><button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button><div style="flex:1; margin-left:14px"><h3 style="font-size:18px">Especiales desde L. ' + Math.round(pO) + '</h3><span class="sub-muted">Precio final según tu distancia</span></div></div><div id="listPrecioEsp" style="margin-top:10px"></div>';
+  const list = document.getElementById("listPrecioEsp");
+  const items = todosLosProductosCache.filter(p => p.pPrec === pO);
+  if (!items.length) { list.innerHTML = '<div class="empty-box"><p>No encontramos platillos con este precio.</p></div>'; return; }
+  items.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "product-row-card";
+    row.innerHTML = '<div class="product-info-left"><div><h4>' + p.pNom + '</h4><p class="sub-muted">De: ' + p.rNom + ' • 🛵 Envío L. ' + envioPara(p.rLat, p.rLon) + '</p></div><div class="product-price">L. ' + precioVisible(p.pPrec, p.rLat, p.rLon).toFixed(2) + '</div></div><div class="product-thumb-box">' + (p.pImg ? '<img src="' + p.pImg + '" class="img-fill" />' : '🍽️') + '<button type="button" class="btn-plus-abs">+</button></div>';
+    row.onclick = () => mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps, p.rLat, p.rLon);
+    list.appendChild(row);
+  });
 }
