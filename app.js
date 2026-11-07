@@ -540,37 +540,6 @@ async function cargarInicioPrincipal() {
     </div>
   `;
 
-  if (miTelefono) {
-    try {
-      const snapMisp = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
-      let hayActivo = false;
-      const finales = ["ENTREGADO", "COMPLETADO", "FINALIZADO", "CANCELADO"];
-      const res = await Promise.all(snapMisp.docs.map(async d => {
-        const p = d.data();
-        if (!p.rId || !p.pId) return null;
-        try {
-          const rDoc = await db.collection("restaurantes").doc(p.rId).collection("pedidos").doc(p.pId).get();
-          if (!rDoc.exists) return null;
-          const est = (rDoc.data().estado || "").toUpperCase();
-          if (est && !finales.includes(est)) return { p, nombre: rDoc.data().restaurante_nombre || "Restaurante" };
-        } catch (e) {}
-        return null;
-      }));
-      const act = res.find(x => x);
-      if (act) {
-        hayActivo = true;
-        pedidoActivoId = act.p.pId;
-        restIdSeleccionadoTemp = act.p.rId;
-        rNombreTemp = act.nombre;
-      }
-      if (!hayActivo) {
-        pedidoActivoId = "";
-        localStorage.removeItem("pedidoActivoId");
-      }
-    } catch (e) {
-      console.error("Error cargando pedidos activos:", e);
-    }
-  }
 
   let snapR;
   try {
@@ -583,6 +552,7 @@ async function cargarInicioPrincipal() {
 
   if (pedidoActivoId) {
     const banner = document.createElement("div");
+    banner.id = "bannerActivo";
     banner.className = "card card-row";
     banner.style.background = "linear-gradient(to right, var(--c-accent), var(--c-accent-dark))";
     banner.style.color = "#fff";
@@ -611,6 +581,7 @@ async function cargarInicioPrincipal() {
     </div>
   `;
   cont.appendChild(heroSlider);
+  revisarPedidoActivo();
 
   const bigRow = document.createElement("div");
   bigRow.style.display = "flex";
@@ -1283,4 +1254,51 @@ async function crearPedidoConId(rId, m) {
     alert("ID no asignado: " + e.message);
     return await col.add(m);
   }
+}
+
+
+async function revisarPedidoActivo() {
+  if (!miTelefono) return;
+  try {
+    const snap = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
+    const finales = ["ENTREGADO", "COMPLETADO", "FINALIZADO", "CANCELADO"];
+    const res = await Promise.all(snap.docs.map(async d => {
+      const p = d.data();
+      if (!p.rId || !p.pId) return null;
+      try {
+        const r = await db.collection("restaurantes").doc(p.rId).collection("pedidos").doc(p.pId).get();
+        if (!r.exists) return null;
+        const x = r.data();
+        const est = (x.estado || "").toUpperCase();
+        if (est && !finales.includes(est)) return { rId: p.rId, pId: p.pId, nombre: x.restaurante_nombre || "Restaurante", lat: x.restaurante_lat, lon: x.restaurante_lon };
+      } catch (e) {}
+      return null;
+    }));
+    const act = res.find(x => x);
+    const viejo = document.getElementById("bannerActivo");
+    if (!act) {
+      pedidoActivoId = "";
+      localStorage.removeItem("pedidoActivoId");
+      if (viejo) viejo.remove();
+      return;
+    }
+    pedidoActivoId = act.pId; restIdSeleccionadoTemp = act.rId; rNombreTemp = act.nombre;
+    if (act.lat) restauranteLatTemp = act.lat;
+    if (act.lon) restauranteLonTemp = act.lon;
+    localStorage.setItem("pedidoActivoId", pedidoActivoId);
+    localStorage.setItem("restIdActivo", restIdSeleccionadoTemp);
+    localStorage.setItem("rNombreActivo", rNombreTemp);
+    const cont = document.getElementById("contRestaurantes");
+    if (viejo || !cont || !cont.querySelector(".hero-slider-wrap")) return;
+    const b = document.createElement("div");
+    b.id = "bannerActivo";
+    b.className = "card card-row";
+    b.style.background = "linear-gradient(to right, var(--c-accent), var(--c-accent-dark))";
+    b.style.color = "#fff";
+    b.style.margin = "14px 16px 0";
+    b.style.cursor = "pointer";
+    b.innerHTML = '<div class="cat-chip-ico" style="background:rgba(255,255,255,0.2)">🛵</div><div style="flex:1; padding-left: 12px"><h4 style="font-size:16px">¡Pedido en proceso!</h4><span style="font-size:13px; color:#FFE2B8">' + act.nombre + '</span></div><span style="font-size:20px">➔</span>';
+    b.onclick = abrirPantallaSeguimientoEnVivo;
+    cont.insertBefore(b, cont.firstChild);
+  } catch (e) {}
 }
