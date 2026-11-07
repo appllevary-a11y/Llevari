@@ -963,7 +963,8 @@ async function confirmarCreacionPedido() {
     pago_motorista: deliv ? t.pago : 0.0,
     ganancia: deliv ? t.ganancia : 0.0,
     nombre_plato: platoTemp,
-    fecha: new Date().toLocaleString("es-HN"),
+    fecha: fechaApp(),
+    hora_creacion: horaCreacionApp(),
     cliente_nombre: miNombre,
     cliente_telefono: miTelefono,
     cliente_lat: miLat,
@@ -983,7 +984,7 @@ async function confirmarCreacionPedido() {
 
   try {
     const colPed = db.collection("restaurantes").doc(restIdSeleccionadoTemp).collection("pedidos");
-    const docRef = await colPed.add(pedData);
+    const docRef = await crearPedidoConId(restIdSeleccionadoTemp, pedData);
     pedidoActivoId = docRef.id;
 
     await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").doc(pedidoActivoId).set({
@@ -1246,4 +1247,40 @@ function filtrarResultados(q) {
     row.onclick = () => mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps, p.rLat, p.rLon);
     list.appendChild(row);
   });
+}
+
+
+function fechaApp() {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return p(d.getDate()) + "/" + M[d.getMonth()] + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+function horaCreacionApp() {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return p(d.getDate()) + "/" + p(d.getMonth() + 1) + "/" + String(d.getFullYear()).slice(2) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+async function crearPedidoConId(rId, m) {
+  const resRef = db.collection("restaurantes").doc(rId);
+  const col = resRef.collection("pedidos");
+  const pedRef = col.doc();
+  try {
+    const q = await col.orderBy("id_numerico", "desc").limit(1).get();
+    let base = 1000;
+    if (!q.empty) { const x = q.docs[0].data().id_numerico; if (x > base) base = x; }
+    const nuevo = await db.runTransaction(async tr => {
+      const r = await tr.get(resRef);
+      const c = (r.data() || {}).contador_pedidos || 0;
+      const n = Math.max(c, base) + 1;
+      tr.update(resRef, { contador_pedidos: n });
+      tr.set(pedRef, Object.assign({}, m, { id_numerico: n }));
+      return n;
+    });
+    m.id_numerico = nuevo;
+    return pedRef;
+  } catch (e) {
+    alert("ID no asignado: " + e.message);
+    return await col.add(m);
+  }
 }
