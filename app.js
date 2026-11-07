@@ -1434,3 +1434,229 @@ function mostrarPlatosPorPrecio(pO) {
     list.appendChild(row);
   });
 }
+
+// ===== AJUSTES, AVISOS Y CARRITO =====
+const LEGAL_TERMINOS = "";
+const LEGAL_POLITICA = "";
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function toast(msg) {
+  let t = document.getElementById("toastMsg");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toastMsg";
+    t.style.cssText = "position:fixed;left:50%;bottom:96px;transform:translateX(-50%);max-width:86%;background:rgba(31,27,46,0.94);color:#fff;padding:12px 18px;border-radius:22px;font-size:14px;font-weight:600;z-index:200;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,0.3);transition:opacity .25s;opacity:0;pointer-events:none";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = "0"; }, 2800);
+}
+
+function crearModalAjustes() {
+  let m = document.getElementById("modalAjustes");
+  if (m) return m;
+  m = document.createElement("div");
+  m.id = "modalAjustes";
+  m.className = "modal-backdrop-alert hidden";
+  m.onclick = e => { if (e.target === m) m.classList.add("hidden"); };
+  document.getElementById("appRoot").appendChild(m);
+  return m;
+}
+
+function abrirAjustes() {
+  const m = crearModalAjustes();
+  m.innerHTML = '<div class="dialog-card">' +
+    '<h3 style="margin-bottom:4px">Ajustes ⚙️</h3>' +
+    '<p class="card-desc" style="margin-bottom:16px">Información legal de LLEVARI.</p>' +
+    '<button class="btn btn-outline-primary" id="ajTer" style="margin-bottom:12px">📜 Términos y Condiciones</button>' +
+    '<button class="btn btn-outline-primary" id="ajPol" style="margin-bottom:12px">📄 Política de Privacidad</button>' +
+    '<button class="btn btn-muted" id="ajCer">CERRAR</button></div>';
+  document.getElementById("ajTer").onclick = () => verLegal("Términos y Condiciones", LEGAL_TERMINOS);
+  document.getElementById("ajPol").onclick = () => verLegal("Política de Privacidad", LEGAL_POLITICA);
+  document.getElementById("ajCer").onclick = () => m.classList.add("hidden");
+  m.classList.remove("hidden");
+}
+
+function verLegal(titulo, texto) {
+  const m = crearModalAjustes();
+  m.innerHTML = '<div class="dialog-card" style="display:flex;flex-direction:column;max-height:82vh">' +
+    '<h3 style="margin-bottom:12px">' + esc(titulo) + '</h3>' +
+    '<div style="flex:1;overflow-y:auto;white-space:pre-wrap;font-size:13.5px;line-height:1.5;color:var(--c-text);margin-bottom:14px">' + esc(texto || "Este documento no está disponible por el momento.") + '</div>' +
+    '<button class="btn btn-primary" id="legVol">❮ Volver</button></div>';
+  document.getElementById("legVol").onclick = abrirAjustes;
+  m.classList.remove("hidden");
+}
+
+const btnCfgHeader = document.getElementById("btnHeaderConfig");
+if (btnCfgHeader) btnCfgHeader.onclick = abrirAjustes;
+
+function leerCarrito() {
+  return (localStorage.getItem("carrito") || "").split(";;").filter(x => x.trim()).map(raw => {
+    const p = raw.split("||");
+    if (p.length < 5) return null;
+    return { raw: raw, rId: p[0], rNom: p[1], nombre: p[2], precio: parseFloat(p[3]) || 0, ops: p[4], img: p[5] || "", lat: parseFloat(p[6]) || 0, lon: parseFloat(p[7]) || 0 };
+  }).filter(Boolean);
+}
+
+function guardarCarrito(items) {
+  localStorage.setItem("carrito", items.map(i => i.raw).join(";;") + (items.length ? ";;" : ""));
+}
+
+function agregarAlCarrito(rId, rNom, nombre, precioTotal, opciones, img, lat, lon) {
+  const lim = s => String(s == null ? "" : s).replace(/\|/g, "/").replace(/;/g, ",");
+  if (!lat || !lon) { lat = miLat + 0.003; lon = miLon + 0.003; }
+  const imagen = (img && img.length < 150000) ? img : "";
+  const armar = im => [lim(rId), lim(rNom), lim(nombre), Number(precioTotal).toFixed(2), lim(opciones), im, lat, lon].join("||") + ";;";
+  const curr = localStorage.getItem("carrito") || "";
+  try {
+    localStorage.setItem("carrito", curr + armar(imagen));
+  } catch (e) {
+    try { localStorage.setItem("carrito", curr + armar("")); }
+    catch (e2) { toast("No se pudo guardar en el carrito"); return; }
+  }
+  actualizarBadgeCarrito();
+  toast("🛒 Agregado al carrito");
+}
+
+function mostrarTabInicioSinRecargar() {
+  tabActualIndex = 0;
+  document.querySelectorAll(".nav-item[data-tab]").forEach(el => {
+    el.classList.toggle("active", parseInt(el.getAttribute("data-tab")) === 0);
+  });
+  document.querySelectorAll(".tab-view").forEach((t, i) => t.classList.toggle("active", i === 0));
+}
+
+function dibujarCarrito() {
+  const cont = document.getElementById("contCarrito");
+  if (!cont) return;
+  actualizarBadgeCarrito();
+  cont.innerHTML = "";
+  const items = leerCarrito();
+  if (!items.length) {
+    cont.innerHTML = '<div class="empty-box"><div class="empty-emoji">🛒</div><h3>Tu carrito está vacío</h3><p class="empty-text">Agrega platillos desde tus locales favoritos</p></div>';
+    return;
+  }
+
+  const grupos = {};
+  items.forEach((it, idx) => {
+    it.idx = idx;
+    const g = grupos[it.rId] = grupos[it.rId] || { rId: it.rId, rNom: it.rNom, lat: it.lat, lon: it.lon, subtotal: 0, items: [] };
+    g.subtotal += it.precio;
+    g.items.push(it);
+  });
+  const lista = Object.values(grupos);
+
+  const tit = document.createElement("div");
+  tit.style.padding = "0 4px 14px";
+  tit.innerHTML = '<h2 style="font-size:26px">Tu carrito</h2><span class="sub-muted">' + items.length + (items.length === 1 ? " producto" : " productos") + (lista.length > 1 ? " • " + lista.length + " locales" : "") + '</span>';
+  cont.appendChild(tit);
+
+  lista.forEach(g => {
+    const t = calcularTarifa(kmHaciaSync(g.lat, g.lon), Math.round(g.subtotal));
+    const total = g.subtotal + t.aumento + t.envio;
+    const falta = t.minimo > 0 && Math.round(g.subtotal) < t.minimo;
+
+    const head = document.createElement("div");
+    head.className = "card card-row";
+    head.style.cssText = "padding:14px;margin-bottom:12px";
+    head.innerHTML = '<div class="logo-box"><span>🏪</span></div>' +
+      '<div style="flex:1;padding:0 10px;min-width:0"><h4 style="font-size:16px">' + esc(g.rNom) + '</h4>' +
+      '<span class="sub-muted">⏱ Recibes en 20-35 min</span><br>' +
+      '<span style="font-size:12px;font-weight:700;color:var(--c-primary-dark)">🛵 Envío L. ' + t.envio + '</span></div>' +
+      '<div class="moto-badge">🛵</div>';
+    cont.appendChild(head);
+
+    g.items.forEach(it => {
+      const visible = it.precio + (g.subtotal > 0 ? t.aumento * it.precio / g.subtotal : 0);
+      const row = document.createElement("div");
+      row.className = "card card-row";
+      row.style.cssText = "padding:12px;margin-bottom:12px";
+      row.innerHTML = '<div class="logo-box item-box"><span>🍽️</span></div>' +
+        '<div style="flex:1;padding:0 10px;min-width:0"><h4 style="font-size:15px">' + esc(it.nombre) + '</h4>' +
+        (it.ops ? '<p class="sub-muted" style="margin-top:3px">' + esc(it.ops) + '</p>' : '') +
+        '<div style="font-weight:800;color:var(--c-primary-dark);margin-top:6px">L. ' + visible.toFixed(2) + '</div></div>' +
+        '<button class="circle-btn" style="background:#FEE2E2;color:#DC2626">🗑</button>';
+      if (it.img) {
+        const box = row.querySelector(".logo-box");
+        const im = document.createElement("img");
+        im.className = "img-fill";
+        im.onload = () => { const sp = box.querySelector("span"); if (sp) sp.remove(); };
+        im.onerror = () => im.remove();
+        im.src = it.img;
+        box.appendChild(im);
+      }
+      row.querySelector("button").onclick = () => {
+        const arr = leerCarrito();
+        arr.splice(it.idx, 1);
+        guardarCarrito(arr);
+        dibujarCarrito();
+      };
+      cont.appendChild(row);
+    });
+
+    if (falta) {
+      const w = document.createElement("div");
+      w.className = "alert-box-warning";
+      w.style.margin = "0 0 12px";
+      w.textContent = "⚠️ Pedido mínimo para delivery: L. " + t.minimo + " (te faltan L. " + (t.minimo - Math.round(g.subtotal)) + ")";
+      cont.appendChild(w);
+    }
+
+    const b1 = document.createElement("button");
+    b1.className = "btn btn-warning";
+    b1.style.marginBottom = "10px";
+    if (falta) b1.style.opacity = "0.55";
+    b1.textContent = "PEDIR ESTE LOCAL ➔ L. " + total.toFixed(2);
+    b1.onclick = () => pedirDesdeCarrito(g.rId);
+    cont.appendChild(b1);
+
+    const b2 = document.createElement("button");
+    b2.className = "btn btn-outline-primary";
+    b2.style.marginBottom = "22px";
+    b2.textContent = "➕ Agregar más de este local";
+    b2.onclick = () => { mostrarTabInicioSinRecargar(); abrirMenuRestaurante(g.rId, g.rNom, g.lat, g.lon, ""); };
+    cont.appendChild(b2);
+  });
+}
+
+let verificandoCarrito = false;
+async function pedirDesdeCarrito(rId) {
+  if (verificandoCarrito) return;
+  const items = leerCarrito().filter(i => i.rId === rId);
+  if (!items.length) return;
+  verificandoCarrito = true;
+  try {
+    try {
+      const d = await db.collection("restaurantes").doc(rId).get();
+      if (d.exists && (d.data().estado || "").toUpperCase() === "CERRADO") { toast("🛑 Este local está cerrado ahora."); return; }
+    } catch (e) { toast("No se pudo verificar el local. Revisa tu conexión."); return; }
+
+    let sum = 0;
+    items.forEach(i => { sum += i.precio; });
+    const lat = items[0].lat || (miLat + 0.003), lon = items[0].lon || (miLon + 0.003);
+    const t = calcularTarifa(kmHaciaSync(lat, lon), Math.round(sum));
+    if (t.minimo > 0 && Math.round(sum) < t.minimo) {
+      toast("Pedido mínimo para delivery: L. " + t.minimo + ". Te faltan L. " + (t.minimo - Math.round(sum)) + ". Agrega más productos.");
+      return;
+    }
+
+    restIdSeleccionadoTemp = rId;
+    rNombreTemp = items[0].rNom;
+    platoTemp = items.map(i => i.nombre + (i.ops ? " (" + i.ops + ")" : "")).join("\n");
+    precioPlatoTemp = sum;
+    imgPlatoTemp = items[0].img;
+    restauranteLatTemp = lat;
+    restauranteLonTemp = lon;
+    carritoRestPendiente = rId;
+    abrirPantallaTipoServicio();
+    const nom = document.getElementById("svItemNombre");
+    if (nom) nom.style.whiteSpace = "pre-line";
+  } finally {
+    verificandoCarrito = false;
+  }
+}
