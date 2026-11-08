@@ -544,6 +544,7 @@ async function cargarInicioPrincipal() {
   let snapR;
   try {
     snapR = await db.collection("restaurantes").get();
+    try { await precargarRutasWeb(snapR.docs.map(d => d.data()).filter(r => !r.ciudad || String(r.ciudad).toLowerCase() === miCiudad.toLowerCase()).map(r => ({ lat: r.latitud, lon: r.longitud })), 3500); } catch (e) {}
   } catch (e) {
     cont.innerHTML = '<div class="empty-box"><div class="empty-emoji">⚠️</div><p style="font-weight:700">No se pudieron cargar los locales</p><p class="empty-text">' + e.message + '</p></div>';
     return;
@@ -2102,4 +2103,410 @@ async function eliminarCuentaWeb(u, pass) {
   } finally {
     eliminandoCuenta = false;
   }
+}
+
+// ===== PRECIOS POR RUTA REAL (igual que la app) =====
+const promesasRuta = {};
+const rutasFallidas = {};
+const colaRutas = [];
+const MAX_RUTAS_SIMULTANEAS = 3;
+let rutasEnCurso = 0;
+let temporizadorRefrescoKm = null;
+
+function claveRutaKm(rLat, rLon) {
+  return rLat.toFixed(4) + "," + rLon.toFixed(4) + ">" + miLat.toFixed(4) + "," + miLon.toFixed(4);
+}
+
+function kmGuardado(k) {
+  if (cacheKmRuta[k]) return cacheKmRuta[k];
+  try {
+    const g = parseFloat(localStorage.getItem("kmruta_" + k));
+    if (g > 0) { cacheKmRuta[k] = g; return g; }
+  } catch (e) {}
+  return 0;
+}
+
+function kmHaciaSync(rLat, rLon) {
+  rLat = Number(rLat); rLon = Number(rLon);
+  if (!rLat || !rLon) { rLat = miLat + 0.003; rLon = miLon + 0.003; }
+  const k = claveRutaKm(rLat, rLon);
+  const g = kmGuardado(k);
+  if (g) return g;
+  pedirKmRutaWeb(k, rLat, rLon);
+  return calcularDistanciaKm(rLat, rLon, miLat, miLon) * 1.3;
+}
+
+function pedirKmRutaWeb(k, rLat, rLon) {
+  if (kmGuardado(k)) return Promise.resolve(true);
+  const f = rutasFallidas[k];
+  if (f && Date.now() - f < 300000) return Promise.resolve(false);
+  if (promesasRuta[k]) return promesasRuta[k];
+  const cLat = miLat, cLon = miLon;
+  const p = new Promise(resolve => {
+    colaRutas.push(async () => {
+      let ok = false;
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 6000);
+      try {
+        const res = await fetch("https://router.project-osrm.org/route/v1/driving/" + rLon + "," + rLat + ";" + cLon + "," + cLat + "?overview=false", { signal: ctrl.signal });
+        const j = await res.json();
+        if (j.code === "Ok" && j.routes && j.routes.length) {
+          const km = j.routes[0].distance / 1000;
+          cacheKmRuta[k] = km;
+          try { localStorage.setItem("kmruta_" + k, String(km)); } catch (e) {}
+          ok = true;
+        }
+      } catch (e) {}
+      clearTimeout(to);
+      if (!ok) rutasFallidas[k] = Date.now();
+      delete promesasRuta[k];
+      resolve(ok);
+      if (ok) {
+        clearTimeout(temporizadorRefrescoKm);
+        temporizadorRefrescoKm = setTimeout(refrescarPorRutas, 700);
+      }
+    });
+  });
+  promesasRuta[k] = p;
+  procesarColaRutas();
+  return p;
+}
+
+function procesarColaRutas() {
+  while (rutasEnCurso < MAX_RUTAS_SIMULTANEAS && colaRutas.length) {
+    const t = colaRutas.shift();
+    rutasEnCurso++;
+    t().finally(() => { rutasEnCurso--; procesarColaRutas(); });
+  }
+}
+
+async function precargarRutasWeb(lista, maxMs) {
+  const ps = [];
+  lista.forEach(r => {
+    const la = Number(r.lat), lo = Number(r.lon);
+    if (!la || !lo) return;
+    ps.push(pedirKmRutaWeb(claveRutaKm(la, lo), la, lo));
+  });
+  if (!ps.length) return;
+  await Promise.race([Promise.all(ps), new Promise(r => setTimeout(r, maxMs))]);
+}
+
+function refrescarPorRutas() {
+  if (!miTelefono) return;
+  const modal = document.getElementById("modalPlatoPro");
+  if (modal && !modal.classList.contains("hidden")) { try { recalcularModalPlato(); } catch (e) {} return; }
+  const sv = document.getElementById("layoutTipoServicio");
+  if (sv && !sv.classList.contains("hidden")) { alternarModalidadServicio(modalidadDelivery); return; }
+  const app = document.getElementById("layoutAppMain");
+  if (!app || app.classList.contains("hidden")) return;
+  if (tabActualIndex === 1) dibujarCarrito();
+}
+
+const _abrirMenuOrig = abrirMenuRestaurante;
+abrirMenuRestaurante = async function (rId, rNom, rLat, rLon, logoUrl) {
+  if (rLat && rLon) { try { await precargarRutasWeb([{ lat: rLat, lon: rLon }], 2500); } catch (e) {} }
+  return _abrirMenuOrig(rId, rNom, rLat, rLon, logoUrl);
+};
+
+// ===== SERVICIO: MINIMO, TARJETA Y LOCAL CERRADO =====
+const _alternarOrig = alternarModalidadServicio;
+alternarModalidadServicio = function (deliv) {
+  if (deliv === false) { toast("💳 Pago con tarjeta: próximamente disponible"); return; }
+  _alternarOrig(true);
+  const sub = Math.round(precioPlatoTemp);
+  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+  const falta = t.minimo > 0 && sub < t.minimo;
+  const av = document.getElementById("svAviso");
+  if (av) {
+    if (falta) { av.textContent = "⚠️ Pedido mínimo para delivery: L. " + t.minimo + " (te faltan L. " + (t.minimo - sub) + ")"; av.classList.remove("hidden"); }
+    else av.classList.add("hidden");
+  }
+  const bc = document.getElementById("svBtnConfirmar");
+  if (bc) bc.style.opacity = falta ? "0.55" : "1";
+};
+
+(function () {
+  const lp = document.getElementById("svLblPickup");
+  if (lp) lp.style.opacity = "0.5";
+})();
+
+const _confirmarOrig = confirmarCreacionPedido;
+confirmarCreacionPedido = async function () {
+  if (modalidadDelivery) {
+    const sub = Math.round(precioPlatoTemp);
+    const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+    if (t.minimo > 0 && sub < t.minimo) {
+      toast("Pedido mínimo para delivery a tu distancia: L. " + t.minimo + ". Te faltan L. " + (t.minimo - sub) + ".");
+      return;
+    }
+  }
+  try {
+    const d = await db.collection("restaurantes").doc(restIdSeleccionadoTemp).get();
+    if (d.exists && String(d.data().estado || "").toUpperCase() === "CERRADO") {
+      toast("🛑 Este local está cerrado ahora. No se envió tu pedido.");
+      document.getElementById("layoutTipoServicio").classList.add("hidden");
+      document.getElementById("layoutAppMain").classList.remove("hidden");
+      cambiarTab(0);
+      return;
+    }
+  } catch (e) {
+    toast("No se pudo verificar el local. Revisa tu conexión.");
+    return;
+  }
+  return _confirmarOrig();
+};
+
+// ===== SEGUIMIENTO EN VIVO (igual que la app) =====
+let segMarkerRest = null, segMarkerCli = null, segMarkerDrv = null;
+let segUserMoved = false, segLineKey = "", segLastView = "", segCache = null;
+let segMapListo = false, segPend = null, segIntervalo = null, segTextoBase = "";
+let segDestino = "", segUltimaRuta = 0;
+
+function numSeg(v) {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+  return 0;
+}
+
+function ubicacionRepartidorSeg(d) {
+  let la = 0, lo = 0;
+  ["repartidor_ubicacion", "repartidor_location", "ubicacion_repartidor"].forEach(c => {
+    const g = d[c];
+    if ((!la || !lo) && g && typeof g.latitude === "number" && typeof g.longitude === "number") { la = g.latitude; lo = g.longitude; }
+  });
+  if (!la || !lo) {
+    la = 0; lo = 0;
+    ["repartidor_lat", "repartidor_latitud", "rep_lat"].forEach(c => { if (!la) la = numSeg(d[c]); });
+    ["repartidor_lon", "repartidor_lng", "repartidor_longitud", "rep_lon"].forEach(c => { if (!lo) lo = numSeg(d[c]); });
+  }
+  return [la, lo];
+}
+
+function marcadorSeg(emoji, label, lng, lat) {
+  const el = document.createElement("div");
+  el.style.cssText = "display:flex;flex-direction:column;align-items:center";
+  let lbl = null;
+  if (label) {
+    lbl = document.createElement("div");
+    lbl.textContent = label;
+    lbl.style.cssText = "background:#1E1E1E;color:#fff;border:1.5px solid #E91E63;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;margin-bottom:3px;white-space:nowrap";
+    el.appendChild(lbl);
+  }
+  const c = document.createElement("div");
+  c.textContent = emoji;
+  c.style.cssText = "width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid #E91E63;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 8px rgba(0,0,0,.3)";
+  el.appendChild(c);
+  const m = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 17] }).setLngLat([lng, lat]).addTo(mapTracking);
+  m._lbl = lbl;
+  return m;
+}
+
+function moverMarcadorSeg(m, lng, lat, ms) {
+  const s = m.getLngLat(), t0 = performance.now();
+  if (m._raf) cancelAnimationFrame(m._raf);
+  const paso = t => {
+    const k = Math.min(1, (t - t0) / ms);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    m.setLngLat([s.lng + (lng - s.lng) * e, s.lat + (lat - s.lat) * e]);
+    if (k < 1) m._raf = requestAnimationFrame(paso);
+  };
+  m._raf = requestAnimationFrame(paso);
+}
+
+function setLineaRuta(pts, dashed) {
+  if (!segMapListo || !mapTracking) { segPend = [pts, dashed]; return; }
+  mapTracking.getSource("route").setData({ type: "Feature", geometry: { type: "LineString", coordinates: pts } });
+  mapTracking.setPaintProperty("route-line", "line-dasharray", dashed ? [0.5, 2] : null);
+}
+
+function rutaSeg(aLa, aLo, bLa, bLo) {
+  const key = aLa.toFixed(4) + "," + aLo.toFixed(4) + ">" + bLa.toFixed(4) + "," + bLo.toFixed(4);
+  if (key === segLineKey) return;
+  const dest = bLa.toFixed(4) + "," + bLo.toFixed(4);
+  const ahora = Date.now();
+  if (dest === segDestino && ahora - segUltimaRuta < 8000) return;
+  segDestino = dest; segUltimaRuta = ahora; segLineKey = key;
+  fetch("https://router.project-osrm.org/route/v1/driving/" + aLo + "," + aLa + ";" + bLo + "," + bLa + "?overview=full&geometries=geojson")
+    .then(r => r.json())
+    .then(j => {
+      if (key !== segLineKey) return;
+      if (!j.routes || !j.routes.length) throw 0;
+      setLineaRuta(j.routes[0].geometry.coordinates, false);
+    })
+    .catch(() => { if (key === segLineKey) setLineaRuta([[aLo, aLa], [bLo, bLa]], true); });
+}
+
+function ajustarVistaSeg() {
+  if (!segCache || !mapTracking) return;
+  const c = segCache;
+  const b = new maplibregl.LngLatBounds();
+  b.extend([c.cLo, c.cLa]);
+  if (c.sD && c.dLa && c.dLo) b.extend([c.dLo, c.dLa]);
+  if (!(c.sD && c.toC) && c.rLa && c.rLo) b.extend([c.rLo, c.rLa]);
+  const key = b.toString();
+  if (key === segLastView) return;
+  segLastView = key;
+  mapTracking.fitBounds(b, { padding: { top: 250, bottom: 100, left: 50, right: 50 }, maxZoom: 16.5, duration: 700 });
+}
+
+function actualizarSeguimientoMapa(rLa, rLo, cLa, cLo, dLa, dLo, dN, sD, toC) {
+  if (!mapTracking) return;
+  const hasD = !!(sD && dLa && dLo);
+  segCache = { rLa: rLa, rLo: rLo, cLa: cLa, cLo: cLo, dLa: dLa, dLo: dLo, sD: hasD, toC: !!toC };
+  if (rLa && rLo) { if (!segMarkerRest) segMarkerRest = marcadorSeg("🏪", "", rLo, rLa); else segMarkerRest.setLngLat([rLo, rLa]); }
+  if (cLa && cLo) { if (!segMarkerCli) segMarkerCli = marcadorSeg("🏠", "Tú", cLo, cLa); else segMarkerCli.setLngLat([cLo, cLa]); }
+  if (hasD) {
+    const nm = dN ? dN.trim().split(" ")[0].toUpperCase() : "REPARTIDOR";
+    if (!segMarkerDrv) segMarkerDrv = marcadorSeg("🛵", nm, dLo, dLa);
+    else {
+      if (segMarkerDrv._lbl && segMarkerDrv._lbl.textContent !== nm) segMarkerDrv._lbl.textContent = nm;
+      moverMarcadorSeg(segMarkerDrv, dLo, dLa, 1200);
+    }
+    if (toC) rutaSeg(dLa, dLo, cLa, cLo);
+    else if (rLa && rLo) rutaSeg(dLa, dLo, rLa, rLo);
+  } else {
+    if (segMarkerDrv) { if (segMarkerDrv._raf) cancelAnimationFrame(segMarkerDrv._raf); segMarkerDrv.remove(); segMarkerDrv = null; }
+    if (rLa && rLo && cLa && cLo) rutaSeg(rLa, rLo, cLa, cLo);
+  }
+  if (!segUserMoved) ajustarVistaSeg();
+}
+
+function reiniciarMapaSeg() {
+  [segMarkerRest, segMarkerCli, segMarkerDrv].forEach(m => { if (m) { if (m._raf) cancelAnimationFrame(m._raf); m.remove(); } });
+  segMarkerRest = segMarkerCli = segMarkerDrv = null;
+  segUserMoved = false; segLineKey = ""; segLastView = ""; segCache = null; segPend = null; segDestino = ""; segUltimaRuta = 0;
+  if (segMapListo && mapTracking) {
+    try { mapTracking.getSource("route").setData({ type: "Feature", geometry: { type: "LineString", coordinates: [] } }); } catch (e) {}
+  }
+}
+
+function crearMapaSeguimiento() {
+  if (mapTracking) { mapTracking.resize(); return; }
+  mapTracking = new maplibregl.Map({ container: "mapTracking", style: "https://tiles.openfreemap.org/styles/positron", center: [miLon, miLat], zoom: 14.5, attributionControl: false });
+  mapTracking.touchZoomRotate.enableRotation();
+  mapTracking.on("dragstart", () => { segUserMoved = true; });
+  mapTracking.on("zoomstart", e => { if (e.originalEvent) segUserMoved = true; });
+  mapTracking.on("rotatestart", () => { segUserMoved = true; });
+  mapTracking.on("load", () => {
+    mapTracking.addSource("route", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } });
+    mapTracking.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 11, "line-opacity": 0.95 } });
+    mapTracking.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#7C3AED", "line-width": 6 } });
+    segMapListo = true;
+    if (segPend) { const p = segPend; segPend = null; setLineaRuta(p[0], p[1]); }
+  });
+}
+
+function botonRecentrarSeg() {
+  if (document.getElementById("btnRecentrarSeg")) return;
+  const b = document.createElement("button");
+  b.id = "btnRecentrarSeg";
+  b.className = "map-fab-btn";
+  b.textContent = "🎯";
+  b.style.cssText = "bottom:92px;right:16px";
+  b.onclick = () => { segUserMoved = false; segLastView = ""; ajustarVistaSeg(); };
+  document.getElementById("layoutSeguimiento").appendChild(b);
+}
+
+function detenerTimerSeg() {
+  if (segIntervalo) { clearInterval(segIntervalo); segIntervalo = null; }
+}
+
+function iniciarTimerSeg(segundos, textoBase) {
+  segTextoBase = textoBase;
+  const clave = "timer_fin_" + pedidoActivoId;
+  let fin = parseInt(localStorage.getItem(clave)) || 0;
+  if (!fin) { fin = Date.now() + segundos * 1000; try { localStorage.setItem(clave, String(fin)); } catch (e) {} }
+  detenerTimerSeg();
+  const f = s => String(Math.floor(Math.abs(s) / 60)).padStart(2, "0") + ":" + String(Math.abs(s) % 60).padStart(2, "0");
+  const pintar = () => {
+    const el = document.getElementById("tvInfoRepartidor");
+    if (!el) return;
+    const diff = Math.round((fin - Date.now()) / 1000);
+    el.textContent = segTextoBase + (diff > 0 ? " | ⏱ " + f(diff) : " | ⚠️ Demorado (+" + f(diff) + ")");
+  };
+  pintar();
+  segIntervalo = setInterval(pintar, 1000);
+}
+
+function abrirPantallaSeguimientoEnVivo() {
+  if (!pedidoActivoId || !restIdSeleccionadoTemp) { toast("No hay un pedido activo"); return; }
+  document.getElementById("layoutAppMain").classList.add("hidden");
+  document.getElementById("layoutSeguimiento").classList.remove("hidden");
+  document.getElementById("tvNombreRestauranteSeguimiento").textContent = rNombreTemp;
+  document.getElementById("tvEstadoSeguimiento").textContent = "Buscando ruta";
+  document.getElementById("tvInfoRepartidor").textContent = "Espera un momento";
+  const cobEl = document.getElementById("tvCobroSeguimiento");
+  if (cobEl) { cobEl.textContent = ""; cobEl.style.whiteSpace = "pre-line"; }
+  const chat = document.getElementById("btnAbrirChat");
+  if (chat) chat.classList.add("hidden");
+  detenerTimerSeg();
+  crearMapaSeguimiento();
+  reiniciarMapaSeg();
+  botonRecentrarSeg();
+  setTimeout(() => { if (mapTracking) mapTracking.resize(); }, 150);
+  if (seguimientoListener) seguimientoListener();
+  const idPed = pedidoActivoId;
+  seguimientoListener = db.collection("restaurantes").doc(restIdSeleccionadoTemp).collection("pedidos").doc(idPed).onSnapshot(doc => {
+    if (!doc.exists || idPed !== pedidoActivoId) return;
+    const d = doc.data();
+    const es = String(d.estado || d.status || d.estatus || "NUEVO").toUpperCase();
+    if (ESTADOS_FINALES.includes(es)) {
+      localStorage.removeItem("pedidoActivoId");
+      localStorage.removeItem("restIdActivo");
+      localStorage.removeItem("rNombreActivo");
+      localStorage.removeItem("timer_fin_" + idPed);
+      pedidoActivoId = "";
+      toast(es.indexOf("CANCEL") === 0 ? "❌ Pedido cancelado" : "🎉 ¡Pedido finalizado!");
+      cerrarPantallaSeguimiento();
+      return;
+    }
+    const sb = numSeg(d.subtotal), au = numSeg(d.aumento), en = numSeg(d.costo_envio), to = numSeg(d.total);
+    const pick = String(d.tipo_servicio || "").toUpperCase() === "PICKUP";
+    if (cobEl) {
+      cobEl.textContent = pick
+        ? "💵 Pagas en el local: L. " + to.toFixed(2)
+        : "💵 Pagas al repartidor: L. " + to.toFixed(2) + "\n(productos L. " + (sb + au).toFixed(2) + " + envío L. " + en.toFixed(2) + ")";
+    }
+    const rN = String(d.repartidor_nombre || "").trim();
+    const asignado = rN !== "" && !/^buscando/i.test(rN);
+    const ub = ubicacionRepartidorSeg(d);
+    const rLa = ub[0], rLo = ub[1];
+    const tieneGps = !!(rLa && rLo);
+    const enNuevo = es === "NUEVO" || es === "PENDIENTE";
+    const haciaCliente = es === "EN_CAMINO" || es === "DESPACHADO";
+    const restLa = numSeg(d.restaurante_lat) || restauranteLatTemp, restLo = numSeg(d.restaurante_lon) || restauranteLonTemp;
+    const cliLa = numSeg(d.cliente_lat) || miLat, cliLo = numSeg(d.cliente_lon) || miLon;
+    actualizarSeguimientoMapa(restLa, restLo, cliLa, cliLo, rLa, rLo, rN, asignado && tieneGps && !enNuevo, haciaCliente);
+    const stEl = document.getElementById("tvEstadoSeguimiento"), infEl = document.getElementById("tvInfoRepartidor");
+    const dKm = tieneGps ? calcularDistanciaKm(rLa, rLo, cliLa, cliLo) : calcularDistanciaKm(restLa, restLo, cliLa, cliLo);
+    if (enNuevo) {
+      stEl.textContent = "Enviado al local"; stEl.style.color = "#E11D48";
+      infEl.textContent = "Esperando confirmación...";
+      detenerTimerSeg();
+    } else if (es === "ACEPTADO") {
+      stEl.textContent = "Preparando tu pedido"; stEl.style.color = "#D97706";
+      infEl.textContent = "Cocinando 👨‍🍳 (El repartidor llegará pronto)";
+      detenerTimerSeg();
+    } else if (asignado && !haciaCliente) {
+      stEl.textContent = "Repartidor asignado"; stEl.style.color = "#2563EB";
+      infEl.textContent = rN + " va en camino al local." + (tieneGps ? "" : " (📡 sin señal GPS)");
+      detenerTimerSeg();
+    } else if (haciaCliente) {
+      stEl.textContent = "🛵 En camino"; stEl.style.color = "#059669";
+      const mE = Math.max(2, Math.round(dKm * 3 + 2));
+      iniciarTimerSeg(mE * 60, tieneGps ? rN : rN + " • 📡 sin señal GPS");
+    } else {
+      stEl.textContent = "Pedido en proceso"; stEl.style.color = "#7C3AED";
+      infEl.textContent = "Estado: " + es;
+      detenerTimerSeg();
+    }
+  }, () => {});
+}
+
+function cerrarPantallaSeguimiento() {
+  if (seguimientoListener) { seguimientoListener(); seguimientoListener = null; }
+  detenerTimerSeg();
+  document.getElementById("layoutSeguimiento").classList.add("hidden");
+  document.getElementById("layoutAppMain").classList.remove("hidden");
+  cambiarTab(0);
 }
