@@ -2072,3 +2072,93 @@ function filaLinksLegales(centrado) {
   const bs = document.getElementById("btnRegPasoSiguiente");
   if (bs && bs.parentNode) bs.parentNode.insertBefore(filaLinksLegales(false), bs);
 })();
+
+// ===== CUENTA Y LEGAL (igual que la app) =====
+const CORREO_SOPORTE = "pharethd@gmail.com";
+
+function abrirAjustes() {
+  const m = crearModalAjustes();
+  m.innerHTML = '<div class="dialog-card">' +
+    '<h3 style="margin-bottom:4px">Cuenta y legal ⚙️</h3>' +
+    '<p class="card-desc" style="margin-bottom:16px">Información legal y de tu cuenta.</p>' +
+    '<button class="btn btn-primary" id="ajPol" style="margin-bottom:10px">📄 Política de Privacidad</button>' +
+    '<button class="btn btn-primary" id="ajTer" style="margin-bottom:10px">📜 Términos y Condiciones</button>' +
+    '<button class="btn btn-blue" id="ajCon" style="margin-bottom:10px">✉️ Contacto y soporte</button>' +
+    '<p class="sub-muted" style="margin:8px 0 12px;line-height:1.4">Si eliminas tu cuenta se borran tu perfil, direcciones, historial de pedidos y mensajes del chat. Los pedidos en los registros del local se conservan solo de forma anonimizada.</p>' +
+    '<button class="btn btn-danger" id="ajEli" style="margin-bottom:10px">🗑 Eliminar mi cuenta</button>' +
+    '<button class="btn btn-muted" id="ajCer">CERRAR</button></div>';
+  document.getElementById("ajPol").onclick = () => verLegal("Política de Privacidad", LEGAL_POLITICA, true);
+  document.getElementById("ajTer").onclick = () => verLegal("Términos y Condiciones", LEGAL_TERMINOS, true);
+  document.getElementById("ajCon").onclick = () => { window.location.href = "mailto:" + CORREO_SOPORTE + "?subject=" + encodeURIComponent("Soporte Llevari"); };
+  document.getElementById("ajEli").onclick = confirmarEliminarCuenta;
+  document.getElementById("ajCer").onclick = () => m.classList.add("hidden");
+  m.classList.remove("hidden");
+}
+
+function confirmarEliminarCuenta() {
+  if (!miTelefono) { toast("No hay sesión iniciada"); return; }
+  if (pedidoActivoId || localStorage.getItem("pedidoActivoId")) {
+    toast("Tienes un pedido en curso. Espera a que termine o cancélalo antes de eliminar tu cuenta.");
+    return;
+  }
+  const u = auth.currentUser;
+  if (!u || !u.email) { toast("Cierra sesión, vuelve a entrar e intenta de nuevo."); return; }
+  const m = crearModalAjustes();
+  m.innerHTML = '<div class="dialog-card">' +
+    '<h3 style="margin-bottom:8px">¿Eliminar tu cuenta?</h3>' +
+    '<p class="card-desc" style="margin-bottom:14px">Se borrarán tu perfil, teléfono, correo, contraseña, direcciones, historial de pedidos y mensajes del chat. Los pedidos en el local quedan anonimizados. Esta acción no se puede deshacer.<br><br>Escribe tu contraseña para confirmar.</p>' +
+    '<div class="input-group"><input type="password" id="elPass" placeholder="Tu contraseña" /></div>' +
+    '<button class="btn btn-danger" id="elOk" style="margin-bottom:10px">Sí, eliminar</button>' +
+    '<button class="btn btn-muted" id="elNo">Cancelar</button></div>';
+  document.getElementById("elNo").onclick = abrirAjustes;
+  document.getElementById("elOk").onclick = () => {
+    const p = document.getElementById("elPass").value;
+    if (!p) { toast("Escribe tu contraseña"); return; }
+    eliminarCuentaWeb(u, p);
+  };
+  m.classList.remove("hidden");
+}
+
+let eliminandoCuenta = false;
+async function eliminarCuentaWeb(u, pass) {
+  if (eliminandoCuenta) return;
+  eliminandoCuenta = true;
+  const tel = miTelefono;
+  try {
+    try {
+      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, pass));
+    } catch (e) { toast("Contraseña incorrecta"); return; }
+    toast("Eliminando cuenta...");
+    try {
+      const snap = await db.collection("clientes").doc(tel).collection("mis_pedidos").get();
+      await Promise.all(snap.docs.map(async d => {
+        const x = d.data();
+        if (x.rId && x.pId) {
+          const pr = db.collection("restaurantes").doc(x.rId).collection("pedidos").doc(x.pId);
+          const s = await pr.get();
+          if (s.exists) {
+            const ch = await pr.collection("chat").get();
+            await Promise.all(ch.docs.map(c => c.ref.delete()));
+            await pr.update({ cliente_nombre: "Cliente eliminado", cliente_telefono: "", cliente_lat: 0, cliente_lon: 0, cliente_direccion_desc: "" });
+          }
+        }
+        await d.ref.delete();
+      }));
+      await db.collection("clientes").doc(tel).delete();
+      const q = await db.collection("clientes").where("telefono", "==", tel).get();
+      await Promise.all(q.docs.map(d => d.ref.delete()));
+      await u.delete();
+    } catch (e) {
+      toast("No se pudo eliminar todo. Revisa tu conexión e intenta de nuevo, o escribe a " + CORREO_SOPORTE);
+      return;
+    }
+    crearModalAjustes().classList.add("hidden");
+    try { await auth.signOut(); } catch (e) {}
+    localStorage.clear();
+    miTelefono = ""; miNombre = ""; pedidoActivoId = "";
+    mostrarPantallaLogin();
+    toast("Cuenta eliminada");
+  } finally {
+    eliminandoCuenta = false;
+  }
+}
