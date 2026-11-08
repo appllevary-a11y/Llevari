@@ -1436,67 +1436,8 @@ function mostrarPlatosPorPrecio(pO) {
 }
 
 // ===== AJUSTES, AVISOS Y CARRITO =====
-const LEGAL_TERMINOS = `TÉRMINOS Y CONDICIONES DE USO - LLEVARI
-
-1. Sobre LLEVARI
-LLEVARI es una plataforma que conecta a clientes con restaurantes y repartidores independientes para pedir comida a domicilio o para recoger en el local. LLEVARI no prepara los alimentos: cada local es responsable de la calidad, preparación y disponibilidad de sus productos.
-
-2. Requisitos
-Debes ser mayor de 18 años y darnos datos reales y actualizados: nombre, correo, teléfono y ubicación. Eres responsable de la confidencialidad de tu contraseña y de lo que ocurra en tu cuenta.
-
-3. Pedidos
-Al confirmar un pedido haces una oferta de compra al local. El pedido queda firme cuando el local lo acepta. Puedes cancelarlo desde la app mientras el estado lo permita. Si el local está cerrado o no puede cumplirlo, se cancelará.
-
-4. Precios y envío
-Los precios mostrados incluyen el costo del servicio de la plataforma. El costo de envío depende de la distancia entre el local y tu ubicación, y se muestra antes de confirmar. Algunos pedidos a mayor distancia requieren un monto mínimo.
-
-5. Pago
-Por ahora el pago es solo en efectivo, al repartidor (delivery) o en el local (pickup). El pago con tarjeta estará disponible próximamente. Debes tener el monto exacto o suficiente al recibir tu pedido.
-
-6. Entrega
-Los tiempos mostrados son estimados y pueden variar por tráfico, clima o demanda. Debes estar disponible en la ubicación indicada y atender al repartidor. Si no se te puede localizar, el pedido puede darse por no entregado y cobrarse según corresponda.
-
-7. Uso adecuado
-No debes dar datos falsos, hacer pedidos de broma, maltratar a repartidores o personal de los locales, ni usar la plataforma para fines ilegales. LLEVARI puede suspender cuentas que incumplan estas reglas.
-
-8. Responsabilidad
-LLEVARI hace lo posible por que el servicio funcione sin interrupciones, pero no garantiza disponibilidad continua. No somos responsables por retrasos fuera de nuestro control ni por la preparación de los alimentos. Si tienes alergias o restricciones, avísalo al local antes de pedir.
-
-9. Cambios
-Podemos actualizar estos términos. Si los cambios son importantes te lo avisaremos en la app. Seguir usándola significa que los aceptas.
-
-10. Ley aplicable
-Estos términos se rigen por las leyes de la República de Honduras.`;
-const LEGAL_POLITICA = `POLÍTICA DE PRIVACIDAD - LLEVARI
-
-1. Qué datos recopilamos
-- Datos de tu cuenta: nombre, correo electrónico, teléfono, ciudad e idioma.
-- Ubicación: las direcciones que guardas y la ubicación que eliges en el mapa para recibir tus pedidos.
-- Pedidos: qué pides, a qué local, montos, fechas y estado.
-
-2. Para qué los usamos
-- Crear y proteger tu cuenta.
-- Procesar y entregar tus pedidos, y calcular el costo de envío.
-- Mostrarte el seguimiento de tu pedido en el mapa.
-- Mejorar el servicio y prevenir fraudes o abusos.
-
-3. Con quién los compartimos
-Para completar tu pedido, el local y el repartidor ven tu nombre, teléfono, dirección y los productos pedidos. Usamos servicios de terceros para funcionar: Firebase (Google) para cuenta y base de datos, y servicios de mapas y rutas (OpenStreetMap, OpenFreeMap, OSRM) que reciben coordenadas para mostrar el mapa y calcular distancias. No vendemos tus datos personales.
-
-4. Cuánto tiempo los guardamos
-Guardamos tus datos mientras tu cuenta esté activa y el tiempo necesario para cumplir obligaciones legales y resolver reclamos sobre pedidos.
-
-5. Tus derechos
-Puedes pedir acceso, corrección o eliminación de tus datos, y retirar tu consentimiento. Puedes cambiar o borrar tus direcciones desde la app. Para solicitudes sobre tu cuenta, contáctanos por los canales oficiales de LLEVARI.
-
-6. Seguridad
-Tus datos se guardan en servidores seguros y las comunicaciones van cifradas. Aun así, ningún sistema es 100% infalible: protege tu contraseña y no la compartas.
-
-7. Menores de edad
-LLEVARI es solo para mayores de 18 años. No recopilamos datos de menores a sabiendas.
-
-8. Cambios a esta política
-Si la actualizamos, te lo avisaremos en la app. La versión vigente siempre estará disponible en Ajustes.`;
+const LEGAL_TERMINOS = "Última actualización: 30 de octubre de 2026\n\nAl crear una cuenta y usar Llevari aceptas estos términos.\n\n1. EL SERVICIO\nLlevari conecta clientes, locales y repartidores. Los productos son preparados y vendidos por cada local; el reparto lo realiza un repartidor independiente.\n\n2. CUENTA\nDebes tener al menos 18 años y dar datos verdaderos. Eres responsable de tu contraseña y de lo que ocurra con tu cuenta.\n\n3. PEDIDOS Y PRECIOS\nEl precio de cada producto que ves en la app incluye un pequeño ajuste por el servicio de entrega, que varía según la distancia. El costo de envío se muestra por separado y el resumen del pedido te da el desglose y el total antes de confirmar. Para ciertas distancias puede aplicar un pedido mínimo. Un pedido queda confirmado cuando lo envías y el local lo acepta.\n\n4. PAGO\nEl pago se realiza en efectivo, al repartidor (delivery) o en el local (retiro). Debes tener el monto disponible al momento de la entrega.\n\n5. CANCELACIONES\nPuedes cancelar mientras el local no haya aceptado tu pedido. Una vez aceptado, podría no ser posible. Los pedidos rechazados repetidamente en la puerta pueden resultar en la suspensión de tu cuenta.\n\n6. ENTREGA\nLos tiempos son estimados y pueden variar por tráfico, clima o demanda. Debes estar disponible en la dirección indicada y que esta sea correcta.\n\n7. CONDUCTA\nNo está permitido el trato abusivo hacia repartidores o locales, enviar contenido ofensivo o ilegal en el chat, ni dar datos falsos o usar la app con fines fraudulentos. Podemos suspender cuentas que incumplan.\n\n8. RESPONSABILIDAD\nCada local responde por la calidad, ingredientes y alérgenos de sus productos. Llevari no se hace responsable por retrasos ajenos a su control. Informa cualquier problema al correo de soporte.\n\n9. ELIMINACIÓN DE CUENTA\nPuedes eliminar tu cuenta cuando quieras desde la app. Se aplica lo indicado en la Política de Privacidad.\n\n10. CAMBIOS Y LEY APLICABLE\nPodemos modificar estos términos; si el cambio es importante te pediremos aceptarlos de nuevo. Se rigen por las leyes de Honduras.\n\n11. CONTACTO\npharethd@gmail.com";
+const LEGAL_POLITICA = "Última actualización: 30 de octubre de 2026\n\nResponsable: Llevari (contacto: pharethd@gmail.com).\n\nLlevari (\"la app\") es una aplicación de pedidos a domicilio y retiro en local. Esta política explica qué datos recopilamos, para qué los usamos, con quién los compartimos y cómo puedes eliminarlos.\n\n1. DATOS QUE RECOPILAMOS\n• Cuenta: nombre, correo, teléfono, contraseña (la gestiona Firebase Authentication; nosotros no la vemos ni la guardamos en texto), ciudad e idioma.\n• Ubicación: tu ubicación precisa (GPS) y las direcciones que guardas, para calcular distancia y costo de envío y para que el repartidor llegue a ti. La ubicación de entrega se guarda en cada pedido.\n• Fotos: imágenes que envías en el chat con el repartidor (cámara o galería). Solo las ven tú y el repartidor de ese pedido. La cámara se solicita únicamente cuando tocas el botón 📷.\n• Pedidos y mensajes: historial de pedidos, montos y chat con el repartidor.\n• Fecha y versión de los términos que aceptaste.\n\n2. PARA QUÉ USAMOS TUS DATOS\n• Crear y proteger tu cuenta.\n• Procesar y entregar tus pedidos.\n• Calcular tarifas y mostrar el seguimiento en el mapa, incluida la ubicación en vivo del repartidor mientras tu pedido está en camino.\n• Permitir la comunicación con el repartidor.\n• Brindarte soporte.\n\n3. CON QUIÉN SE COMPARTEN\n• Con el local: tu nombre y tu pedido.\n• Con el repartidor asignado: nombre, teléfono, dirección y ubicación de entrega, y el chat.\n• Proveedores técnicos: Google Firebase (autenticación y almacenamiento de datos) y servicios de mapas y rutas: OpenStreetMap/Nominatim (búsqueda de direcciones), OSRM (rutas y distancias), OpenFreeMap (mapa), Esri (imagen satelital) y unpkg (librería del mapa). Estos servicios pueden recibir tu dirección IP y las coordenadas que consultas.\nNo vendemos tus datos a terceros.\n\n4. UBICACIÓN\nSolo usamos tu ubicación mientras usas la app. Puedes negar el permiso y ubicar tu dirección manualmente en el mapa.\n\n5. CONSERVACIÓN\nGuardamos tus datos mientras tu cuenta esté activa. Al eliminar tu cuenta borramos tu perfil, direcciones, historial y mensajes del chat. Los pedidos registrados por el local se conservan sin tu nombre, teléfono ni ubicación, por razones contables.\n\n6. TUS DERECHOS\nPuedes ver, corregir o eliminar tus datos. Para eliminar tu cuenta usa \"Eliminar mi cuenta\" dentro de la app (ícono ⚙️ en la pantalla principal) o escríbenos al correo de contacto y la eliminaremos por ti.\n\n7. SEGURIDAD\nAplicamos medidas razonables para proteger tu información, pero ningún sistema es 100% seguro. No compartas tu contraseña con nadie.\n\n8. MENORES DE EDAD\nLa app es solo para mayores de 18 años y al registrarte confirmas que lo eres. No recopilamos datos de menores a sabiendas.\n\n9. CAMBIOS\nPodemos actualizar esta política. Publicaremos la nueva versión en la app y te pediremos aceptarla de nuevo si el cambio es importante.\n\n10. CONTACTO\npharethd@gmail.com";
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
