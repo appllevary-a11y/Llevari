@@ -1020,3 +1020,57 @@ input:focus, select:focus {
 }
 .empty-emoji { font-size: 54px; margin-bottom: 12px; }
 .empty-text { font-size: 14.5px; color: var(--c-muted); line-height: 1.4; }
+
+/* colUbi neomorfismo: selector de ubicacion como boton de cristal */
+#colUbi {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  cursor: pointer;
+  padding: 8px 16px 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.30);
+  background: linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    6px 6px 14px rgba(20,0,50,0.35),
+    -4px -4px 10px rgba(255,255,255,0.12),
+    inset 1px 1px 2px rgba(255,255,255,0.38);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+#colUbi:active {
+  transform: scale(0.97);
+  box-shadow:
+    inset 4px 4px 10px rgba(20,0,50,0.42),
+    inset -3px -3px 8px rgba(255,255,255,0.16);
+}
+#colUbi::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.38), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: brilloUbi 4.5s ease-in-out infinite;
+}
+@keyframes brilloUbi {
+  0% { left: -60%; }
+  40%, 100% { left: 130%; }
+}
+.header-actions .circle-btn {
+  background: linear-gradient(145deg, rgba(255,255,255,0.26), rgba(255,255,255,0.08));
+  border: 1px solid rgba(255,255,255,0.28);
+  box-shadow:
+    4px 4px 10px rgba(20,0,50,0.32),
+    -3px -3px 8px rgba(255,255,255,0.10),
+    inset 1px 1px 1px rgba(255,255,255,0.32);
+}
+.header-actions .circle-btn:active {
+  box-shadow:
+    inset 3px 3px 7px rgba(20,0,50,0.4),
+    inset -2px -2px 6px rgba(255,255,255,0.14);
+}
