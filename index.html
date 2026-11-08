@@ -35,7 +35,7 @@
           <div class="input-group">
             <input type="password" id="etLogPin" placeholder="Contraseña" />
           </div>
-          <button id="btnIniciarSesion" class="btn btn-primary" onclick="if(window.iniciarSesion) iniciarSesion(); else alert('El archivo app.js no se ha cargado correctamente.');">ENTRAR AHORA</button>
+          <button id="btnIniciarSesion" class="btn btn-primary">ENTRAR AHORA</button>
           <a href="javascript:void(0)" id="lnkOlvidoPin" class="text-link center" onclick="document.getElementById('layoutLogin').classList.add('hidden'); document.getElementById('layoutRecuperar').classList.remove('hidden');">¿Olvidaste tu contraseña?</a>
           <a href="javascript:void(0)" id="lnkIrRegistro" class="text-link center" onclick="document.getElementById('layoutLogin').classList.add('hidden'); document.getElementById('layoutRegistro').classList.remove('hidden');">¿No tienes cuenta? Regístrate aquí</a>
         </div>
@@ -48,7 +48,7 @@
             <input type="email" id="etRecCorreo" placeholder="Correo electrónico" />
           </div>
           <div id="tvRecEstado" class="msg-alert success hidden"></div>
-          <button id="btnRecEnviar" class="btn btn-primary" onclick="if(window.enviarRecuperacion) enviarRecuperacion();">ENVIAR ENLACE</button>
+          <button id="btnRecEnviar" class="btn btn-primary">ENVIAR ENLACE</button>
           <a href="javascript:void(0)" id="lnkVolverLogin" class="text-link center" onclick="document.getElementById('layoutRecuperar').classList.add('hidden'); document.getElementById('layoutLogin').classList.remove('hidden');">❮ Volver a iniciar sesión</a>
         </div>
 
@@ -87,7 +87,7 @@
               <input type="checkbox" id="cbAcepto" />
               <span>Soy mayor de 18 años y acepto los Términos y Condiciones y la Política de Privacidad</span>
             </label>
-            <button id="btnRegPasoSiguiente" class="btn btn-warning" onclick="if(window.validarPaso1Registro) validarPaso1Registro();">SIGUIENTE ➔</button>
+            <button id="btnRegPasoSiguiente" class="btn btn-warning">SIGUIENTE ➔</button>
             <a href="javascript:void(0)" id="lnkRegVolverLog" class="text-link center" onclick="document.getElementById('layoutRegistro').classList.add('hidden'); document.getElementById('layoutLogin').classList.remove('hidden');">¿Ya tienes una cuenta? Inicia sesión</a>
           </div>
 
@@ -96,8 +96,8 @@
             <h3>Tus Direcciones 📍</h3>
             <p class="card-desc">Agrega al menos una dirección para entregas.</p>
             <div id="contDireccionesReg" class="address-list"></div>
-            <button id="btnRegNuevaDirMapa" class="btn btn-blue" onclick="if(window.abrirMapaNuevaDireccion) abrirMapaNuevaDireccion();">+ Agregar Nueva Dirección en Mapa</button>
-            <button id="btnRegistrarmeFinal" class="btn btn-success" disabled onclick="if(window.finalizarRegistro) finalizarRegistro();">FINALIZAR REGISTRO ✅</button>
+            <button id="btnRegNuevaDirMapa" class="btn btn-blue">+ Agregar Nueva Dirección en Mapa</button>
+            <button id="btnRegistrarmeFinal" class="btn btn-success" disabled>FINALIZAR REGISTRO ✅</button>
             <a href="javascript:void(0)" id="lnkRegVolverPaso1" class="text-link center" onclick="document.getElementById('layoutRegPaso2').classList.add('hidden'); document.getElementById('layoutRegPaso1').classList.remove('hidden');">❮ Volver a datos</a>
           </div>
         </div>
@@ -108,7 +108,7 @@
     <!-- PANTALLA: SELECTOR DE UBICACIÓN / MAPA -->
     <div id="layoutMapa" class="screen full-screen hidden">
       <div class="map-topbar">
-        <button id="btnCerrarMapa" class="btn-text" onclick="if(window.volverDeMapa) volverDeMapa();">❮ Volver</button>
+        <button id="btnCerrarMapa" class="btn-text">❮ Volver</button>
         <span class="map-title">Ubica tu dirección</span>
       </div>
       <div id="mapContainerPick" class="map-view"></div>
@@ -360,6 +360,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="app.js?v=1794095042"></script>
+  <script src="app.js?v=1794098209"></script>
 </body>
 </html>

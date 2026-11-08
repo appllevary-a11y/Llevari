@@ -1660,3 +1660,322 @@ async function pedirDesdeCarrito(rId) {
     verificandoCarrito = false;
   }
 }
+
+// ===== MAPA DE UBICACION (igual que la app) + AGREGAR UBICACION =====
+const ESTILO_CALLE = "https://tiles.openfreemap.org/styles/liberty";
+const ESTILO_SAT = { version: 8, sources: { sat: { type: "raster", tileSize: 256, maxzoom: 19, attribution: "© Esri", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"] } }, layers: [{ id: "sat", type: "raster", source: "sat" }] };
+let mapaSat = false, meMarker = null, tRev = null, tSea = null, controlesMapaListos = false, agregandoDesdeApp = false;
+
+function prepararControlesMapa() {
+  if (controlesMapaListos) return;
+  controlesMapaListos = true;
+  const lay = document.getElementById("layoutMapa");
+  const box = document.getElementById("mapSearch");
+  const inp = document.getElementById("inputGeoSearch");
+  const res = document.getElementById("geoResults");
+  box.style.zIndex = "11";
+  inp.placeholder = "🔍 Buscar calle, colonia o lugar";
+  inp.style.cssText = "width:100%;padding:13px 16px;border:none;border-radius:16px;font-size:15px;background:#fff;box-shadow:0 4px 16px rgba(59,7,100,.25);outline:none;color:#1F1B2E";
+  inp.addEventListener("input", () => {
+    clearTimeout(tSea);
+    const v = inp.value.trim();
+    if (v.length < 3 || !mapPicker) { res.classList.add("hidden"); return; }
+    tSea = setTimeout(() => {
+      const c = mapPicker.getCenter(), k = 0.6;
+      const vb = (c.lng - k) + "," + (c.lat + k) + "," + (c.lng + k) + "," + (c.lat - k);
+      fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=es&viewbox=" + vb + "&q=" + encodeURIComponent(v))
+        .then(r => r.json()).then(a => {
+          res.innerHTML = "";
+          if (!a.length) {
+            const d0 = document.createElement("div");
+            d0.textContent = "Sin resultados";
+            res.appendChild(d0);
+          } else {
+            a.forEach(p => {
+              const d1 = document.createElement("div");
+              d1.textContent = p.display_name.split(",").slice(0, 3).join(",");
+              d1.onclick = () => {
+                mapPicker.flyTo({ center: [+p.lon, +p.lat], zoom: 18, duration: 700 });
+                inp.value = "";
+                res.classList.add("hidden");
+              };
+              res.appendChild(d1);
+            });
+          }
+          res.classList.remove("hidden");
+        }).catch(() => {});
+    }, 450);
+  });
+  const bc = document.createElement("button");
+  bc.id = "btnCapaMapa";
+  bc.className = "map-fab-btn";
+  bc.textContent = "🛰️";
+  bc.style.cssText = "top:128px;bottom:auto;right:14px";
+  bc.onclick = () => {
+    if (!mapPicker) return;
+    mapaSat = !mapaSat;
+    mapPicker.setStyle(mapaSat ? ESTILO_SAT : ESTILO_CALLE);
+    bc.textContent = mapaSat ? "🗺️" : "🛰️";
+  };
+  lay.appendChild(bc);
+  document.getElementById("mapAddr").style.bottom = "150px";
+  const fab = document.getElementById("btnMiUbi");
+  fab.style.bottom = "205px";
+  fab.onclick = () => irAMiUbicacion(false);
+  document.getElementById("shadow").style.transition = "all .18s ease";
+}
+
+function ocultarResultadosGeo() {
+  const res = document.getElementById("geoResults");
+  if (res) res.classList.add("hidden");
+  const inp = document.getElementById("inputGeoSearch");
+  if (inp) inp.blur();
+}
+
+function levantarPin(on) {
+  const p = document.getElementById("pin"), s = document.getElementById("shadow");
+  if (p) p.classList.toggle("lift", on);
+  if (s) { s.style.transform = on ? "scale(.6)" : ""; s.style.opacity = on ? ".5" : ""; }
+}
+
+function geocodificarCentro() {
+  const el = document.getElementById("mapAddr");
+  if (!mapPicker || !el) return;
+  const c = mapPicker.getCenter();
+  fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=es&lat=" + c.lat + "&lon=" + c.lng)
+    .then(r => r.json()).then(j => {
+      if (!j || !j.display_name) throw 0;
+      el.textContent = "📍 " + j.display_name.split(",").slice(0, 3).join(",").trim();
+      el.classList.remove("hidden");
+    }).catch(() => el.classList.add("hidden"));
+}
+
+function irAMiUbicacion(silencioso) {
+  if (!navigator.geolocation || !mapPicker) { if (!silencioso) toast("Tu navegador no permite ubicación"); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    if (!mapPicker) return;
+    const la = pos.coords.latitude, lo = pos.coords.longitude;
+    if (meMarker) meMarker.setLngLat([lo, la]);
+    else {
+      const e = document.createElement("div");
+      e.style.cssText = "width:18px;height:18px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 0 0 6px rgba(37,99,235,.25)";
+      meMarker = new maplibregl.Marker({ element: e }).setLngLat([lo, la]).addTo(mapPicker);
+    }
+    mapPicker.flyTo({ center: [lo, la], zoom: 17.5, duration: 800 });
+  }, () => { if (!silencioso) toast("Enciende tu GPS y da permiso de ubicación"); }, { enableHighAccuracy: !silencioso, timeout: 10000, maximumAge: silencioso ? 60000 : 0 });
+}
+
+function initMapPicker(lat, lon) {
+  prepararControlesMapa();
+  if (!mapPicker) {
+    mapPicker = new maplibregl.Map({ container: "mapContainerPick", style: ESTILO_CALLE, center: [lon, lat], zoom: 17, attributionControl: false });
+    mapPicker.touchZoomRotate.enableRotation();
+    mapPicker.on("movestart", () => { levantarPin(true); ocultarResultadosGeo(); });
+    mapPicker.on("move", () => { const c = mapPicker.getCenter(); tempMapaLat = c.lat; tempMapaLon = c.lng; });
+    mapPicker.on("moveend", () => { levantarPin(false); clearTimeout(tRev); tRev = setTimeout(geocodificarCentro, 500); });
+  } else {
+    mapPicker.resize();
+    mapPicker.jumpTo({ center: [lon, lat], zoom: 17 });
+  }
+  setTimeout(() => { if (mapPicker) mapPicker.resize(); }, 150);
+  geocodificarCentro();
+}
+
+function abrirMapaNuevaDireccion() {
+  document.getElementById("layoutAuth").classList.add("hidden");
+  document.getElementById("layoutAppMain").classList.add("hidden");
+  document.getElementById("layoutMapa").classList.remove("hidden");
+  initMapPicker(tempMapaLat, tempMapaLon);
+  irAMiUbicacion(true);
+}
+
+function volverDeMapa() {
+  document.getElementById("layoutMapa").classList.add("hidden");
+  if (agregandoDesdeApp) {
+    agregandoDesdeApp = false;
+    document.getElementById("layoutAppMain").classList.remove("hidden");
+  } else {
+    document.getElementById("layoutAuth").classList.remove("hidden");
+  }
+}
+
+async function guardarDetalleDireccion() {
+  const sel = document.querySelector('input[name="rbTipoDir"]:checked');
+  const etiqueta = sel ? sel.value : "Casa";
+  const campo = document.getElementById("etDescDireccion");
+  const desc = campo.value.trim();
+  const dir = { etiqueta, desc, lat: tempMapaLat, lon: tempMapaLon };
+  document.getElementById("modalDetalleDir").classList.add("hidden");
+  campo.value = "";
+  if (agregandoDesdeApp) {
+    volverDeMapa();
+    await guardarNuevaUbicacionCuenta(dir);
+    return;
+  }
+  listaDireccionesReg.push(dir);
+  indiceDireccionSeleccionada = listaDireccionesReg.length - 1;
+  volverDeMapa();
+  actualizarListaDireccionesReg();
+}
+
+async function guardarNuevaUbicacionCuenta(dir) {
+  if (!miTelefono) return;
+  try {
+    await db.collection("clientes").doc(miTelefono).update({ direcciones: firebase.firestore.FieldValue.arrayUnion(dir) });
+    seleccionarUbicacion(dir.lat, dir.lon, dir.etiqueta, dir.desc, -1);
+  } catch (e) {
+    toast("No se pudo guardar la ubicación: " + e.message);
+  }
+}
+
+function seleccionarUbicacion(lat, lon, etiqueta, desc, idx) {
+  miLat = lat; miLon = lon;
+  miDireccionDesc = (desc && desc.trim()) ? desc.trim() : etiqueta;
+  localStorage.setItem("lat", miLat);
+  localStorage.setItem("lon", miLon);
+  localStorage.setItem("dir_desc", miDireccionDesc);
+  const up = { latitud: miLat, longitud: miLon, direccion_desc: miDireccionDesc };
+  if (idx >= 0) up.indice_dir_activa = idx;
+  db.collection("clientes").doc(miTelefono).update(up).catch(() => {});
+  actualizarCabecera();
+  cambiarTab(tabActualIndex);
+  toast("📍 Ubicación actualizada");
+}
+
+async function mostrarSelectorUbicaciones() {
+  const modal = document.getElementById("modalSelectorUbicaciones");
+  const list = document.getElementById("listaMisUbicaciones");
+  modal.classList.remove("hidden");
+  list.style.cssText = "max-height:40vh;overflow-y:auto;margin-bottom:12px";
+  list.innerHTML = '<p class="sub-muted">Cargando...</p>';
+  let dirs = [];
+  try {
+    const doc = await db.collection("clientes").doc(miTelefono).get();
+    if (doc.exists) dirs = doc.data().direcciones || [];
+  } catch (e) {
+    list.innerHTML = '<p class="sub-muted" style="color:#DC2626">No se pudieron cargar tus ubicaciones.</p>';
+    return;
+  }
+  list.innerHTML = "";
+  const validas = dirs.map((d, i) => ({ d, i })).filter(x => x.d && x.d.lat && x.d.lon);
+  if (!validas.length) { list.innerHTML = '<p class="sub-muted">Aún no tienes ubicaciones guardadas.</p>'; return; }
+  validas.forEach(({ d, i }) => {
+    const sel = Math.abs(d.lat - miLat) < 0.0001 && Math.abs(d.lon - miLon) < 0.0001;
+    const ico = d.etiqueta === "Casa" ? "🏠" : d.etiqueta === "Trabajo" ? "💼" : "📍";
+    const item = document.createElement("div");
+    item.className = "card card-row";
+    item.style.cssText = "padding:10px 14px;margin-bottom:10px;border:" + (sel ? "2px solid var(--c-primary)" : "1px solid #E4DEF5") + ";background:" + (sel ? "var(--c-primary-light)" : "#fff");
+    item.innerHTML = '<input type="radio" ' + (sel ? "checked" : "") + ' style="accent-color: var(--c-primary); margin-right: 12px; pointer-events:none" /><div style="flex:1"><h4 style="font-size:15px">' + ico + " " + esc(d.etiqueta) + "</h4>" + (d.desc ? '<p class="sub-muted">' + esc(d.desc) + "</p>" : "") + "</div>";
+    item.onclick = () => { modal.classList.add("hidden"); seleccionarUbicacion(d.lat, d.lon, d.etiqueta, d.desc, i); };
+    list.appendChild(item);
+  });
+}
+
+(function () {
+  const bn = document.getElementById("btnModalNuevaUbi");
+  if (bn) bn.onclick = () => {
+    agregandoDesdeApp = true;
+    document.getElementById("modalSelectorUbicaciones").classList.add("hidden");
+    tempMapaLat = miLat; tempMapaLon = miLon;
+    abrirMapaNuevaDireccion();
+  };
+  const mo = document.getElementById("modalSelectorUbicaciones");
+  if (mo) mo.onclick = e => { if (e.target === mo) mo.classList.add("hidden"); };
+})();
+
+// ===== REGISTRO: VALIDACIONES =====
+const LONG_TEL_PAIS = { "+504": 8, "+52": 10, "+503": 8, "+502": 8, "+1": 10 };
+async function validarPaso1Registro() {
+  const n = document.getElementById("etRegNombre").value.trim();
+  const c = document.getElementById("etRegCorreo").value.trim().toLowerCase();
+  const telNum = document.getElementById("etRegTelefono").value.trim();
+  const p = document.getElementById("etRegPin").value;
+  const cb = document.getElementById("cbAcepto").checked;
+  const pais = document.getElementById("spRegPais").value;
+  if (!n || !c || !telNum || !p) return alert("Completa todos los campos");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) return alert("Correo inválido");
+  const largo = LONG_TEL_PAIS[pais];
+  if (!/^\d+$/.test(telNum) || (largo && telNum.length !== largo)) return alert("El número debe tener " + largo + " dígitos");
+  if (p.length < 6) return alert("La contraseña debe tener al menos 6 caracteres");
+  if (!cb) return alert("Debes aceptar los términos y la política");
+  try {
+    const docTel = await db.collection("clientes").doc(pais + telNum).get();
+    if (docTel.exists) return alert("Teléfono ya registrado");
+    const snapEmail = await db.collection("clientes").where("correo", "==", c).get();
+    if (!snapEmail.empty) return alert("Correo ya registrado");
+  } catch (e) {
+    return alert("No se pudo verificar tus datos. Revisa tu conexión.");
+  }
+  document.getElementById("layoutRegPaso1").classList.add("hidden");
+  document.getElementById("layoutRegPaso2").classList.remove("hidden");
+}
+
+// ===== PEDIDOS: CARGA EN PARALELO =====
+const ESTADOS_FINALES = ["ENTREGADO", "ENTREGADA", "COMPLETADO", "COMPLETADA", "FINALIZADO", "FINALIZADA", "TERMINADO", "TERMINADA", "DELIVERED", "CANCELADO", "CANCELADA"];
+
+function etiquetaEstado(es) {
+  if (es === "NUEVO" || es === "PENDIENTE") return ["⏳ Esperando restaurante", "#D97706"];
+  if (es === "ACEPTADO") return ["👨‍🍳 Preparando tu orden", "#2563EB"];
+  if (es === "EN_CAMINO" || es === "DESPACHADO") return ["🛵 En camino", "#059669"];
+  if (es.indexOf("CANCEL") === 0) return ["❌ Cancelado", "#DC2626"];
+  if (ESTADOS_FINALES.includes(es)) return ["✅ Entregado", "#475569"];
+  return ["🛵 " + es, "#059669"];
+}
+
+async function cargarHistorial() {
+  const c = document.getElementById("listContHistorial");
+  if (!c) return;
+  const miFiltro = filtroPedidos;
+  c.innerHTML = '<div class="empty-box"><p>Cargando pedidos...</p></div>';
+  let snap;
+  try {
+    snap = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
+  } catch (e) {
+    c.innerHTML = '<div class="empty-box"><p>No se pudieron cargar tus pedidos.</p></div>';
+    return;
+  }
+  if (snap.empty) { c.innerHTML = '<div class="empty-box"><p>Aún no tienes pedidos registrados.</p></div>'; return; }
+  const res = await Promise.all(snap.docs.map(async doc => {
+    const d = doc.data();
+    if (!d.rId || !d.pId) return null;
+    try {
+      const r = await db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId).get();
+      return r.exists ? { d, r: r.data() } : null;
+    } catch (e) { return null; }
+  }));
+  if (miFiltro !== filtroPedidos) return;
+  const filas = res.filter(Boolean).map(x => {
+    const es = (x.r.estado || "NUEVO").toUpperCase();
+    return Object.assign(x, { es, fin: ESTADOS_FINALES.includes(es) });
+  }).filter(x => miFiltro === 0 ? !x.fin : x.fin);
+  c.innerHTML = "";
+  if (!filas.length) {
+    c.innerHTML = '<div class="empty-box"><p>' + (miFiltro === 0 ? "No tienes pedidos en curso ahora." : "Aún no tienes pedidos finalizados.") + "</p></div>";
+    return;
+  }
+  filas.sort((a, b) => (b.r.id_numerico || 0) - (a.r.id_numerico || 0));
+  filas.forEach(x => {
+    const r = x.r, et = etiquetaEstado(x.es);
+    const card = document.createElement("div");
+    card.className = "card card-row";
+    card.style.margin = "0 0 12px";
+    card.style.cursor = "pointer";
+    card.innerHTML = '<div style="flex:1;min-width:0"><h4 style="font-size:15px">' + esc(r.restaurante_nombre) + " • L. " + Number(r.total || 0).toFixed(2) + '</h4><p class="sub-muted" style="white-space:pre-line;margin:3px 0 8px">' + esc(r.nombre_plato) + '</p><span style="font-size:12px;font-weight:700;color:' + et[1] + '">' + et[0] + '</span></div><span style="font-size:18px;color:var(--c-primary)">➔</span>';
+    card.onclick = () => {
+      if (!x.fin) {
+        pedidoActivoId = x.d.pId;
+        restIdSeleccionadoTemp = x.d.rId;
+        rNombreTemp = r.restaurante_nombre;
+        restauranteLatTemp = r.restaurante_lat || miLat;
+        restauranteLonTemp = r.restaurante_lon || miLon;
+        localStorage.setItem("pedidoActivoId", pedidoActivoId);
+        localStorage.setItem("restIdActivo", restIdSeleccionadoTemp);
+        localStorage.setItem("rNombreActivo", rNombreTemp);
+        abrirPantallaSeguimientoEnVivo();
+      } else {
+        alert("Restaurante: " + r.restaurante_nombre + "\nFecha: " + (r.fecha || "") + "\nEstado: " + x.es + "\n\n" + (r.nombre_plato || "") + "\n\nProductos: L. " + (Number(r.subtotal || 0) + Number(r.aumento || 0)).toFixed(2) + "\nEnvío: L. " + Number(r.costo_envio || 0).toFixed(2) + "\nTotal: L. " + Number(r.total || 0).toFixed(2));
+      }
+    };
+    c.appendChild(card);
+  });
+}
