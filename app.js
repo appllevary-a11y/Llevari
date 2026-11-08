@@ -1436,8 +1436,67 @@ function mostrarPlatosPorPrecio(pO) {
 }
 
 // ===== AJUSTES, AVISOS Y CARRITO =====
-const LEGAL_TERMINOS = "";
-const LEGAL_POLITICA = "";
+const LEGAL_TERMINOS = `TÉRMINOS Y CONDICIONES DE USO - LLEVARI
+
+1. Sobre LLEVARI
+LLEVARI es una plataforma que conecta a clientes con restaurantes y repartidores independientes para pedir comida a domicilio o para recoger en el local. LLEVARI no prepara los alimentos: cada local es responsable de la calidad, preparación y disponibilidad de sus productos.
+
+2. Requisitos
+Debes ser mayor de 18 años y darnos datos reales y actualizados: nombre, correo, teléfono y ubicación. Eres responsable de la confidencialidad de tu contraseña y de lo que ocurra en tu cuenta.
+
+3. Pedidos
+Al confirmar un pedido haces una oferta de compra al local. El pedido queda firme cuando el local lo acepta. Puedes cancelarlo desde la app mientras el estado lo permita. Si el local está cerrado o no puede cumplirlo, se cancelará.
+
+4. Precios y envío
+Los precios mostrados incluyen el costo del servicio de la plataforma. El costo de envío depende de la distancia entre el local y tu ubicación, y se muestra antes de confirmar. Algunos pedidos a mayor distancia requieren un monto mínimo.
+
+5. Pago
+Por ahora el pago es solo en efectivo, al repartidor (delivery) o en el local (pickup). El pago con tarjeta estará disponible próximamente. Debes tener el monto exacto o suficiente al recibir tu pedido.
+
+6. Entrega
+Los tiempos mostrados son estimados y pueden variar por tráfico, clima o demanda. Debes estar disponible en la ubicación indicada y atender al repartidor. Si no se te puede localizar, el pedido puede darse por no entregado y cobrarse según corresponda.
+
+7. Uso adecuado
+No debes dar datos falsos, hacer pedidos de broma, maltratar a repartidores o personal de los locales, ni usar la plataforma para fines ilegales. LLEVARI puede suspender cuentas que incumplan estas reglas.
+
+8. Responsabilidad
+LLEVARI hace lo posible por que el servicio funcione sin interrupciones, pero no garantiza disponibilidad continua. No somos responsables por retrasos fuera de nuestro control ni por la preparación de los alimentos. Si tienes alergias o restricciones, avísalo al local antes de pedir.
+
+9. Cambios
+Podemos actualizar estos términos. Si los cambios son importantes te lo avisaremos en la app. Seguir usándola significa que los aceptas.
+
+10. Ley aplicable
+Estos términos se rigen por las leyes de la República de Honduras.`;
+const LEGAL_POLITICA = `POLÍTICA DE PRIVACIDAD - LLEVARI
+
+1. Qué datos recopilamos
+- Datos de tu cuenta: nombre, correo electrónico, teléfono, ciudad e idioma.
+- Ubicación: las direcciones que guardas y la ubicación que eliges en el mapa para recibir tus pedidos.
+- Pedidos: qué pides, a qué local, montos, fechas y estado.
+
+2. Para qué los usamos
+- Crear y proteger tu cuenta.
+- Procesar y entregar tus pedidos, y calcular el costo de envío.
+- Mostrarte el seguimiento de tu pedido en el mapa.
+- Mejorar el servicio y prevenir fraudes o abusos.
+
+3. Con quién los compartimos
+Para completar tu pedido, el local y el repartidor ven tu nombre, teléfono, dirección y los productos pedidos. Usamos servicios de terceros para funcionar: Firebase (Google) para cuenta y base de datos, y servicios de mapas y rutas (OpenStreetMap, OpenFreeMap, OSRM) que reciben coordenadas para mostrar el mapa y calcular distancias. No vendemos tus datos personales.
+
+4. Cuánto tiempo los guardamos
+Guardamos tus datos mientras tu cuenta esté activa y el tiempo necesario para cumplir obligaciones legales y resolver reclamos sobre pedidos.
+
+5. Tus derechos
+Puedes pedir acceso, corrección o eliminación de tus datos, y retirar tu consentimiento. Puedes cambiar o borrar tus direcciones desde la app. Para solicitudes sobre tu cuenta, contáctanos por los canales oficiales de LLEVARI.
+
+6. Seguridad
+Tus datos se guardan en servidores seguros y las comunicaciones van cifradas. Aun así, ningún sistema es 100% infalible: protege tu contraseña y no la compartas.
+
+7. Menores de edad
+LLEVARI es solo para mayores de 18 años. No recopilamos datos de menores a sabiendas.
+
+8. Cambios a esta política
+Si la actualizamos, te lo avisaremos en la app. La versión vigente siempre estará disponible en Ajustes.`;
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1979,3 +2038,37 @@ async function cargarHistorial() {
     c.appendChild(card);
   });
 }
+
+
+// ===== LEGAL EN VENTANA MODAL =====
+function verLegal(titulo, texto, desdeAjustes) {
+  const m = crearModalAjustes();
+  const volver = desdeAjustes !== false;
+  m.innerHTML = '<div class="dialog-card" style="display:flex;flex-direction:column;max-height:82vh">' +
+    '<h3 style="margin-bottom:12px">' + esc(titulo) + '</h3>' +
+    '<div style="flex:1;overflow-y:auto;white-space:pre-wrap;font-size:13.5px;line-height:1.5;color:var(--c-text);margin-bottom:14px">' + esc(texto || "Este documento no está disponible por el momento.") + '</div>' +
+    '<button class="btn btn-primary" id="legVol">' + (volver ? "❮ Volver" : "CERRAR") + '</button></div>';
+  document.getElementById("legVol").onclick = volver ? abrirAjustes : () => m.classList.add("hidden");
+  m.classList.remove("hidden");
+}
+
+function filaLinksLegales(centrado) {
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;flex-wrap:wrap;justify-content:" + (centrado ? "center" : "flex-start") + ";gap:6px 14px;margin:12px 0";
+  [["📜 Términos y Condiciones", "Términos y Condiciones", LEGAL_TERMINOS], ["📄 Política de Privacidad", "Política de Privacidad", LEGAL_POLITICA]].forEach(x => {
+    const a = document.createElement("a");
+    a.href = "javascript:void(0)";
+    a.textContent = x[0];
+    a.style.cssText = "color:#2563EB;font-size:13px;text-decoration:none";
+    a.onclick = e => { e.preventDefault(); verLegal(x[1], x[2], false); };
+    row.appendChild(a);
+  });
+  return row;
+}
+
+(function () {
+  const lg = document.getElementById("layoutLogin");
+  if (lg) lg.appendChild(filaLinksLegales(true));
+  const bs = document.getElementById("btnRegPasoSiguiente");
+  if (bs && bs.parentNode) bs.parentNode.insertBefore(filaLinksLegales(false), bs);
+})();
