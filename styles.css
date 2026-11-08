@@ -1074,3 +1074,31 @@ input:focus, select:focus {
     inset 3px 3px 7px rgba(20,0,50,0.4),
     inset -2px -2px 6px rgba(255,255,255,0.14);
 }
+
+/* ===== MI PERFIL ===== */
+.perfil-card { padding: 0; max-width: 400px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+.perfil-head { background: linear-gradient(135deg, var(--c-primary-deep), var(--c-primary-dark), var(--c-primary)); padding: 22px 18px 18px; text-align: center; color: #fff; flex-shrink: 0; }
+.perfil-avatar { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--c-accent), var(--c-accent-dark)); border: 3px solid rgba(255,255,255,0.55); box-shadow: 0 8px 18px rgba(0,0,0,0.3); }
+.perfil-nombre { font-size: 19px; font-weight: 800; }
+.perfil-correo { font-size: 12.5px; color: #DDD6FE; margin-top: 2px; word-break: break-all; }
+.perfil-body { padding: 16px 18px 18px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+.perfil-sec { font-size: 15px; font-weight: 800; color: var(--c-text); margin: 4px 0 12px; }
+.perfil-lbl { display: block; font-size: 12px; font-weight: 700; color: var(--c-muted); margin: 0 0 4px 4px; }
+.perfil-inp { margin-bottom: 12px; }
+.perfil-lock { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 13px 16px; margin-bottom: 12px; border-radius: var(--radius-md); background: #EFEBF8; color: var(--c-muted); font-size: 14.5px; word-break: break-all; }
+.perfil-dir { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 10px; border-radius: 18px; background: #fff; border: 1px solid #E4DEF5; cursor: pointer; box-shadow: 0 4px 12px rgba(59,7,100,0.06); }
+.perfil-dir.activa { border: 2px solid var(--c-primary); background: var(--c-primary-light); }
+.perfil-dir:active { transform: scale(0.98); }
+.perfil-dir-ico { width: 42px; height: 42px; border-radius: 14px; background: var(--c-primary-light); display: flex; align-items: center; justify-content: center; font-size: 21px; flex-shrink: 0; }
+.perfil-dir.activa .perfil-dir-ico { background: #fff; }
+.perfil-dir-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.perfil-dir-top { display: flex; align-items: center; gap: 8px; }
+.perfil-dir-top b { font-size: 15px; }
+.perfil-dir-info small { font-size: 12px; color: var(--c-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.perfil-badge { background: var(--c-primary); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
+.perfil-mini { width: 36px; height: 36px; border-radius: 50%; border: none; background: #F1EEFA; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+.perfil-mini:active { transform: scale(0.9); }
+.perfil-dir-edit { width: 100%; }
+.perfil-dir-btns { display: flex; gap: 8px; }
+.perfil-dir-btns .btn { flex: 1; }
+.perfil-load { padding: 60px 20px; text-align: center; color: var(--c-muted); font-weight: 700; }

@@ -2510,3 +2510,216 @@ function cerrarPantallaSeguimiento() {
   document.getElementById("layoutAppMain").classList.remove("hidden");
   cambiarTab(0);
 }
+
+// ===== MI PERFIL =====
+let perfilDirs = [];
+let perfilEditIdx = -1;
+let perfilDatos = {};
+
+function inicialPerfil(n) {
+  const c = String(n || "").trim().charAt(0);
+  return c ? c.toUpperCase() : "👤";
+}
+
+function esActivaDir(x) {
+  return !!x && Math.abs(x.lat - miLat) < 0.0001 && Math.abs(x.lon - miLon) < 0.0001;
+}
+
+const _abrirAjustesBase = abrirAjustes;
+abrirAjustes = function () {
+  _abrirAjustesBase();
+  const card = document.querySelector("#modalAjustes .dialog-card");
+  if (!card || document.getElementById("ajPerfil")) return;
+  const b = document.createElement("button");
+  b.id = "ajPerfil";
+  b.className = "btn btn-warning";
+  b.style.marginBottom = "10px";
+  b.textContent = "👤 Mi perfil";
+  b.onclick = abrirPerfil;
+  card.insertBefore(b, card.querySelector("button"));
+};
+(function () {
+  const bc = document.getElementById("btnHeaderConfig");
+  if (bc) bc.onclick = abrirAjustes;
+})();
+
+async function abrirPerfil() {
+  if (!miTelefono) { toast("No hay sesión iniciada"); return; }
+  const m = crearModalAjustes();
+  m.innerHTML = '<div class="dialog-card perfil-card"><div class="perfil-load">Cargando tu perfil...</div></div>';
+  m.classList.remove("hidden");
+  let d = {};
+  try {
+    const doc = await db.collection("clientes").doc(miTelefono).get();
+    if (doc.exists) d = doc.data();
+  } catch (e) {
+    toast("No se pudo cargar tu perfil. Revisa tu conexión.");
+    abrirAjustes();
+    return;
+  }
+  perfilDirs = Array.isArray(d.direcciones) ? d.direcciones.slice() : [];
+  perfilEditIdx = -1;
+  pintarPerfil(d);
+}
+
+function pintarPerfil(d) {
+  perfilDatos = d;
+  const m = crearModalAjustes();
+  const nombre = d.nombre || miNombre || "";
+  const correo = d.correo || (auth.currentUser && auth.currentUser.email) || "—";
+  const tel = d.telefono || miTelefono;
+  const ciu = d.ciudad || miCiudad;
+  const ciudades = ["Choluteca", "Tegucigalpa", "San Pedro Sula", "Comayagua"];
+  if (ciudades.indexOf(ciu) < 0) ciudades.push(ciu);
+  const idi = d.idioma || "Español";
+  const opt = (arr, sel) => arr.map(t => '<option value="' + esc(t) + '"' + (t === sel ? " selected" : "") + ">" + esc(t) + "</option>").join("");
+  m.innerHTML = '<div class="dialog-card perfil-card">' +
+    '<div class="perfil-head"><div class="perfil-avatar" id="pfAvatar">' + esc(inicialPerfil(nombre)) + '</div>' +
+    '<div class="perfil-nombre" id="pfHeadNombre">' + esc(nombre || "Mi perfil") + '</div>' +
+    '<div class="perfil-correo">' + esc(correo) + '</div></div>' +
+    '<div class="perfil-body">' +
+    '<div class="perfil-sec">📋 Datos personales</div>' +
+    '<label class="perfil-lbl">Nombre completo</label>' +
+    '<input type="text" id="pfNombre" class="perfil-inp" value="' + esc(nombre) + '" />' +
+    '<label class="perfil-lbl">Correo electrónico</label>' +
+    '<div class="perfil-lock"><span>✉️ ' + esc(correo) + '</span><span>🔒</span></div>' +
+    '<label class="perfil-lbl">Teléfono</label>' +
+    '<div class="perfil-lock"><span>📱 ' + esc(tel) + '</span><span>🔒</span></div>' +
+    '<label class="perfil-lbl">Ciudad</label>' +
+    '<select id="pfCiudad" class="perfil-inp">' + opt(ciudades, ciu) + '</select>' +
+    '<label class="perfil-lbl">Idioma de preferencia</label>' +
+    '<select id="pfIdioma" class="perfil-inp">' + opt(["Español", "English"], idi) + '</select>' +
+    '<button class="btn btn-primary" id="pfGuardar" style="margin-bottom:20px">GUARDAR CAMBIOS</button>' +
+    '<div class="perfil-sec">📍 Mis ubicaciones</div>' +
+    '<p class="sub-muted" style="margin:-6px 0 10px">Toca una para usarla en tus pedidos.</p>' +
+    '<div id="pfDirs"></div>' +
+    '<button class="btn btn-warning" id="pfNuevaDir" style="margin:4px 0 10px">+ Agregar ubicación</button>' +
+    '<button class="btn btn-muted" id="pfVolver">❮ Volver</button>' +
+    '</div></div>';
+  document.getElementById("pfGuardar").onclick = guardarDatosPerfil;
+  document.getElementById("pfVolver").onclick = abrirAjustes;
+  document.getElementById("pfNuevaDir").onclick = () => {
+    crearModalAjustes().classList.add("hidden");
+    agregandoDesdeApp = true;
+    tempMapaLat = miLat; tempMapaLon = miLon;
+    abrirMapaNuevaDireccion();
+  };
+  pintarDirsPerfil();
+}
+
+function pintarDirsPerfil() {
+  const cont = document.getElementById("pfDirs");
+  if (!cont) return;
+  cont.innerHTML = "";
+  const validas = perfilDirs.map((x, i) => ({ x, i })).filter(o => o.x && o.x.lat && o.x.lon);
+  if (!validas.length) {
+    cont.innerHTML = '<p class="sub-muted" style="margin-bottom:10px">Aún no tienes ubicaciones guardadas.</p>';
+    return;
+  }
+  validas.forEach(({ x, i }) => {
+    const activa = esActivaDir(x);
+    const et = x.etiqueta || "Otro";
+    const ico = et === "Casa" ? "🏠" : et === "Trabajo" ? "💼" : "📍";
+    const row = document.createElement("div");
+    row.className = "perfil-dir" + (activa ? " activa" : "");
+    if (i === perfilEditIdx) {
+      row.style.cursor = "default";
+      row.innerHTML = '<div class="perfil-dir-edit">' +
+        '<select id="pfEdEt" class="perfil-inp">' + ["Casa", "Trabajo", "Otro"].map(t => "<option" + (t === et ? " selected" : "") + ">" + t + "</option>").join("") + "</select>" +
+        '<input type="text" id="pfEdDesc" class="perfil-inp" placeholder="Descripción (Ej. Casa verde, portón negro)" value="' + esc(x.desc || "") + '" />' +
+        '<div class="perfil-dir-btns"><button class="btn btn-success" id="pfEdOk">Guardar</button><button class="btn btn-muted" id="pfEdNo">Cancelar</button></div></div>';
+      cont.appendChild(row);
+      row.querySelector("#pfEdOk").onclick = () => guardarEdicionDir(i);
+      row.querySelector("#pfEdNo").onclick = () => { perfilEditIdx = -1; pintarDirsPerfil(); };
+      return;
+    }
+    row.innerHTML = '<div class="perfil-dir-ico">' + ico + '</div>' +
+      '<div class="perfil-dir-info"><div class="perfil-dir-top"><b>' + esc(et) + '</b>' + (activa ? '<span class="perfil-badge">Activa</span>' : "") + '</div>' +
+      "<small>" + esc(x.desc || "Sin descripción") + "</small></div>" +
+      '<button class="perfil-mini" data-a="ed">✏️</button><button class="perfil-mini" data-a="del">🗑</button>';
+    row.onclick = () => usarDirPerfil(i);
+    row.querySelector('[data-a="ed"]').onclick = e => { e.stopPropagation(); perfilEditIdx = i; pintarDirsPerfil(); };
+    row.querySelector('[data-a="del"]').onclick = e => { e.stopPropagation(); borrarDirPerfil(i); };
+    cont.appendChild(row);
+  });
+}
+
+function usarDirPerfil(i) {
+  const x = perfilDirs[i];
+  if (!x) return;
+  seleccionarUbicacion(x.lat, x.lon, x.etiqueta, x.desc, i);
+  pintarDirsPerfil();
+}
+
+async function guardarEdicionDir(i) {
+  const et = document.getElementById("pfEdEt").value;
+  const desc = document.getElementById("pfEdDesc").value.trim();
+  const eraActiva = esActivaDir(perfilDirs[i]);
+  const nuevas = perfilDirs.map((x, k) => k === i ? Object.assign({}, x, { etiqueta: et, desc: desc }) : x);
+  try {
+    await db.collection("clientes").doc(miTelefono).update({ direcciones: nuevas });
+  } catch (e) { toast("No se pudo guardar: " + e.message); return; }
+  perfilDirs = nuevas;
+  perfilEditIdx = -1;
+  if (eraActiva) {
+    miDireccionDesc = desc || et;
+    localStorage.setItem("dir_desc", miDireccionDesc);
+    db.collection("clientes").doc(miTelefono).update({ direccion_desc: miDireccionDesc }).catch(() => {});
+    actualizarCabecera();
+  }
+  pintarDirsPerfil();
+  toast("✅ Ubicación actualizada");
+}
+
+async function borrarDirPerfil(i) {
+  const validas = perfilDirs.filter(x => x && x.lat && x.lon);
+  if (validas.length <= 1) { toast("Debes tener al menos una ubicación guardada"); return; }
+  const x = perfilDirs[i];
+  if (!confirm("¿Eliminar la ubicación \"" + (x.etiqueta || "Otro") + (x.desc ? " • " + x.desc : "") + "\"?")) return;
+  const eraActiva = esActivaDir(x);
+  const nuevas = perfilDirs.filter((_, k) => k !== i);
+  const payload = { direcciones: nuevas };
+  if (!eraActiva) {
+    const ai = nuevas.findIndex(z => esActivaDir(z));
+    if (ai >= 0) payload.indice_dir_activa = ai;
+  }
+  try {
+    await db.collection("clientes").doc(miTelefono).update(payload);
+  } catch (e) { toast("No se pudo eliminar: " + e.message); return; }
+  perfilDirs = nuevas;
+  perfilEditIdx = -1;
+  if (eraActiva) {
+    const o = nuevas.find(z => z && z.lat && z.lon);
+    if (o) seleccionarUbicacion(o.lat, o.lon, o.etiqueta, o.desc, nuevas.indexOf(o));
+  }
+  pintarDirsPerfil();
+  toast("🗑 Ubicación eliminada");
+}
+
+async function guardarDatosPerfil() {
+  const n = document.getElementById("pfNombre").value.trim().replace(/\s+/g, " ");
+  const c = document.getElementById("pfCiudad").value;
+  const idi = document.getElementById("pfIdioma").value;
+  if (n.length < 2) { toast("Escribe tu nombre completo"); return; }
+  const btn = document.getElementById("pfGuardar");
+  btn.disabled = true;
+  try {
+    await db.collection("clientes").doc(miTelefono).update({ nombre: n, ciudad: c, idioma: idi });
+  } catch (e) {
+    toast("No se pudo guardar: " + e.message);
+    btn.disabled = false;
+    return;
+  }
+  const cambioCiudad = c !== miCiudad;
+  miNombre = n; miCiudad = c;
+  localStorage.setItem("nombre", n);
+  localStorage.setItem("ciudad", c);
+  actualizarCabecera();
+  perfilDatos = Object.assign({}, perfilDatos, { nombre: n, ciudad: c, idioma: idi });
+  const hn = document.getElementById("pfHeadNombre"), av = document.getElementById("pfAvatar");
+  if (hn) hn.textContent = n;
+  if (av) av.textContent = inicialPerfil(n);
+  btn.disabled = false;
+  toast("✅ Perfil actualizado");
+  if (cambioCiudad) cambiarTab(tabActualIndex);
+}
