@@ -1,0 +1,176 @@
+    if (!marca[i] && abierto) { out += "</mark>"; abierto = false; }
+    out += esc(c);
+  });
+  return abierto ? out + "</mark>" : out;
+}
+
+function _vSyncX() {
+  const row = document.getElementById("searchRow"), et = document.getElementById("etBuscador");
+  if (row && et) row.classList.toggle("v-con-texto", !!et.value);
+}
+
+function _vPonerBuscador(enLocal, nombre) {
+  const et = document.getElementById("etBuscador");
+  if (!et) return;
+  et.placeholder = enLocal ? "Buscar platos en " + nombre : _vSugerencias[_vSugIdx];
+  const row = document.getElementById("searchRow");
+  if (row) {
+    row.classList.toggle("v-busq-local", !!enLocal);
+    const ic = row.querySelector(".search-icon-badge");
+    if (ic) ic.textContent = enLocal ? "🍽️" : "🔍";
+  }
+  _vSyncX();
+}
+
+async function _vLocalesBusqueda() {
+  if (_vLocales && Date.now() - _vLocalesT < 60000) return _vLocales;
+  const col = db.collection("restaurantes");
+  let snap = null;
+  try { const c = await col.get({ source: "cache" }); if (!c.empty) snap = c; } catch (e) {}
+  if (!snap) snap = await col.get();
+  const lista = [];
+  snap.forEach(doc => {
+    const r = doc.data();
+    if (r.ciudad && String(r.ciudad).toLowerCase() !== miCiudad.toLowerCase()) return;
+    lista.push({ id: doc.id, nombre: r.nombre || "", lat: r.latitud || 0, lon: r.longitud || 0, cerrado: (r.estado || "").toUpperCase() === "CERRADO", logo: r.logoUrl || "" });
+  });
+  _vLocales = lista;
+  _vLocalesT = Date.now();
+  return lista;
+}
+
+async function _vProductosLocal(rId) {
+  if (_vMenuItems[rId]) return _vMenuItems[rId];
+  let items = todosLosProductosCache.filter(p => p.rId === rId);
+  if (!items.length) {
+    const snap = await db.collection("restaurantes").doc(rId).collection("productos").get();
+    items = [];
+    snap.forEach(d => {
+      const p = d.data();
+      if (p.nombre) items.push({ rId: rId, rNom: rNombreTemp, rLat: restauranteLatTemp, rLon: restauranteLonTemp, pNom: p.nombre, pDesc: p.descripcion || "", pPrec: p.precio, pImg: formatearImagen(p.imagenUrl || ""), pOps: p.opciones || "" });
+    });
+  }
+  _vMenuItems[rId] = items;
+  return items;
+}
+
+function _vFilaPlato(p, conLocal, palabras) {
+  const row = document.createElement("div");
+  row.className = "product-row-card";
+  const precio = precioVisible(p.pPrec, p.rLat, p.rLon);
+  const sub = conLocal
+    ? '<p class="sub-muted">De: ' + _vResaltar(p.rNom, palabras) + " • 🛵 Envío L. " + envioPara(p.rLat, p.rLon) + "</p>"
+    : "<p>" + _vResaltar(p.pDesc, palabras) + "</p>";
+  row.innerHTML = '<div class="product-info-left"><div><h4>' + _vResaltar(p.pNom, palabras) + "</h4>" + sub + '</div><div class="product-price">L. ' + precio.toFixed(2) + '</div></div><div class="product-thumb-box">' + (p.pImg ? '<img src="' + p.pImg + '" class="img-fill" />' : "🍽️") + '<button type="button" class="btn-plus-abs">+</button></div>';
+  row.onclick = () => mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps, p.rLat, p.rLon);
+  return row;
+}
+
+async function _vBuscarEnLocal(q) {
+  const rId = restIdSeleccionadoTemp;
+  const seq = ++_vBusqSeq;
+  let items = [];
+  try { items = await _vProductosLocal(rId); } catch (e) {}
+  const list = document.getElementById("listMenuPlatos");
+  if (seq !== _vBusqSeq || !list) return;
+  const palabras = _vPalabras(q);
+  const res = palabras.length ? items.filter(p => _vCoincide(p.pNom + " " + p.pDesc, palabras)) : items;
+  list.innerHTML = "";
+  if (!res.length) {
+    list.innerHTML = '<div class="empty-box"><div class="empty-emoji">🔍</div><p class="empty-text">Este local no tiene platos con “' + esc(q) + "”.</p></div>";
+    return;
+  }
+  if (palabras.length) {
+    const h = document.createElement("div");
+    h.className = "v-res-head";
+    h.innerHTML = "<span>Platos en <b>" + esc(rNombreTemp) + "</b></span><em>" + res.length + (res.length === 1 ? " plato" : " platos") + "</em>";
+    list.appendChild(h);
+  }
+  res.forEach(p => list.appendChild(_vFilaPlato(p, false, palabras)));
+}
+
+filtrarResultados = async function (q) {
+  if (document.getElementById("listMenuPlatos")) return _vBuscarEnLocal(q);
+  if (!q) { cargarInicioPrincipal(); return; }
+  const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
+  const seq = ++_vBusqSeq;
+  const palabras = _vPalabras(q);
+  let locales = [];
+  try { locales = await _vLocalesBusqueda(); } catch (e) {}
+  if (seq !== _vBusqSeq || document.getElementById("listMenuPlatos")) return;
+  const locs = locales.filter(l => _vCoincide(l.nombre, palabras));
+  const prods = todosLosProductosCache
+    .filter(p => _vCoincide(p.pNom + " " + p.pDesc + " " + p.rNom, palabras))
+    .sort((a, b) => (_vCoincide(b.pNom, palabras) ? 1 : 0) - (_vCoincide(a.pNom, palabras) ? 1 : 0));
+  cont.innerHTML = '<div class="v-res-head"><span>Resultados para <b>“' + esc(q) + "”</b></span><em>" + locs.length + (locs.length === 1 ? " local" : " locales") + " · " + prods.length + (prods.length === 1 ? " plato" : " platos") + "</em></div>";
+  if (!locs.length && !prods.length) {
+    cont.insertAdjacentHTML("beforeend", '<div class="empty-box"><div class="empty-emoji">🔍</div><p class="empty-text">No encontramos locales ni platos con ese nombre.</p></div>');
+    return;
+  }
+  if (locs.length) {
+    cont.insertAdjacentHTML("beforeend", '<div class="v-sec">🏪 Locales</div><div class="grid-2" id="vResLocales"></div>');
+    const grid = document.getElementById("vResLocales");
+    locs.forEach(l => {
+      const logoSrc = formatearImagen(l.logo);
+      const card = document.createElement("div");
+      card.className = "rest-card-grid";
+      card.innerHTML = '<div class="rest-card-cover">' + (logoSrc ? '<img src="' + logoSrc + '" class="img-fill" />' : "🍽️") + '<span class="badge-status ' + (l.cerrado ? "cerrado" : "abierto") + '">' + (l.cerrado ? "🛑 CERRADO" : "🟢 ABIERTO") + '</span></div><div class="rest-card-body"><h4>' + _vResaltar(l.nombre, palabras) + '</h4><span class="sub-muted">🛵 L. ' + envioPara(l.lat, l.lon) + "</span></div>";
+      card.onclick = () => {
+        if (l.cerrado) return alert("Este local está cerrado actualmente 🛑");
+        abrirMenuRestaurante(l.id, l.nombre, l.lat, l.lon, l.logo);
+      };
+      grid.appendChild(card);
+    });
+  }
+  if (prods.length) {
+    cont.insertAdjacentHTML("beforeend", '<div class="v-sec">🍽️ Platos</div><div id="vResPlatos"></div>');
+    const lista = document.getElementById("vResPlatos");
+    prods.slice(0, 60).forEach(p => lista.appendChild(_vFilaPlato(p, true, palabras)));
+  }
+};
+
+const _vAbrirMenuBase = abrirMenuRestaurante;
+abrirMenuRestaurante = async function (rId, rNom, rLat, rLon, logoUrl) {
+  const et = document.getElementById("etBuscador");
+  if (rId !== _vMenuId && et) et.value = "";
+  delete _vMenuItems[rId];
+  _vMenuId = rId;
+  _vPonerBuscador(true, rNom);
+  return _vAbrirMenuBase(rId, rNom, rLat, rLon, logoUrl);
+};
+
+const _vInicioBase = cargarInicioPrincipal;
+cargarInicioPrincipal = function () {
+  const et = document.getElementById("etBuscador");
+  if (_vMenuId !== null && et) et.value = "";
+  _vMenuId = null;
+  _vPonerBuscador(false);
+  return _vInicioBase.apply(this, arguments);
+};
+
+(function () {
+  const row = document.getElementById("searchRow"), et = document.getElementById("etBuscador");
+  if (!row || !et || document.getElementById("btnLimpiarBusq")) return;
+  const x = document.createElement("button");
+  x.id = "btnLimpiarBusq";
+  x.type = "button";
+  x.textContent = "✕";
+  x.className = "v-busq-x";
+  row.insertBefore(x, row.querySelector(".search-icon-badge"));
+  et.setAttribute("enterkeyhint", "search");
+  et.setAttribute("autocomplete", "off");
+  et.placeholder = _vSugerencias[0];
+  et.addEventListener("input", _vSyncX);
+  et.addEventListener("keydown", e => { if (e.key === "Enter") { filtrarResultados(et.value.trim()); et.blur(); } });
+  x.onclick = () => { et.value = ""; _vSyncX(); filtrarResultados(""); et.focus(); };
+  setInterval(() => {
+    if (_vMenuId !== null || et.value || document.activeElement === et) return;
+    _vSugIdx = (_vSugIdx + 1) % _vSugerencias.length;
+    et.placeholder = _vSugerencias[_vSugIdx];
+    et.classList.remove("v-ph");
+    void et.offsetWidth;
+    et.classList.add("v-ph");
+  }, 3600);
+  et.classList.add("v-ph");
+})();
