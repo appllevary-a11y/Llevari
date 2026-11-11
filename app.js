@@ -3669,3 +3669,100 @@ iniciarSliderPublicitario = function () {
   };
   espera();
 };
+
+// ===== BANNER TEXTOS POR PRODUCTO =====
+function _bnClasif(txt, conBebidas) {
+  const t = _bnN(txt);
+  if (conBebidas) {
+    if (/\b(frappe|malteada|batido|licuado|smoothie|granizada|iced)\b|\b(cafe|te|chocolate)\s+(frio|fria|helado|helada)\b/.test(t)) return "bebidaFria";
+    if (/\bagua\b/.test(t)) return "agua";
+    if (/\b(cerveza|michelada|vino|tequila|whisky|vodka|coctel|cocktail|margarita|ron)\b/.test(t)) return "alcohol";
+  }
+  if (/hambur|burger/.test(t)) return "hamburguesa";
+  if (/pizza/.test(t)) return "pizza";
+  if (/pollo|alita|wing|nugget/.test(t)) return "pollo";
+  if (/taco|nacho|burrito|baleada|pupusa|quesadilla/.test(t)) return "mexicana";
+  if (/mariscos|pescado|camaron|ceviche|langosta|tilapia|pulpo/.test(t)) return "mar";
+  if (/sopa|caldo|consome|sancocho/.test(t)) return "sopa";
+  if (/desayuno|huevo|tostada|panqueque|omelet/.test(t)) return "desayuno";
+  if (/postre|pastel|helado|dulce|brownie|\bflan\b|\bcrepas?\b|\bdonas?\b|galleta|cheesecake|tres leches|\bpay\b/.test(t)) return "postre";
+  if (conBebidas) {
+    if (/\bcafe\b|capuchino|cappuccino|\blatte\b|expreso|espresso|chocolate caliente|\bte (caliente|negro|verde|manzanilla)\b|\batol\b/.test(t)) return "bebidaCaliente";
+    if (/jugo|limonada|naranjada|refresco|gaseosa|\bsoda\b|\bcoca\b|pepsi|fanta|sprite|\bcola\b(?! de)|energizante|monster|horchata|jamaica|bebida/.test(t)) return "bebidaFria";
+  }
+  return "general";
+}
+
+function _bnTipo(nombre, desc) {
+  const a = _bnClasif(nombre, true);
+  return a !== "general" ? a : _bnClasif(desc, false);
+}
+
+const _bnGanchosTipo = {
+  agua: ["Para hidratarte 💧", "Va perfecta con tu pedido 💧"],
+  bebidaFria: ["Para acompañar tu pedido 🥤", "El acompañante perfecto 🥤", "Para refrescar el día 🥤"],
+  bebidaCaliente: ["Calientito para el antojo ☕", "Un break con sabor ☕"],
+  alcohol: ["Para acompañar la ocasión 🍻", "Para brindar con tu pedido 🍻"],
+  postre: ["Un gustito dulce te lo mereces 🍰", "Para endulzar tu día 🍰"],
+  hamburguesa: ["Jugosa y bien servida 🍔", "La clásica que nunca falla 🍔", "Para los que no se aguantan 🍔"],
+  pizza: ["Queso estirado en cada bocado 🍕", "Compártela (o no) 🍕"],
+  pollo: ["Para chuparse los dedos 🍗", "Sabroso y bien servido 🍗"],
+  mexicana: ["Sabor de casa en cada mordida 🌮", "Un antojo que nunca falla 🌮"],
+  mar: ["Sabor de mar en tu mesa 🐟", "Sabroso y bien servido 🐟"],
+  sopa: ["Sabrosa y bien servida 🍲", "Para disfrutar sin prisa 🍲"],
+  general: ["Pídelo y llega a tu puerta 🛵", "Hoy te mereces este gusto ✨", "Tu antojo, sin salir de casa 🏠", "Directo a tu puerta 🛵"]
+};
+const _bnTagsTipo = {
+  agua: ["💧 PARA HIDRATARTE", "⭐ RECOMENDADO"],
+  bebidaFria: ["🥤 PARA REFRESCAR", "⭐ RECOMENDADO"],
+  bebidaCaliente: ["☕ PARA ACOMPAÑAR", "⭐ RECOMENDADO"],
+  alcohol: ["🍻 PARA LA OCASIÓN", "⭐ RECOMENDADO"],
+  postre: ["🍰 GUSTITO DULCE", "⭐ RECOMENDADO"]
+};
+const _bnTagsComida = ["⭐ RECOMENDADO", "😋 PRUÉBALO", "🔥 SE ANTOJA"];
+const _bnIconos = { agua: "💧", bebidaFria: "🥤", bebidaCaliente: "☕", alcohol: "🍻", postre: "🍰", hamburguesa: "🍔", pizza: "🍕", pollo: "🍗", mexicana: "🌮", mar: "🐟", sopa: "🍲", desayuno: "🍳" };
+let _bnRotTag = 0;
+
+function _bnGanchoTipo(tipo) {
+  let opts = _bnGanchosTipo[tipo];
+  if (tipo === "desayuno") {
+    const h = new Date().getHours();
+    opts = (h >= 5 && h < 11) ? ["Empieza el día con sabor ☀️", "El mejor inicio de día ☀️"] : ["Un desayuno a cualquier hora 🍳", "Para cuando se te antoje 🍳"];
+  }
+  if (!opts) opts = _bnGanchosTipo.general;
+  let h2 = opts[Math.floor(Math.random() * opts.length)];
+  if (h2 === _bn.ultGancho && opts.length > 1) h2 = opts[(opts.indexOf(h2) + 1) % opts.length];
+  _bn.ultGancho = h2;
+  return h2;
+}
+
+const _bnArmarBase = _bnArmar;
+_bnArmar = function () {
+  const lista = _bnArmarBase();
+  const m = _bnMomento();
+  const rx = new RegExp("\\b(" + m.palabras.join("|") + ")s?\\b");
+  lista.forEach(it => {
+    if (it.tipo !== "plato" || !it.datos) return;
+    const p = it.datos;
+    const tipo = _bnTipo(p.pNom, p.pDesc);
+    const esBeb = tipo === "agua" || tipo === "bebidaFria" || tipo === "bebidaCaliente" || tipo === "alcohol";
+    it.tkn = tipo;
+    if (String(it.tag).indexOf("💸") === 0) {
+      if (esBeb) it.sub = "Buen precio para acompañar tu pedido";
+      return;
+    }
+    const coincide = rx.test(_bnN(p.pNom + " " + p.pDesc));
+    it.mom = coincide ? m.id : "";
+    if (coincide) it.tag = m.tag;
+    else { const arr = _bnTagsTipo[tipo] || _bnTagsComida; it.tag = arr[(_bnRotTag++) % arr.length]; }
+    it.sub = _bnGanchoTipo(tipo);
+  });
+  return lista;
+};
+
+_bnEmoji = function (it) {
+  const e = document.createElement("div");
+  e.className = "bn-emoji";
+  e.textContent = it.tipo === "plato" ? (_bnIconos[it.tkn] || "🍽️") : it.tipo === "hasta" ? "🏷️" : it.tipo === "barato" ? "🛵" : "🏪";
+  return e;
+};
