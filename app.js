@@ -3766,3 +3766,49 @@ _bnEmoji = function (it) {
   e.textContent = it.tipo === "plato" ? (_bnIconos[it.tkn] || "🍽️") : it.tipo === "hasta" ? "🏷️" : it.tipo === "barato" ? "🛵" : "🏪";
   return e;
 };
+
+// ===== BANNER SERIO =====
+function _bnExcluido(p) {
+  const n = _bnN(p.pNom);
+  if (/\bagua\b|botellon|garrafon|\bhielo\b/.test(n)) return true;
+  if (/^(extra|adicional|salsa|aderezo|cubierto|servilleta|bolsa|empaque|vaso|tapa|propina)/.test(n) || /\s(extra|adicional)$/.test(n)) return true;
+  if (/\b(gaseosa|refresco|soda|coca|pepsi|fanta|sprite|7up|seven up|energizante|monster|red bull|cerveza|michelada|vino|tequila|whisky|vodka|ron|coctel|cocktail|margarita)\b|\bcola\b(?! de)/.test(n)) return true;
+  return false;
+}
+
+const _bnSerioTags = ["⭐ RECOMENDADO", "🛍️ ORDENA AHORA", "📍 DISPONIBLE HOY", "✅ LISTO PARA PEDIR"];
+const _bnSerioTxt = {
+  postre: ["Complementa tu pedido con un postre", "Ordena ahora, entrega a domicilio"],
+  bebida: ["Agrégalo a tu pedido de hoy", "Ordena ahora, entrega a domicilio"],
+  otro: ["Ordena ahora, entrega a domicilio", "Haz tu pedido en segundos", "Disponible ahora para entrega", "Pide hoy y recíbelo en tu puerta"]
+};
+let _bnSerioRot = 0;
+
+function _bnSerioSub(tipo) {
+  const g = tipo === "postre" ? "postre" : (tipo === "bebidaFria" || tipo === "bebidaCaliente") ? "bebida" : "otro";
+  const opts = _bnSerioTxt[g];
+  let s = opts[Math.floor(Math.random() * opts.length)];
+  if (s === _bn.ultGancho && opts.length > 1) s = opts[(opts.indexOf(s) + 1) % opts.length];
+  _bn.ultGancho = s;
+  return s;
+}
+
+const _bnArmarSerio = _bnArmar;
+_bnArmar = function () {
+  const orig = todosLosProductosCache;
+  let lista;
+  try {
+    const filtrado = orig.filter(p => !_bnExcluido(p));
+    todosLosProductosCache = filtrado.length ? filtrado : orig;
+    lista = _bnArmarSerio();
+  } finally {
+    todosLosProductosCache = orig;
+  }
+  lista.forEach(it => {
+    if (it.tipo !== "plato" || !it.datos) return;
+    if (String(it.tag).indexOf("💸") === 0) { it.sub = "Buen precio para tu pedido de hoy"; return; }
+    if (!it.mom) it.tag = _bnSerioTags[(_bnSerioRot++) % _bnSerioTags.length];
+    it.sub = _bnSerioSub(it.tkn || _bnTipo(it.datos.pNom, it.datos.pDesc));
+  });
+  return lista;
+};
