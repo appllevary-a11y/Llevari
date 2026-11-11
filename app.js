@@ -3349,3 +3349,323 @@ cargarInicioPrincipal = function () {
   }, 3600);
   et.classList.add("v-ph");
 })();
+
+// ===== BANNER INTELIGENTE =====
+const BN_MS = 5500;
+const _bnN = s => String(s == null ? "" : s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const _bn = { gen: 0, lista: [], i: -1, timer: null, ini: 0, resta: BN_MS, pausa: false, ultGancho: "", rot: 0 };
+
+const _bnGenericos = ["Pídelo y llega a tu puerta 🛵", "Hoy te mereces este gusto ✨", "Calientito y directo a ti 🔥", "Tu antojo, sin salir de casa 🏠"];
+const _bnGanchos = [
+  [/hambur|burger/, ["Jugosa y bien servida 🍔", "La clásica que nunca falla 🍔", "Para los que no se aguantan 🍔"]],
+  [/pizza/, ["Queso estirado en cada bocado 🍕", "Compártela (o no) 🍕"]],
+  [/pollo|alita|wing|nugget/, ["Doradito y crujiente 🍗", "Para chuparse los dedos 🍗"]],
+  [/taco|nacho|burrito|baleada|pupusa|quesadilla/, ["Sabor de casa en cada mordida 🌮", "Antojo hondureño al instante 🌮"]],
+  [/postre|pastel|helado|torta|dulce|brownie|flan|crepa/, ["Un gustito dulce te lo mereces 🍰", "Para endulzar tu día 🍰"]],
+  [/cafe|frappe|malteada|batido|jugo|licuado|bebida|refresco|te frio/, ["Fresquito para acompañar 🥤", "Para refrescar el día 🥤"]],
+  [/desayuno|huevo|tostada|panqueque|omelet/, ["Empieza el día con sabor ☀️", "El mejor inicio de día ☀️"]],
+  [/sopa|caldo|mariscos|pescado|camaron|ceviche/, ["Directo del mar a tu mesa 🐟", "Sabroso y bien servido 🍲"]]
+];
+
+function _bnVistos() { try { return JSON.parse(localStorage.getItem("bn_vistos") || "{}") || {}; } catch (e) { return {}; } }
+function _bnGuardar(v) {
+  try {
+    const ks = Object.keys(v);
+    if (ks.length > 400) ks.forEach(k => { v[k] = Math.floor(v[k] / 2); if (!v[k]) delete v[k]; });
+    localStorage.setItem("bn_vistos", JSON.stringify(v));
+  } catch (e) {}
+}
+
+function _bnMomento() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 10) return { id: "desayuno", tag: "☀️ PARA EL DESAYUNO", palabras: ["desayuno", "baleada", "huevo", "pan", "cafe", "jugo", "panqueque", "tostada", "omelet", "sandwich", "licuado"] };
+  if (h >= 10 && h < 15) return { id: "almuerzo", tag: "🍽️ HORA DE ALMORZAR", palabras: ["almuerzo", "pollo", "carne", "arroz", "pescado", "res", "cerdo", "pasta", "sopa", "ensalada", "hamburguesa", "combo", "plato"] };
+  if (h >= 15 && h < 19) return { id: "tarde", tag: "🧁 ANTOJO DE LA TARDE", palabras: ["postre", "helado", "pastel", "cafe", "frappe", "snack", "nacho", "papas", "malteada", "batido", "crepa", "dulce", "pan"] };
+  return { id: "noche", tag: "🌙 CENA DE HOY", palabras: ["pizza", "hamburguesa", "taco", "alitas", "pollo", "burrito", "hot dog", "perro", "wings", "pupusa", "cena", "combo"] };
+}
+
+function _bnGancho(nombre) {
+  const t = _bnN(nombre);
+  let opts = _bnGenericos;
+  for (const g of _bnGanchos) { if (g[0].test(t)) { opts = g[1]; break; } }
+  let h = opts[Math.floor(Math.random() * opts.length)];
+  if (h === _bn.ultGancho && opts.length > 1) h = opts[(opts.indexOf(h) + 1) % opts.length];
+  _bn.ultGancho = h;
+  return h;
+}
+
+function _bnArmar() {
+  const base = todosLosProductosCache.filter(p => !p.rCerrado && p.pPrec > 0);
+  if (!base.length) return [];
+  const vistos = _bnVistos();
+  const m = _bnMomento();
+  const kP = p => p.rId + "|" + p.pNom;
+  const kR = p => "r|" + p.rId;
+
+  let min = Infinity;
+  base.forEach(p => { min = Math.min(min, vistos[kP(p)] || 0); });
+  if (isFinite(min) && min > 0) { base.forEach(p => { vistos[kP(p)] = (vistos[kP(p)] || 0) - min; }); _bnGuardar(vistos); }
+
+  const pts = base.map(p => {
+    const t = _bnN(p.pNom + " " + p.pDesc);
+    const coincide = m.palabras.some(w => t.includes(w));
+    let s = Math.random() * 1.3 - (vistos[kP(p)] || 0) * 1.6 - (vistos[kR(p)] || 0) * 0.25;
+    if (coincide) s += 2;
+    if (p.pImg) s += 0.7;
+    return { p: p, s: s, coincide: coincide };
+  }).sort((a, b) => b.s - a.s);
+
+  const porRest = {}, usados = {}, elegidos = [];
+  for (const x of pts) {
+    if (elegidos.length >= 8) break;
+    const n = porRest[x.p.rId] || 0, nom = _bnN(x.p.pNom).trim();
+    if (n >= 2 || usados[nom]) continue;
+    porRest[x.p.rId] = n + 1;
+    usados[nom] = true;
+    elegidos.push(x);
+  }
+  for (const x of pts) {
+    if (elegidos.length >= Math.min(4, pts.length)) break;
+    const nom = _bnN(x.p.pNom).trim();
+    if (!elegidos.includes(x) && !usados[nom]) { usados[nom] = true; elegidos.push(x); }
+  }
+
+  const tagsRot = ["⭐ RECOMENDADO", "😋 PRUÉBALO", "🔥 SE ANTOJA"];
+  const lista = elegidos.map(x => {
+    const p = x.p;
+    return {
+      tipo: "plato", mom: x.coincide ? m.id : "",
+      tag: x.coincide ? m.tag : tagsRot[(_bn.rot++) % tagsRot.length],
+      titulo: p.pNom, sub: _bnGancho(p.pNom), rest: "🏪 " + p.rNom,
+      precio: Math.round(precioVisible(p.pPrec, p.rLat, p.rLon)), envio: envioPara(p.rLat, p.rLon),
+      img: p.pImg, datos: p, claves: [kP(p), kR(p)]
+    };
+  });
+
+  const esp = [];
+  const locales = {};
+  base.forEach(p => {
+    const l = locales[p.rId] = locales[p.rId] || { rId: p.rId, rNom: p.rNom, rLat: p.rLat, rLon: p.rLon, img: "", n: 0 };
+    l.n++;
+    if (!l.img && p.pImg) l.img = p.pImg;
+  });
+  const locs = Object.values(locales).map(l => Object.assign(l, { envio: envioPara(l.rLat, l.rLon) }));
+  if (locs.length) {
+    const envMin = Math.min(...locs.map(l => l.envio)), envMax = Math.max(...locs.map(l => l.envio));
+    const barato = envMax > envMin;
+    const pool = (barato ? locs.filter(l => l.envio === envMin) : locs.slice())
+      .sort((a, b) => ((vistos["r|" + a.rId] || 0) - (vistos["r|" + b.rId] || 0)) || (Math.random() - 0.5));
+    const l = pool[0];
+    esp.push({
+      tipo: barato ? "barato" : "local",
+      tag: barato ? "🚀 ENVÍO MÁS BAJO" : "🏪 DESCUBRE",
+      titulo: l.rNom,
+      sub: barato ? "Envío solo L. " + l.envio : l.n + (l.n === 1 ? " plato" : " platos") + " para elegir",
+      rest: "", envio: l.envio, img: l.img, datos: l, claves: ["r|" + l.rId]
+    });
+  }
+
+  const vis = base.map(p => ({ p: p, v: Math.round(precioVisible(p.pPrec, p.rLat, p.rLon)) })).sort((a, b) => a.v - b.v);
+  if (vis.length >= 4) {
+    const b = vis.slice(0, 3).sort((a, c) => (vistos[kP(a.p)] || 0) - (vistos[kP(c.p)] || 0))[0];
+    if (!lista.some(it => it.tipo === "plato" && _bnN(it.titulo).trim() === _bnN(b.p.pNom).trim())) {
+      esp.push({
+        tipo: "plato", mom: "", tag: "💸 LO MÁS ECONÓMICO", titulo: b.p.pNom, sub: "Buen precio, mucho sabor",
+        rest: "🏪 " + b.p.rNom, precio: b.v, envio: envioPara(b.p.rLat, b.p.rLon), img: b.p.pImg, datos: b.p, claves: [kP(b.p), kR(b.p)]
+      });
+    }
+  }
+  const tope = [80, 100, 120, 150, 200, 250].find(t => vis.filter(x => x.v <= t).length >= 3);
+  if (tope) {
+    const sel = vis.filter(x => x.v <= tope);
+    if (sel.length < vis.length) {
+      esp.push({
+        tipo: "hasta", tag: "🏷️ MENOS DE L. " + tope, titulo: "Platillos desde L. " + sel[0].v,
+        sub: sel.length + " opciones a buen precio", rest: "", img: sel[0].p.pImg, tope: tope, datos: null, claves: []
+      });
+    }
+  }
+  esp.forEach((e, k) => lista.splice(Math.min(2 + k * 3, lista.length), 0, e));
+
+  const rid = it => it.datos ? it.datos.rId : "";
+  for (let i = 1; i < lista.length; i++) {
+    if (rid(lista[i]) && rid(lista[i]) === rid(lista[i - 1])) {
+      for (let j = i + 1; j < lista.length; j++) {
+        if (rid(lista[j]) !== rid(lista[i - 1])) { const t = lista[i]; lista[i] = lista[j]; lista[j] = t; break; }
+      }
+    }
+  }
+  return lista;
+}
+
+function _bnEmoji(it) {
+  const e = document.createElement("div");
+  e.className = "bn-emoji";
+  e.textContent = it.tipo === "plato" ? "🍽️" : it.tipo === "hasta" ? "🏷️" : it.tipo === "barato" ? "🛵" : "🏪";
+  return e;
+}
+
+function _bnPintar(wrap, it, dir) {
+  wrap.querySelectorAll(".hero-overlay, .hero-content, .hero-bg-img").forEach(n => n.remove());
+  const viejo = wrap.querySelector(".bn-slide:not(.bn-out)");
+  const s = document.createElement("div");
+  s.className = "bn-slide" + (it.tipo !== "plato" ? " bn-t-" + it.tipo : "") + (it.mom && it.mom !== "almuerzo" ? " bn-m-" + it.mom : "");
+  s.style.setProperty("--bn-dir", dir);
+  if (it.img) {
+    const im = document.createElement("img");
+    im.className = "bn-img";
+    im.alt = "";
+    im.onerror = () => { im.remove(); s.insertBefore(_bnEmoji(it), s.firstChild); };
+    im.src = it.img;
+    s.appendChild(im);
+  } else s.appendChild(_bnEmoji(it));
+  const body = document.createElement("div");
+  body.className = "bn-body";
+  const add = (cls, txt) => { const d = document.createElement("div"); d.className = cls; d.textContent = txt; body.appendChild(d); return d; };
+  const tg = document.createElement("span"); tg.className = "bn-tag"; tg.textContent = it.tag; body.appendChild(tg);
+  add("bn-title", it.titulo);
+  if (it.sub) add("bn-sub", it.sub);
+  if (it.rest) add("bn-rest", it.rest);
+  if (it.envio != null) {
+    const ch = document.createElement("div"); ch.className = "bn-chips";
+    ["🛵 Envío L. " + it.envio, "⏱ 20-35 min"].forEach(t => { const c = document.createElement("span"); c.textContent = t; ch.appendChild(c); });
+    body.appendChild(ch);
+  }
+  add("bn-cta", it.tipo === "plato" ? "Pedir ahora ➔" : it.tipo === "hasta" ? "Ver platillos ➔" : "Ver menú ➔");
+  s.appendChild(body);
+  if (it.tipo === "plato" && it.precio) { const p = document.createElement("div"); p.className = "bn-price"; p.textContent = "L. " + it.precio; s.appendChild(p); }
+  wrap.appendChild(s);
+  if (viejo) { viejo.classList.add("bn-out"); viejo.style.setProperty("--bn-dir", dir); setTimeout(() => viejo.remove(), 450); }
+}
+
+function _bnDots(wrap, i, total) {
+  let d = wrap.querySelector(".bn-dots");
+  if (!d) { d = document.createElement("div"); d.className = "bn-dots"; wrap.appendChild(d); }
+  d.innerHTML = "";
+  for (let k = 0; k < total; k++) {
+    const sg = document.createElement("span");
+    sg.className = "bn-seg" + (k < i ? " hecho" : k === i ? " act" : "");
+    const f = document.createElement("i");
+    if (k === i) f.style.animationDuration = BN_MS + "ms";
+    sg.appendChild(f);
+    d.appendChild(sg);
+  }
+}
+
+function _bnProgramar(wrap) {
+  clearTimeout(_bn.timer);
+  const gen = _bn.gen;
+  _bn.ini = Date.now();
+  _bn.timer = setTimeout(() => {
+    if (gen !== _bn.gen || !wrap.isConnected) return;
+    if (wrap.offsetParent === null || document.hidden) { _bn.resta = 1500; _bnProgramar(wrap); return; }
+    _bnSiguiente(wrap, 1);
+  }, _bn.resta);
+}
+
+function _bnMostrar(wrap, i, dir) {
+  const it = _bn.lista[i];
+  if (!it) return;
+  _bn.i = i;
+  _bnPintar(wrap, it, dir);
+  _bnDots(wrap, i, _bn.lista.length);
+  const v = _bnVistos();
+  (it.claves || []).forEach(k => { v[k] = (v[k] || 0) + 1; });
+  _bnGuardar(v);
+  _bn.resta = BN_MS;
+  _bnProgramar(wrap);
+}
+
+function _bnSiguiente(wrap, dir) {
+  if (!wrap.isConnected) return;
+  if (dir > 0) {
+    if (_bn.i + 1 >= _bn.lista.length) {
+      const ult = _bn.lista[_bn.i];
+      const nueva = _bnArmar();
+      if (nueva.length) {
+        if (nueva.length > 1 && ult && nueva[0].datos && nueva[0].datos === ult.datos) { const t = nueva[0]; nueva[0] = nueva[1]; nueva[1] = t; }
+        _bn.lista = nueva;
+      }
+      _bnMostrar(wrap, 0, 1);
+      return;
+    }
+    _bnMostrar(wrap, _bn.i + 1, 1);
+  } else {
+    _bnMostrar(wrap, Math.max(0, _bn.i - 1), -1);
+  }
+}
+
+function _bnPausar(wrap) {
+  if (_bn.pausa) return;
+  _bn.pausa = true;
+  clearTimeout(_bn.timer);
+  _bn.resta = Math.max(400, _bn.resta - (Date.now() - _bn.ini));
+  wrap.classList.add("bn-pausa");
+}
+
+function _bnReanudar(wrap) {
+  if (!_bn.pausa) return;
+  _bn.pausa = false;
+  wrap.classList.remove("bn-pausa");
+  _bnProgramar(wrap);
+}
+
+function _bnTocar() {
+  const it = _bn.lista[_bn.i];
+  if (!it) return;
+  const d = it.datos;
+  if (it.tipo === "plato") mostrarPlatoPro(d.rId, d.rNom, d.pNom, d.pDesc, d.pPrec, d.pImg, d.pOps, d.rLat, d.rLon);
+  else if (it.tipo === "hasta") mostrarPlatosHasta(it.tope);
+  else abrirMenuRestaurante(d.rId, d.rNom, d.rLat, d.rLon, d.img);
+}
+
+function _bnGestos(wrap) {
+  let x0 = 0, y0 = 0, t0 = 0, activo = false;
+  wrap.addEventListener("pointerdown", e => { activo = true; x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); _bnPausar(wrap); });
+  const fin = e => {
+    if (!activo) return;
+    activo = false;
+    _bnReanudar(wrap);
+    if (e.type === "pointercancel") return;
+    const dx = e.clientX - x0, dy = e.clientY - y0, dt = Date.now() - t0;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4) { _bnSiguiente(wrap, dx < 0 ? 1 : -1); return; }
+    if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 600) _bnTocar();
+  };
+  wrap.addEventListener("pointerup", fin);
+  wrap.addEventListener("pointercancel", fin);
+}
+
+function mostrarPlatosHasta(tope) {
+  const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
+  cont.innerHTML = '<div class="section-header"><button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button><div style="flex:1; margin-left:14px"><h3 style="font-size:18px">Platillos hasta L. ' + tope + '</h3><span class="sub-muted">Precio final según tu distancia</span></div></div><div id="listPrecioEsp" style="margin-top:10px"></div>';
+  const list = document.getElementById("listPrecioEsp");
+  const items = todosLosProductosCache
+    .filter(p => !p.rCerrado && p.pPrec > 0 && Math.round(precioVisible(p.pPrec, p.rLat, p.rLon)) <= tope)
+    .sort((a, b) => precioVisible(a.pPrec, a.rLat, a.rLon) - precioVisible(b.pPrec, b.rLat, b.rLon));
+  if (!items.length) { list.innerHTML = '<div class="empty-box"><p>No encontramos platillos en este rango.</p></div>'; return; }
+  items.forEach(p => list.appendChild(_vFilaPlato(p, true, [])));
+}
+
+iniciarSliderPublicitario = function () {
+  if (sliderTimer) { clearTimeout(sliderTimer); sliderTimer = null; }
+  clearTimeout(_bn.timer);
+  const gen = ++_bn.gen;
+  _bn.pausa = false; _bn.lista = []; _bn.i = -1; _bn.resta = BN_MS;
+  const wrap = document.querySelector(".hero-slider-wrap");
+  if (!wrap) return;
+  wrap.classList.add("bn-wrap");
+  _bnGestos(wrap);
+  let ultimoN = -1, intentos = 0;
+  const espera = () => {
+    if (gen !== _bn.gen || !wrap.isConnected) return;
+    if (wrap.offsetParent === null) { setTimeout(espera, 1200); return; }
+    const n = todosLosProductosCache.length;
+    if (n === 0 || (n !== ultimoN && intentos < 8)) { ultimoN = n; if (n) intentos++; setTimeout(espera, 500); return; }
+    const lista = _bnArmar();
+    if (!lista.length) { setTimeout(espera, 800); return; }
+    _bn.lista = lista;
+    _bnMostrar(wrap, 0, 1);
+  };
+  espera();
+};
