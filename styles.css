@@ -1102,3 +1102,26 @@ input:focus, select:focus {
 .perfil-dir-btns { display: flex; gap: 8px; }
 .perfil-dir-btns .btn { flex: 1; }
 .perfil-load { padding: 60px 20px; text-align: center; color: var(--c-muted); font-weight: 700; }
+
+/* ===== MODAL DE PLATO: OPCIONES Y RECOMENDACIONES ===== */
+.dish-hero { border-radius: 0 0 30px 30px; overflow: hidden; flex-shrink: 0; }
+.dish-hero .img-fill { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.opt-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.opt-head h4 { font-size: 16px; font-weight: 800; color: #0F172A; text-transform: uppercase; }
+.opt-badge { background: #F1F5F9; color: #334155; font-size: 11px; padding: 5px 12px; border-radius: 10px; }
+.opt-sub { font-size: 13px; color: #94A3B8; margin: 2px 0 6px; }
+.option-row { gap: 12px; justify-content: flex-start; padding: 14px 0; }
+.opt-radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--c-primary); position: relative; flex-shrink: 0; }
+.option-row.sel .opt-radio::after { content: ""; position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px; border-radius: 50%; background: var(--c-primary); }
+.opt-name { flex: 1; font-size: 15px; color: #334155; }
+.option-row.sel .opt-name { font-weight: 700; color: #0F172A; }
+.opt-price { font-size: 14px; font-weight: 700; color: #64748B; }
+.sug-title { font-size: 20px; font-weight: 800; color: #0F172A; padding: 22px 18px 8px; }
+.sug-row { display: flex; align-items: center; padding: 8px 18px; cursor: pointer; }
+.sug-row:active { transform: scale(0.98); }
+.sug-thumb { width: 84px; height: 84px; border-radius: 18px; background: #F3F4F8; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+.sug-thumb img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+.sug-info { flex: 1; min-width: 0; padding: 0 12px 0 14px; }
+.sug-info b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; font-weight: 500; color: #0F172A; line-height: 1.25; }
+.sug-info span { display: block; margin-top: 6px; font-size: 16px; font-weight: 800; color: #0F172A; }
+.sug-plus { width: 40px; height: 40px; border-radius: 50%; border: none; background: #F1F2F6; font-size: 22px; font-weight: 700; color: #0F172A; box-shadow: 0 2px 6px rgba(0,0,0,0.15); flex-shrink: 0; }

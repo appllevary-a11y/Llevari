@@ -2863,3 +2863,219 @@ confirmarCreacionPedido = async function () {
   }
   return _confirmarTarifas();
 };
+
+// ===== MODAL DE PLATO: OPCIONES Y RECOMENDACIONES (igual que la app) =====
+let currentDishExtra = 0;
+let dishToken = 0;
+
+function parsearOpciones(opStr) {
+  const grupos = [];
+  if (!opStr || !String(opStr).trim()) return grupos;
+  String(opStr).split("/").forEach(g => {
+    const pt = g.split(":");
+    if (pt.length < 2) return;
+    const nombre = pt[0].trim();
+    let hayCosto = false;
+    const ops = [];
+    pt[1].split(",").forEach(o => {
+      let nO = o.trim();
+      if (!nO) return;
+      let precio = 0;
+      if (nO.indexOf("+") >= 0) {
+        const se = nO.split("+");
+        nO = se[0].trim();
+        const v = parseFloat(String(se[1]).replace(/[^0-9.]/g, ""));
+        if (!isNaN(v)) { if (v > 0) hayCosto = true; precio = v; }
+      }
+      ops.push({ nombre: nO, precio: precio });
+    });
+    if (hayCosto) ops.unshift({ nombre: "No gracias", precio: 0 });
+    if (ops.length) grupos.push({ nombre: nombre, ops: ops });
+  });
+  return grupos;
+}
+
+function actualizarExtrasPlato() {
+  let ex = 0;
+  document.querySelectorAll("#modalDishOptions .option-row.sel").forEach(r => { ex += parseFloat(r.getAttribute("data-extra")) || 0; });
+  currentDishExtra = ex;
+}
+
+function opcionesElegidasTexto() {
+  const partes = [];
+  document.querySelectorAll("#modalDishOptions .option-group-card").forEach(g => {
+    const sel = g.querySelector(".option-row.sel");
+    if (!sel) return;
+    const nom = sel.getAttribute("data-nom") || "";
+    if (nom.toLowerCase() !== "no gracias") partes.push(g.getAttribute("data-grupo") + ": " + nom);
+  });
+  return partes.join(" / ");
+}
+
+function recalcularModalPlato() {
+  const u = currentDishBasePrice + currentDishExtra;
+  const sub = Math.round(u * currentDishQty);
+  const t = calcularTarifa(kmHaciaSync(currentDishData.rLat, currentDishData.rLon), sub);
+  const totProd = sub + t.aumento;
+  const total = totProd + t.envio;
+  document.getElementById("modalDishPrice").textContent = "L. " + (totProd / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
+  document.getElementById("modalDishSubtotal").textContent = "L. " + totProd;
+  document.getElementById("btnDishOrderNow").textContent = "Pedir • L. " + total;
+}
+
+function refrescarCantidadPlato() {
+  document.getElementById("txtDishQty").textContent = currentDishQty;
+  recalcularModalPlato();
+}
+
+function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon) {
+  dishToken++;
+  const token = dishToken;
+  currentDishQty = 1;
+  currentDishBasePrice = Number(baseP) || 0;
+  currentDishExtra = 0;
+  currentDishData = { rId: rId, rNom: rNom, plato: plato, desc: desc, baseP: currentDishBasePrice, imgD: imgD, opStr: opStr, rLat: rLat, rLon: rLon };
+
+  document.getElementById("modalDishTitle").textContent = plato;
+  document.getElementById("modalDishDesc").textContent = desc || "";
+  document.getElementById("modalHeroRestChip").textContent = "🏪 " + rNom;
+  document.getElementById("txtDishQty").textContent = "1";
+
+  const heroImg = document.getElementById("modalHeroImg");
+  heroImg.onerror = () => heroImg.classList.add("hidden");
+  if (imgD) { heroImg.src = imgD; heroImg.classList.remove("hidden"); }
+  else { heroImg.removeAttribute("src"); heroImg.classList.add("hidden"); }
+
+  const cont = document.getElementById("modalDishOptions");
+  cont.innerHTML = "";
+  parsearOpciones(opStr).forEach(g => {
+    const card = document.createElement("div");
+    card.className = "option-group-card";
+    card.setAttribute("data-grupo", g.nombre);
+    const head = document.createElement("div");
+    head.className = "opt-head";
+    const h = document.createElement("h4");
+    h.textContent = g.nombre;
+    const bd = document.createElement("span");
+    bd.className = "opt-badge";
+    bd.textContent = "Obligatorio";
+    head.appendChild(h); head.appendChild(bd);
+    card.appendChild(head);
+    const sb = document.createElement("p");
+    sb.className = "opt-sub";
+    sb.textContent = "Selecciona una opción";
+    card.appendChild(sb);
+    g.ops.forEach((o, i) => {
+      const row = document.createElement("div");
+      row.className = "option-row" + (i === 0 ? " sel" : "");
+      row.setAttribute("data-extra", String(o.precio));
+      row.setAttribute("data-nom", o.nombre);
+      const rd = document.createElement("span");
+      rd.className = "opt-radio";
+      const nm = document.createElement("span");
+      nm.className = "opt-name";
+      nm.textContent = o.nombre;
+      row.appendChild(rd); row.appendChild(nm);
+      if (o.precio > 0) {
+        const pr = document.createElement("span");
+        pr.className = "opt-price";
+        pr.textContent = "+ L. " + o.precio.toFixed(2);
+        row.appendChild(pr);
+      }
+      row.onclick = () => {
+        card.querySelectorAll(".option-row").forEach(x => x.classList.remove("sel"));
+        row.classList.add("sel");
+        actualizarExtrasPlato();
+        recalcularModalPlato();
+      };
+      card.appendChild(row);
+    });
+    cont.appendChild(card);
+  });
+
+  document.getElementById("btnDishMinus").onclick = () => { if (currentDishQty > 1) { currentDishQty--; refrescarCantidadPlato(); } };
+  document.getElementById("btnDishPlus").onclick = () => { currentDishQty++; refrescarCantidadPlato(); };
+
+  document.getElementById("btnDishAddToCart").onclick = () => {
+    const u = (currentDishBasePrice + currentDishExtra) * currentDishQty;
+    agregarAlCarrito(rId, rNom, currentDishQty + "x " + plato, u, opcionesElegidasTexto(), imgD, rLat, rLon);
+    document.getElementById("modalPlatoPro").classList.add("hidden");
+  };
+
+  document.getElementById("btnDishOrderNow").onclick = () => {
+    const ops = opcionesElegidasTexto();
+    carritoRestPendiente = null;
+    restIdSeleccionadoTemp = rId;
+    rNombreTemp = rNom;
+    imgPlatoTemp = imgD;
+    platoTemp = currentDishQty + "x " + plato + (ops ? " (" + ops + ")" : "");
+    precioPlatoTemp = (currentDishBasePrice + currentDishExtra) * currentDishQty;
+    restauranteLatTemp = (rLat && rLon) ? rLat : (miLat + 0.003);
+    restauranteLonTemp = (rLat && rLon) ? rLon : (miLon + 0.003);
+    document.getElementById("modalPlatoPro").classList.add("hidden");
+    abrirPantallaTipoServicio();
+  };
+
+  recalcularModalPlato();
+  document.getElementById("modalPlatoPro").classList.remove("hidden");
+  document.getElementById("modalPlatoScroll").scrollTop = 0;
+  cargarSugerenciasPlato(token);
+}
+
+async function cargarSugerenciasPlato(token) {
+  const d = currentDishData;
+  let items = todosLosProductosCache.filter(p => p.rId === d.rId).map(p => ({ pNom: p.pNom, pDesc: p.pDesc || "", pPrec: Number(p.pPrec) || 0, pImg: p.pImg || "", pOps: p.pOps || "" }));
+  if (items.length < 2) {
+    try {
+      const snap = await db.collection("restaurantes").doc(d.rId).collection("productos").get();
+      items = [];
+      snap.forEach(doc => {
+        const x = doc.data();
+        items.push({ pNom: x.nombre, pDesc: x.descripcion || "", pPrec: Number(x.precio) || 0, pImg: formatearImagen(x.imagenUrl), pOps: x.opciones || "" });
+      });
+    } catch (e) { return; }
+  }
+  if (token !== dishToken) return;
+  const vistos = {};
+  const lista = items.filter(p => {
+    if (!p.pNom || p.pNom === d.plato || p.pPrec <= 0 || vistos[p.pNom]) return false;
+    vistos[p.pNom] = true;
+    return true;
+  }).slice(0, 4);
+  if (!lista.length) return;
+  const cont = document.getElementById("modalDishOptions");
+  if (!cont || document.getElementById("dishSugs")) return;
+  const wrap = document.createElement("div");
+  wrap.id = "dishSugs";
+  const tt = document.createElement("div");
+  tt.className = "sug-title";
+  tt.textContent = "Otras personas lo combinaron con";
+  wrap.appendChild(tt);
+  lista.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "sug-row";
+    const th = document.createElement("div");
+    th.className = "sug-thumb";
+    th.textContent = "🍽️";
+    if (s.pImg) {
+      const im = document.createElement("img");
+      im.onerror = () => im.remove();
+      im.src = s.pImg;
+      th.appendChild(im);
+    }
+    const info = document.createElement("div");
+    info.className = "sug-info";
+    const nb = document.createElement("b");
+    nb.textContent = s.pNom;
+    const pv = document.createElement("span");
+    pv.textContent = "L. " + Math.round(precioVisible(s.pPrec, d.rLat, d.rLon));
+    info.appendChild(nb); info.appendChild(pv);
+    const bt = document.createElement("button");
+    bt.className = "sug-plus";
+    bt.textContent = "+";
+    row.appendChild(th); row.appendChild(info); row.appendChild(bt);
+    row.onclick = () => mostrarPlatoPro(d.rId, d.rNom, s.pNom, s.pDesc, s.pPrec, s.pImg, s.pOps, d.rLat, d.rLon);
+    wrap.appendChild(row);
+  });
+  cont.appendChild(wrap);
+}
