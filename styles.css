@@ -1289,3 +1289,34 @@ img { -webkit-user-drag: none; }
 .rest-mini-logo { animation: vFlotar 4s ease-in-out infinite; }
 .brand-title { animation: vResplandor 2.6s ease-in-out infinite alternate; }
 .full-screen:not(.hidden):not(.auth-gradient) { animation: vPantalla .4s ease-out; }
+
+/* ===== BUSCADOR VIDA ===== */
+@keyframes vBordeBusq { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 600px 0; } }
+@keyframes vPh { 0% { opacity: 0; } 14% { opacity: 1; } 86% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes vLupa { 0% { transform: rotate(0) scale(1); } 40% { transform: rotate(-25deg) scale(1.25); } 70% { transform: rotate(15deg) scale(1.1); } 100% { transform: rotate(0) scale(1); } }
+@keyframes vSubrayar { from { background-size: 0 100%; } to { background-size: 100% 100%; } }
+
+.search-row {
+  height: 56px; padding: 0 6px 0 18px; border: 3px solid transparent; border-radius: 30px;
+  background: linear-gradient(#fff, #fff) padding-box, linear-gradient(100deg, #FF9500, #FF2D8A, #8B2BFF, #1FA8FF, #FF9500) border-box;
+  background-size: 100% 100%, 600px 100%; background-repeat: no-repeat, repeat-x;
+  box-shadow: 0 10px 26px rgba(20,14,43,.3);
+  animation: vBordeBusq 5s linear infinite;
+  transition: transform .3s cubic-bezier(.3,1.5,.5,1), box-shadow .3s;
+}
+.search-row:focus-within { transform: translateY(-2px) scale(1.025); box-shadow: 0 16px 36px rgba(139,43,255,.55), 0 0 0 5px rgba(255,255,255,.25); animation-duration: 1.8s; }
+.search-row input { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--c-text); caret-color: var(--c-primary); text-overflow: ellipsis; }
+.search-row input:focus { box-shadow: none; }
+.search-row input::placeholder { color: #8E86B0; font-weight: 600; }
+.search-row input.v-ph::placeholder { animation: vPh 3.6s ease-in-out forwards; }
+.search-icon-badge { width: 42px; height: 42px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(255,79,0,.5); transition: background .3s; }
+.search-row:focus-within .search-icon-badge { animation: vLupa .6s ease-out, vAnillo 2.4s ease-out .6s infinite; }
+.v-busq-local .search-icon-badge { background: linear-gradient(135deg, #8B2BFF, #5A12D6); box-shadow: 0 4px 12px rgba(90,18,214,.5); }
+.v-busq-x { display: none; width: 30px; height: 30px; flex-shrink: 0; margin-right: 6px; border: none; border-radius: 50%; background: #EDE4FF; color: var(--c-primary-dark); font-size: 14px; font-weight: 800; cursor: pointer; }
+.v-con-texto .v-busq-x { display: block; animation: vPop .3s cubic-bezier(.2,1.5,.4,1) backwards; }
+
+.v-res-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px 6px; font-size: 14px; color: var(--c-muted); animation: vDeslizar .4s cubic-bezier(.2,.8,.2,1) backwards; }
+.v-res-head b { color: var(--c-primary-dark); }
+.v-res-head em { font-style: normal; font-weight: 800; font-size: 12px; color: #fff; padding: 5px 11px; border-radius: 14px; background: linear-gradient(135deg, var(--c-accent), var(--c-accent-dark)); box-shadow: 0 4px 10px rgba(255,79,0,.35); white-space: nowrap; }
+.v-sec { font-size: 17px; font-weight: 800; padding: 14px 18px 8px; animation: vDeslizar .4s cubic-bezier(.2,.8,.2,1) backwards; }
+mark.v-hl { color: inherit; padding: 0 1px; border-radius: 3px; background: linear-gradient(180deg, transparent 52%, rgba(255,149,0,.6) 52%) no-repeat left / 100% 100%; animation: vSubrayar .5s ease-out backwards; }
