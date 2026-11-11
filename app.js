@@ -3079,3 +3079,29 @@ async function cargarSugerenciasPlato(token) {
   });
   cont.appendChild(wrap);
 }
+
+// ===== SALIR DENTRO DE AJUSTES =====
+const _abrirAjustesSinSalir = abrirAjustes;
+abrirAjustes = function () {
+  _abrirAjustesSinSalir();
+  const card = document.querySelector("#modalAjustes .dialog-card");
+  if (!card || document.getElementById("ajSalir")) return;
+  const b = document.createElement("button");
+  b.id = "ajSalir";
+  b.className = "btn btn-blue";
+  b.style.marginBottom = "10px";
+  b.textContent = "🚪 Cerrar sesión";
+  b.onclick = () => {
+    const m = document.getElementById("modalAjustes");
+    if (m) m.classList.add("hidden");
+    auth.signOut();
+    localStorage.clear();
+    miTelefono = "";
+    mostrarPantallaLogin();
+  };
+  card.insertBefore(b, document.getElementById("ajCer"));
+};
+(function () {
+  const bc = document.getElementById("btnHeaderConfig");
+  if (bc) bc.onclick = abrirAjustes;
+})();
