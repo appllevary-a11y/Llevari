@@ -1244,3 +1244,48 @@ input:focus, select:focus {
 .nav-item:active .nav-icon { transform: scale(1.5) translateY(-5px); }
 .modal-backdrop, .modal-backdrop-alert { animation: vFundir .25s ease-out; }
 .dialog-card { animation: vPop .4s cubic-bezier(.2,1.2,.4,1) backwards; }
+
+/* ===== VIDA EXTRA 3: color, toque y mas animacion ===== */
+:root {
+  --c-primary: #8B2BFF;
+  --c-primary-dark: #5A12D6;
+  --c-primary-deep: #2D0A8C;
+  --c-primary-light: #E3D4FF;
+  --c-accent: #FF9500;
+  --c-accent-dark: #FF4F00;
+  --c-bg: #EEE6FF;
+  --c-text: #140E2B;
+  --c-muted: #55507A;
+}
+html, body, #appRoot { background-image: linear-gradient(180deg, #EEE6FF 0%, #FFEFE0 100%); }
+.card, .rest-card-big, .rest-card-grid, .product-row-card { box-shadow: 0 10px 26px rgba(139,43,255,.22), 0 2px 6px rgba(139,43,255,.1); }
+.hero-bg-img, .rest-card-cover img, .product-thumb-box img, .img-fill, .sug-thumb img { filter: saturate(1.25) contrast(1.05); }
+.rest-card-cover { background: linear-gradient(135deg, #E3D4FF, #FFD8B0); }
+.cat-chip-ico { background: linear-gradient(135deg, #E3D4FF, #C7A8FF); }
+.cat-big[style*="FFF1DC"] { background: linear-gradient(135deg, #FFC93D, #FF6A00) !important; box-shadow: 0 10px 22px rgba(255,106,0,.4); }
+.cat-big[style*="EDE9FE"] { background: linear-gradient(135deg, #B07CFF, #6D1FF0) !important; box-shadow: 0 10px 22px rgba(109,31,240,.4); }
+.cat-big[style*="FFF1DC"] span, .cat-big[style*="EDE9FE"] span { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.btn-blue { background-color: #1F6BFF; }
+.btn-success { background-color: #00B87C; }
+.btn-danger { background-color: #F5223A; }
+.btn-muted { background-color: #5B6478; }
+
+* { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+input, textarea, select { -webkit-user-select: text; user-select: text; }
+img { -webkit-user-drag: none; }
+
+@keyframes vOnda { from { transform: scale(1); opacity: 1; } to { transform: scale(9); opacity: 0; } }
+@keyframes vToque { 0% { transform: scale(1); } 35% { transform: scale(.9); } 70% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes vSubr { from { background-size: 28px 4px; } to { background-size: 72px 4px; } }
+@keyframes vDeslizar { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+@keyframes vResplandor { from { text-shadow: 0 4px 12px rgba(0,0,0,.3), 0 0 8px rgba(255,255,255,.2); } to { text-shadow: 0 4px 12px rgba(0,0,0,.3), 0 0 28px rgba(255,190,110,.95); } }
+@keyframes vPantalla { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+
+.v-onda { position: fixed; z-index: 99999; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,.75) 0%, rgba(139,43,255,.45) 45%, rgba(139,43,255,0) 70%); animation: vOnda .6s ease-out forwards; }
+.v-tocado { animation: vToque .38s cubic-bezier(.3,1.6,.5,1) !important; }
+.section-header h3 { background: linear-gradient(90deg, var(--c-accent), var(--c-accent-dark)) no-repeat 0 100% / 28px 4px; animation: vSubr 2.4s ease-in-out infinite alternate; }
+.hero-content { animation: vDeslizar .8s cubic-bezier(.2,.8,.2,1) backwards; }
+.hero-cta { animation: vLatido 2s ease-in-out infinite; }
+.rest-mini-logo { animation: vFlotar 4s ease-in-out infinite; }
+.brand-title { animation: vResplandor 2.6s ease-in-out infinite alternate; }
+.full-screen:not(.hidden):not(.auth-gradient) { animation: vPantalla .4s ease-out; }

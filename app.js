@@ -3105,3 +3105,44 @@ abrirAjustes = function () {
   const bc = document.getElementById("btnHeaderConfig");
   if (bc) bc.onclick = abrirAjustes;
 })();
+
+// ===== VIDA JS 3: toque con onda y rebote =====
+(function () {
+  const ondas = new Map();
+  function clicable(el) {
+    let t = null;
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(n.tagName)) return null;
+      if (n.tagName === "BUTTON" || n.tagName === "A") { t = n; break; }
+      if (getComputedStyle(n).cursor === "pointer") t = n;
+      else if (t) break;
+    }
+    return t;
+  }
+  document.addEventListener("pointerdown", e => {
+    if (!clicable(e.target)) return;
+    const r = document.createElement("div");
+    r.className = "v-onda";
+    r.style.left = e.clientX + "px";
+    r.style.top = e.clientY + "px";
+    document.body.appendChild(r);
+    ondas.set(e.pointerId, r);
+    r.addEventListener("animationend", () => r.remove());
+  }, true);
+  document.addEventListener("pointercancel", e => {
+    const r = ondas.get(e.pointerId);
+    if (r) { r.remove(); ondas.delete(e.pointerId); }
+  }, true);
+  document.addEventListener("pointerup", e => ondas.delete(e.pointerId), true);
+  document.addEventListener("click", e => {
+    const t = clicable(e.target);
+    if (!t) return;
+    t.classList.remove("v-tocado");
+    void t.offsetWidth;
+    t.classList.add("v-tocado");
+    setTimeout(() => t.classList.remove("v-tocado"), 420);
+  }, true);
+  document.addEventListener("contextmenu", e => {
+    if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) e.preventDefault();
+  });
+})();
