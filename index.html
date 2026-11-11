@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=480, user-scalable=no" />
   <title>LLEVARI - Delivery & Pickup</title>
   <link rel="stylesheet" href="styles.css?v=1794150502" />
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://www.gstatic.com" />
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" media="print" onload="this.media='all'" />
   <script>
     // Detector visual de errores para saber exactamente qué pasa en el teléfono
     window.onerror = function(msg, url, line) {
@@ -356,10 +359,10 @@
 
   </div>
 
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script async src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" onload="document.dispatchEvent(new Event('maplibre-listo'))"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="app.js?v=1794150502"></script>
+  <script src="app.js?v=1794432291"></script>
 </body>
 </html>

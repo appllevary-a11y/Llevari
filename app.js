@@ -17,6 +17,8 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
+try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
 const KM_MIN = 2, KM_MAX = 20;
@@ -543,8 +545,8 @@ async function cargarInicioPrincipal() {
 
   let snapR;
   try {
-    snapR = await db.collection("restaurantes").get();
-    try { await precargarRutasWeb(snapR.docs.map(d => d.data()).filter(r => !r.ciudad || String(r.ciudad).toLowerCase() === miCiudad.toLowerCase()).map(r => ({ lat: r.latitud, lon: r.longitud })), 3500); } catch (e) {}
+    snapR = await restaurantesRapido();
+    try { await precargarRutasWeb(snapR.docs.map(d => d.data()).filter(r => !r.ciudad || String(r.ciudad).toLowerCase() === miCiudad.toLowerCase()).map(r => ({ lat: r.latitud, lon: r.longitud })), 2000); } catch (e) {}
   } catch (e) {
     cont.innerHTML = '<div class="empty-box"><div class="empty-emoji">⚠️</div><p style="font-weight:700">No se pudieron cargar los locales</p><p class="empty-text">' + e.message + '</p></div>';
     return;
@@ -642,7 +644,7 @@ async function cargarInicioPrincipal() {
     };
     bestRow.appendChild(card);
 
-    db.collection("restaurantes").doc(doc.id).collection("productos").get().then(pSnap => {
+    colaProductos(() => db.collection("restaurantes").doc(doc.id).collection("productos").get()).then(pSnap => {
       pSnap.forEach(pd => {
         const pData = pd.data();
         if (pData.nombre && pData.precio > 0) {
@@ -2723,3 +2725,70 @@ async function guardarDatosPerfil() {
   toast("✅ Perfil actualizado");
   if (cambioCiudad) cambiarTab(tabActualIndex);
 }
+
+
+// ===== CARGA RAPIDA =====
+let ultimaRevalidacionRest = 0;
+let ultimoRefrescoRest = 0;
+
+function firmaRest(snap) {
+  return snap.docs.map(d => {
+    const x = d.data() || {};
+    return [d.id, x.nombre, x.estado, x.latitud, x.longitud, String(x.logoUrl || "").length].join(":");
+  }).sort().join("|");
+}
+
+async function restaurantesRapido() {
+  colaProd.length = 0;
+  const col = db.collection("restaurantes");
+  let cache = null;
+  try {
+    const c = await col.get({ source: "cache" });
+    if (!c.empty) cache = c;
+  } catch (e) {}
+  if (!cache) {
+    ultimaRevalidacionRest = Date.now();
+    return await col.get();
+  }
+  if (Date.now() - ultimaRevalidacionRest < 60000) return cache;
+  ultimaRevalidacionRest = Date.now();
+  col.get().then(srv => {
+    if (firmaRest(srv) === firmaRest(cache)) return;
+    if (Date.now() - ultimoRefrescoRest < 60000) return;
+    ultimoRefrescoRest = Date.now();
+    const cont = document.getElementById("contRestaurantes");
+    const q = document.getElementById("etBuscador");
+    if (tabActualIndex === 0 && cont && cont.querySelector(".hero-slider-wrap") && !(q && q.value.trim())) cargarInicioPrincipal();
+  }).catch(() => {});
+  return cache;
+}
+
+const colaProd = [];
+let prodEnCurso = 0;
+
+function colaProductos(fn) {
+  return new Promise((resolve, reject) => {
+    colaProd.push(() => {
+      fn().then(resolve, reject).finally(() => { prodEnCurso--; siguienteProd(); });
+    });
+    siguienteProd();
+  });
+}
+
+function siguienteProd() {
+  while (prodEnCurso < 2 && colaProd.length) {
+    prodEnCurso++;
+    colaProd.shift()();
+  }
+}
+
+function conMapLibre(fn) {
+  return function () {
+    if (window.maplibregl) return fn.apply(this, arguments);
+    toast("Cargando mapa...");
+    const self = this, args = arguments;
+    document.addEventListener("maplibre-listo", () => fn.apply(self, args), { once: true });
+  };
+}
+abrirPantallaSeguimientoEnVivo = conMapLibre(abrirPantallaSeguimientoEnVivo);
+abrirMapaNuevaDireccion = conMapLibre(abrirMapaNuevaDireccion);
