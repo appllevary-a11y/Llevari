@@ -2792,3 +2792,74 @@ function conMapLibre(fn) {
 }
 abrirPantallaSeguimientoEnVivo = conMapLibre(abrirPantallaSeguimientoEnVivo);
 abrirMapaNuevaDireccion = conMapLibre(abrirMapaNuevaDireccion);
+
+// ===== TARIFAS EN VIVO (igual que la app) =====
+function firmaTarifasWeb() {
+  return [cfgTopePct, cfgEnvioMax, cfgGanancia, cfgExtraPct, cfgMinimoLargo, cfgKmMinimo, cfgPagoKm.join(",")].join("|");
+}
+
+function aplicarTarifasWeb(d) {
+  const n = (v, def) => typeof v === "number" ? v : def;
+  cfgTopePct = n(d.tope_aumento_pct, cfgTopePct);
+  cfgEnvioMax = n(d.envio_visible_max, cfgEnvioMax);
+  cfgGanancia = n(d.ganancia_pedido, cfgGanancia);
+  cfgExtraPct = n(d.ganancia_extra_pct, cfgExtraPct);
+  cfgMinimoLargo = n(d.pedido_minimo, cfgMinimoLargo);
+  cfgKmMinimo = n(d.km_pedido_minimo, cfgKmMinimo);
+  if (Array.isArray(d.pago_km) && d.pago_km.length === KM_MAX - KM_MIN + 1 && d.pago_km.every(x => typeof x === "number")) cfgPagoKm = d.pago_km;
+}
+
+function refrescarPorTarifas() {
+  if (!miTelefono) return;
+  const modal = document.getElementById("modalPlatoPro");
+  if (modal && !modal.classList.contains("hidden")) { try { recalcularModalPlato(); } catch (e) {} return; }
+  const sv = document.getElementById("layoutTipoServicio");
+  if (sv && !sv.classList.contains("hidden")) { alternarModalidadServicio(true); return; }
+  const app = document.getElementById("layoutAppMain");
+  if (!app || app.classList.contains("hidden")) return;
+  if (tabActualIndex === 1) { dibujarCarrito(); return; }
+  if (tabActualIndex !== 0) return;
+  const q = document.getElementById("etBuscador");
+  const cont = document.getElementById("contRestaurantes");
+  if (!cont) return;
+  if (q && q.value.trim()) { filtrarResultados(q.value.trim().toLowerCase()); return; }
+  if (document.getElementById("listMenuPlatos")) { abrirMenuRestaurante(restIdSeleccionadoTemp, rNombreTemp, restauranteLatTemp, restauranteLonTemp, ""); return; }
+  if (document.getElementById("gridTodosLocales")) { verTodosLosRestaurantes(); return; }
+  if (cont.querySelector(".hero-slider-wrap")) cargarInicioPrincipal();
+}
+
+function escucharTarifas() {
+  let timer = null;
+  db.collection("configuracion").doc("tarifas").onSnapshot(doc => {
+    if (!doc.exists) return;
+    const antes = firmaTarifasWeb();
+    aplicarTarifasWeb(doc.data());
+    if (antes !== firmaTarifasWeb()) {
+      clearTimeout(timer);
+      timer = setTimeout(refrescarPorTarifas, 400);
+    }
+  });
+}
+
+const _confirmarTarifas = confirmarCreacionPedido;
+confirmarCreacionPedido = async function () {
+  const total = () => {
+    const sub = Math.round(precioPlatoTemp);
+    const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+    return modalidadDelivery ? sub + t.aumento + t.envio : sub;
+  };
+  const antes = total();
+  try {
+    const d = await db.collection("configuracion").doc("tarifas").get({ source: "server" });
+    if (d.exists) aplicarTarifasWeb(d.data());
+  } catch (e) {
+    toast("No se pudieron verificar las tarifas. Revisa tu conexión.");
+    return;
+  }
+  if (total() !== antes) {
+    toast("Las tarifas cambiaron. Revisa el nuevo total y confirma de nuevo.");
+    alternarModalidadServicio(true);
+    return;
+  }
+  return _confirmarTarifas();
+};
