@@ -4,12 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=480, user-scalable=no" />
   <title>LLEVARI - Delivery & Pickup</title>
-  <link rel="stylesheet" href="styles.css?v=1794522623" />
+  <link rel="stylesheet" href="styles.css?v=1794523086" />
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://www.gstatic.com" />
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" media="print" onload="this.media='all'" />
-  <script>
+<script>
     // Detector visual de errores para saber exactamente qué pasa en el teléfono
     window.onerror = function(msg, url, line) {
       console.error("Error:", msg, "línea", line);
@@ -355,10 +354,25 @@
 
   </div>
 
-  <script async src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" onload="document.dispatchEvent(new Event('maplibre-listo'))"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script>
+    // Mapa diferido: se descarga después de que la app arranca (o al instante si se necesita)
+    (function () {
+      var cargado = false;
+      window.llCargarMapa = function () {
+        if (cargado) return; cargado = true;
+        var l = document.createElement("link"); l.rel = "stylesheet";
+        l.href = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"; document.head.appendChild(l);
+        var s = document.createElement("script");
+        s.src = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
+        s.onload = function () { document.dispatchEvent(new Event("maplibre-listo")); };
+        document.head.appendChild(s);
+      };
+      window.addEventListener("load", function () { setTimeout(window.llCargarMapa, 2500); });
+    })();
+  </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="app.js?v=1794522623"></script>
+  <script src="app.js?v=1794523086"></script>
 </body>
 </html>

@@ -4161,3 +4161,59 @@ if (window.MutationObserver) {
     return p;
   };
 })();
+
+// ===== OPTIMIZACION PRO =====
+// 1) Productos: no volver a bajarlos de Firestore si se pidieron hace menos de 3 min (y compartir la descarga si ya va en camino)
+(function () {
+  try {
+    const Q = firebase.firestore.Query.prototype, g = Q.get, memo = {};
+    Q.get = function (opts) {
+      const path = this.path;
+      if (opts !== undefined || typeof path !== "string" || !/\/productos$/.test(path)) return g.apply(this, arguments);
+      const m = memo[path];
+      if (m && m.snap && Date.now() - m.t < 180000) return Promise.resolve(m.snap);
+      if (m && m.p) return m.p;
+      const p = g.apply(this, arguments).then(
+        s => { memo[path] = { t: Date.now(), snap: s }; return s; },
+        e => { delete memo[path]; throw e; }
+      );
+      memo[path] = { p: p };
+      return p;
+    };
+  } catch (e) {}
+})();
+
+// 2) Rutas (OSRM): no hacer esperar al cliente más de 1 segundo; el precio exacto se actualiza solo cuando llegue
+(function () {
+  const orig = window.precargarRutasWeb;
+  if (typeof orig !== "function") return;
+  window.precargarRutasWeb = function (lista, maxMs) {
+    return orig.call(this, lista, Math.min(Number(maxMs) || 1000, 1000));
+  };
+})();
+
+// 3) Imágenes: decodificar sin bloquear y cargar solo las que se van a ver
+(function () {
+  if (!window.MutationObserver) return;
+  const LAZY = ".rest-card-cover img,.product-thumb-box img,.sug-thumb img";
+  function ajustar(n) {
+    if (!n || n.nodeType !== 1) return;
+    const imgs = n.tagName === "IMG" ? [n] : (n.querySelectorAll ? Array.from(n.querySelectorAll("img")) : []);
+    imgs.forEach(im => {
+      if (!im.getAttribute("decoding")) im.decoding = "async";
+      if (!im.getAttribute("loading") && im.matches(LAZY)) im.loading = "lazy";
+    });
+  }
+  new MutationObserver(ms => { ms.forEach(m => m.addedNodes.forEach(ajustar)); })
+    .observe(document.body, { childList: true, subtree: true });
+})();
+
+// 4) Mapa: la librería pesada se descarga en segundo plano (ver index.html) o al instante si hace falta
+["abrirPantallaSeguimientoEnVivo", "abrirMapaNuevaDireccion"].forEach(n => {
+  const orig = window[n];
+  if (typeof orig !== "function") return;
+  window[n] = function () {
+    if (!window.maplibregl && window.llCargarMapa) window.llCargarMapa();
+    return orig.apply(this, arguments);
+  };
+});
