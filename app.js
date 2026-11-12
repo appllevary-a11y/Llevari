@@ -639,7 +639,7 @@ async function cargarInicioPrincipal() {
       </div>
     `;
     card.onclick = () => {
-      if (cerrado) return alert("Este local está cerrado actualmente 🛑");
+      if (cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
       abrirMenuRestaurante(doc.id, r.nombre, rLat, rLon, r.logoUrl);
     };
     bestRow.appendChild(card);
@@ -692,7 +692,7 @@ function verTodosLosRestaurantes() {
         </div>
       `;
       card.onclick = () => {
-        if (cerrado) return alert("Este local está cerrado actualmente 🛑");
+        if (cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
         abrirMenuRestaurante(doc.id, r.nombre, rLat, rLon, r.logoUrl);
       };
       grid.appendChild(card);
@@ -1636,7 +1636,7 @@ async function pedirDesdeCarrito(rId) {
   try {
     try {
       const d = await db.collection("restaurantes").doc(rId).get();
-      if (d.exists && (d.data().estado || "").toUpperCase() === "CERRADO") { toast("🛑 Este local está cerrado ahora."); return; }
+      if (d.exists && (d.data().estado || "").toUpperCase() === "CERRADO") { alert({ titulo: "Aviso", mensaje: "Este local está cerrado ahora 🛑" }); return; }
     } catch (e) { toast("No se pudo verificar el local. Revisa tu conexión."); return; }
 
     let sum = 0;
@@ -3292,7 +3292,7 @@ filtrarResultados = async function (q) {
       card.className = "rest-card-grid";
       card.innerHTML = '<div class="rest-card-cover">' + (logoSrc ? '<img src="' + logoSrc + '" class="img-fill" />' : "🍽️") + '<span class="badge-status ' + (l.cerrado ? "cerrado" : "abierto") + '">' + (l.cerrado ? "🛑 CERRADO" : "🟢 ABIERTO") + '</span></div><div class="rest-card-body"><h4>' + _vResaltar(l.nombre, palabras) + '</h4><span class="sub-muted">🛵 L. ' + envioPara(l.lat, l.lon) + "</span></div>";
       card.onclick = () => {
-        if (l.cerrado) return alert("Este local está cerrado actualmente 🛑");
+        if (l.cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
         abrirMenuRestaurante(l.id, l.nombre, l.lat, l.lon, l.logo);
       };
       grid.appendChild(card);
@@ -4408,7 +4408,7 @@ if (window.MutationObserver) {
             </div>
           `;
           card.onclick = () => {
-            if (cerrado) return alert("Este local está cerrado actualmente 🛑");
+            if (cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
             abrirMenuRestaurante(r.id || r.rId, r.nombre || r.rNom, rLat, rLon, logoSrc);
           };
           frag.appendChild(card);
@@ -4428,26 +4428,23 @@ if (window.MutationObserver) {
   };
 })();
 
-
-
-
 // ===== ALERTAS PREMIUM 3D =====
 (function() {
-  // 1. Crear el HTML de la ventana 3D
   const overlay = document.createElement("div");
   overlay.id = "llvAlertOverlay";
   overlay.className = "llv-alert-backdrop hidden";
   overlay.innerHTML = `
     <div class="llv-alert-card">
-      <div class="llv-alert-icon" id="llvAlertIcon">🔔</div>
-      <h3 class="llv-alert-title">LLEVARI</h3>
+      <div class="llv-alert-icon-wrap" id="llvAlertIconWrap">
+        <div class="llv-alert-icon" id="llvAlertIcon">🔔</div>
+      </div>
+      <h3 class="llv-alert-title" id="llvAlertTitle">LLEVARI</h3>
       <p class="llv-alert-msg" id="llvAlertMsg"></p>
       <button class="llv-alert-btn" id="llvAlertBtn">Aceptar</button>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  // 2. Animación de cierre
   const btn = document.getElementById("llvAlertBtn");
   btn.onclick = () => {
     const card = overlay.querySelector('.llv-alert-card');
@@ -4458,23 +4455,43 @@ if (window.MutationObserver) {
     }, 280);
   };
 
-  // 3. Interceptar window.alert nativo
-  window.alert = function(msg) {
-    msg = String(msg);
-    document.getElementById("llvAlertMsg").textContent = msg;
+  // Alerta inteligente que acepta objeto de configuración o texto directo
+  window.alert = function(arg) {
+    const titleEl = document.getElementById("llvAlertTitle");
+    const msgEl = document.getElementById("llvAlertMsg");
+    const iconWrap = document.getElementById("llvAlertIconWrap");
     const i = document.getElementById("llvAlertIcon");
-    
-    // Asignar íconos inteligentes según el texto del mensaje
-    if (msg.includes("cerrado") || msg.includes("🛑")) {
-        i.innerHTML = "🏪<span class='badge-closed'>CERRADO</span>";
-    } else if (msg.includes("❌") || /error|incorrecto|falló|completa/i.test(msg)) {
-        i.innerHTML = "⚠️";
-    } else if (msg.includes("✅") || msg.includes("🎉") || msg.includes("éxito")) {
-        i.innerHTML = "✨";
-    } else if (msg.includes("🛒")) {
-        i.innerHTML = "🛒";
+
+    let msg = "";
+    let title = "LLEVARI";
+    let imgUrl = "";
+
+    if (typeof arg === "object" && arg !== null) {
+      msg = arg.mensaje || "";
+      title = arg.titulo || "LLEVARI";
+      imgUrl = arg.imagen || "";
     } else {
-        i.innerHTML = "🔔";
+      msg = String(arg);
+    }
+
+    msgEl.textContent = msg;
+    titleEl.textContent = title;
+
+    // Si pasaron una imagen (como el logo del local cerrado), la mostramos en 3D
+    if (imgUrl) {
+      iconWrap.innerHTML = '<img src="' + imgUrl + '" class="llv-alert-img-logo" />';
+    } else {
+      iconWrap.innerHTML = '<div class="llv-alert-icon" id="llvAlertIcon">🔔</div>';
+      const iconDiv = document.getElementById("llvAlertIcon");
+      if (msg.includes("cerrado") || msg.includes("🛑")) {
+        iconDiv.innerHTML = "🏪<span class='badge-closed'>CERRADO</span>";
+      } else if (msg.includes("❌") || /error|incorrecto|falló|completa/i.test(msg)) {
+        iconDiv.innerHTML = "⚠️";
+      } else if (msg.includes("✅") || msg.includes("🎉") || msg.includes("éxito")) {
+        iconDiv.innerHTML = "✨";
+      } else {
+        iconDiv.innerHTML = "🔔";
+      }
     }
 
     overlay.classList.remove("hidden");
