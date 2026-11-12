@@ -639,7 +639,7 @@ async function cargarInicioPrincipal() {
       </div>
     `;
     card.onclick = () => {
-      if (cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
+      if (cerrado) { alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc }); return; }
       abrirMenuRestaurante(doc.id, r.nombre, rLat, rLon, r.logoUrl);
     };
     bestRow.appendChild(card);
@@ -692,7 +692,7 @@ function verTodosLosRestaurantes() {
         </div>
       `;
       card.onclick = () => {
-        if (cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
+        if (cerrado) { alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc }); return; }
         abrirMenuRestaurante(doc.id, r.nombre, rLat, rLon, r.logoUrl);
       };
       grid.appendChild(card);
@@ -724,17 +724,6 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
     }
   } catch(e) {}
 
-  // Blindaje de seguridad: Si el local está cerrado, bloquear apertura
-  try {
-    const docCheck = await db.collection("restaurantes").doc(rId).get();
-    if (docCheck.exists) {
-      const rData = docCheck.data();
-      if (String(rData.estado || "").toUpperCase() === "CERRADO") {
-        alert({ titulo: rData.nombre || rNom, mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(rData.logoUrl || logoUrl) });
-        return;
-      }
-    }
-  } catch(e) {}
   restIdSeleccionadoTemp = rId;
   rNombreTemp = rNom;
   restauranteLatTemp = rLat;
@@ -3325,7 +3314,7 @@ filtrarResultados = async function (q) {
       card.className = "rest-card-grid";
       card.innerHTML = '<div class="rest-card-cover">' + (logoSrc ? '<img src="' + logoSrc + '" class="img-fill" />' : "🍽️") + '<span class="badge-status ' + (l.cerrado ? "cerrado" : "abierto") + '">' + (l.cerrado ? "🛑 CERRADO" : "🟢 ABIERTO") + '</span></div><div class="rest-card-body"><h4>' + _vResaltar(l.nombre, palabras) + '</h4><span class="sub-muted">🛵 L. ' + envioPara(l.lat, l.lon) + "</span></div>";
       card.onclick = () => {
-        if (l.cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
+        if (l.cerrado) { alert({ titulo: l.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc }); return; }
         abrirMenuRestaurante(l.id, l.nombre, l.lat, l.lon, l.logo);
       };
       grid.appendChild(card);
@@ -4308,6 +4297,21 @@ if (window.MutationObserver) {
 (function() {
   // 1. Quitar bloqueos de red al abrir restaurantes (apertura instantánea)
   window.abrirMenuRestaurante = async function(rId, rNom, rLat, rLon, logoUrl) {
+    // CANDADO: si el local está cerrado, solo se muestra la alerta y NO se abre el menú
+    try {
+      let dc = null;
+      try { dc = await db.collection("restaurantes").doc(rId).get({ source: "cache" }); } catch (e1) { dc = null; }
+      if (!dc || !dc.exists) dc = await db.collection("restaurantes").doc(rId).get();
+      if (dc && dc.exists) {
+        const rd = dc.data() || {};
+        if (String(rd.estado || "").toUpperCase() === "CERRADO") {
+          if (typeof llvHide === "function" && window.LLV) Object.keys(window.LLV.activos || {}).forEach(k => llvHide(k));
+          alert({ titulo: rd.nombre || rNom || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(rd.logoUrl || logoUrl) });
+          return;
+        }
+      }
+    } catch (e) {}
+
     // A. Calcular rutas en fondo, SIN trabar el celular (quitamos el await)
     if (rLat && rLon && typeof window.precargarRutasWeb === "function") {
       window.precargarRutasWeb([{ lat: rLat, lon: rLon }], 1000).catch(()=>{});
@@ -4441,7 +4445,7 @@ if (window.MutationObserver) {
             </div>
           `;
           card.onclick = () => {
-            if (cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc });
+            if (cerrado) { alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc }); return; }
             abrirMenuRestaurante(r.id || r.rId, r.nombre || r.rNom, rLat, rLon, logoSrc);
           };
           frag.appendChild(card);
