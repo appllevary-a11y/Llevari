@@ -12,7 +12,7 @@
   <script>
     // Detector visual de errores para saber exactamente qué pasa en el teléfono
     window.onerror = function(msg, url, line) {
-      alert("⚠️ Error detectado: " + msg + "\nLínea: " + line);
+      console.error("Error:", msg, "línea", line);
     };
   </script>
 </head>
@@ -359,6 +359,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="app.js?v=1794520159"></script>
+  <script src="app.js?v=1794521419"></script>
 </body>
 </html>

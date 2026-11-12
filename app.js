@@ -452,8 +452,8 @@ function actualizarListaDireccionesReg() {
     item.innerHTML = `
       <input type="radio" name="rbDirItem" ${sel ? "checked" : ""} style="accent-color: var(--c-primary); margin-right: 12px;" />
       <div style="flex:1">
-        <h4 style="font-size:15px">${dir.etiqueta}</h4>
-        ${dir.desc ? `<p class="sub-muted">${dir.desc}</p>` : ""}
+        <h4 style="font-size:15px">${esc(dir.etiqueta)}</h4>
+        ${dir.desc ? `<p class="sub-muted">${esc(dir.desc)}</p>` : ""}
       </div>
     `;
     item.onclick = () => {
@@ -565,7 +565,7 @@ async function cargarInicioPrincipal() {
       <div class="cat-chip-ico" style="background:rgba(255,255,255,0.2)">🛵</div>
       <div style="flex:1; padding-left: 12px">
         <h4 style="font-size:16px">¡Pedido en proceso!</h4>
-        <span style="font-size:13px; color:#FFE2B8">${rNombreTemp}</span>
+        <span style="font-size:13px; color:#FFE2B8">${esc(rNombreTemp)}</span>
       </div>
       <span style="font-size:20px">➔</span>
     `;
@@ -633,7 +633,7 @@ async function cargarInicioPrincipal() {
       </div>
       <div class="rest-card-body">
         <div style="flex:1">
-          <h4 style="font-size:16px; font-weight:700">${r.nombre}</h4>
+          <h4 style="font-size:16px; font-weight:700">${esc(r.nombre)}</h4>
           <span class="sub-muted">${cerrado ? 'No disponible' : '⏱ 20-35 min • 🛵 L. ' + envio}</span>
         </div>
       </div>
@@ -687,7 +687,7 @@ function verTodosLosRestaurantes() {
           <span class="badge-status ${cerrado ? 'cerrado' : 'abierto'}">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</span>
         </div>
         <div class="rest-card-body">
-          <h4>${r.nombre}</h4>
+          <h4>${esc(r.nombre)}</h4>
           <span class="sub-muted">🛵 L. ${envioPara(rLat, rLon)}</span>
         </div>
       `;
@@ -713,7 +713,7 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
     <div class="section-header">
       <button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button>
       <div style="flex:1; margin-left: 14px">
-        <h3 style="font-size:18px">${rNom}</h3>
+        <h3 style="font-size:18px">${esc(rNom)}</h3>
         <span class="sub-muted">🛵 Envío L. ${envioPara(rLat, rLon)}</span>
       </div>
     </div>
@@ -736,8 +736,8 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
     row.innerHTML = `
       <div class="product-info-left">
         <div>
-          <h4>${p.nombre}</h4>
-          <p>${p.descripcion || ''}</p>
+          <h4>${esc(p.nombre)}</h4>
+          <p>${esc(p.descripcion || '')}</p>
         </div>
         <div class="product-price">L. ${finalPrice.toFixed(2)}</div>
       </div>
@@ -1301,7 +1301,7 @@ async function revisarPedidoActivo() {
     b.style.color = "#fff";
     b.style.margin = "14px 16px 0";
     b.style.cursor = "pointer";
-    b.innerHTML = '<div class="cat-chip-ico" style="background:rgba(255,255,255,0.2)">🛵</div><div style="flex:1; padding-left: 12px"><h4 style="font-size:16px">¡Pedido en proceso!</h4><span style="font-size:13px; color:#FFE2B8">' + act.nombre + '</span></div><span style="font-size:20px">➔</span>';
+    b.innerHTML = '<div class="cat-chip-ico" style="background:rgba(255,255,255,0.2)">🛵</div><div style="flex:1; padding-left: 12px"><h4 style="font-size:16px">¡Pedido en proceso!</h4><span style="font-size:13px; color:#FFE2B8">' + esc(act.nombre) + '</span></div><span style="font-size:20px">➔</span>';
     b.onclick = abrirPantallaSeguimientoEnVivo;
     cont.insertBefore(b, cont.firstChild);
   } catch (e) {}
@@ -3877,4 +3877,64 @@ _vLocalesBusqueda = function () {
   const k = miLat + "," + miLon + "," + miCiudad;
   if (k !== _vLocKey) { _vLocKey = k; _vLocales = null; }
   return _vLocalesBusquedaBase();
+};
+
+// ===== CANCELAR SOLO SIN REPARTIDOR =====
+let _cancelListener = null;
+
+function _repAsignadoCancel(d) {
+  const rN = String(d.repartidor_nombre || "").trim();
+  return rN !== "" && !/^buscando/i.test(rN);
+}
+
+function _puedeCancelar(d) {
+  const es = String(d.estado || d.status || d.estatus || "NUEVO").toUpperCase();
+  if (ESTADOS_FINALES.includes(es)) return false;
+  if (es === "EN_CAMINO" || es === "DESPACHADO") return false;
+  return !_repAsignadoCancel(d);
+}
+
+const _abrirSegCancel = abrirPantallaSeguimientoEnVivo;
+abrirPantallaSeguimientoEnVivo = function () {
+  const b = document.getElementById("bCancelarPedido");
+  if (b) b.classList.add("hidden");
+  const r = _abrirSegCancel.apply(this, arguments);
+  if (_cancelListener) { _cancelListener(); _cancelListener = null; }
+  if (pedidoActivoId && restIdSeleccionadoTemp) {
+    const idPed = pedidoActivoId;
+    _cancelListener = db.collection("restaurantes").doc(restIdSeleccionadoTemp).collection("pedidos").doc(idPed).onSnapshot(doc => {
+      if (!doc.exists || idPed !== pedidoActivoId) return;
+      const b2 = document.getElementById("bCancelarPedido");
+      if (b2) b2.classList.toggle("hidden", !_puedeCancelar(doc.data()));
+    }, () => {});
+  }
+  return r;
+};
+
+const _cerrarSegCancel = cerrarPantallaSeguimiento;
+cerrarPantallaSeguimiento = function () {
+  if (_cancelListener) { _cancelListener(); _cancelListener = null; }
+  return _cerrarSegCancel.apply(this, arguments);
+};
+
+cancelarPedidoActivo = async function () {
+  if (!pedidoActivoId || !restIdSeleccionadoTemp) return;
+  const ref = db.collection("restaurantes").doc(restIdSeleccionadoTemp).collection("pedidos").doc(pedidoActivoId);
+  try {
+    const s = await ref.get({ source: "server" });
+    if (s.exists && !_puedeCancelar(s.data())) {
+      toast("Ya no se puede cancelar: un repartidor tomó tu pedido.");
+      return;
+    }
+  } catch (e) {
+    toast("No se pudo verificar el pedido. Revisa tu conexión.");
+    return;
+  }
+  if (!confirm("¿Deseas cancelar tu pedido?")) return;
+  try {
+    await ref.update({ estado: "CANCELADO" });
+    toast("Pedido cancelado");
+  } catch (e) {
+    toast("No se pudo cancelar el pedido: " + e.message);
+  }
 };
