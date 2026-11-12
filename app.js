@@ -3812,3 +3812,69 @@ _bnArmar = function () {
   });
   return lista;
 };
+
+// ===== UNA SUCURSAL POR MARCA =====
+function unaSucursalPorMarca(docs) {
+  const grupos = new Map();
+  docs.forEach(d => {
+    const m = String((d.data() || {}).marca_id || "").trim().toLowerCase();
+    if (!m) return;
+    if (!grupos.has(m)) grupos.set(m, []);
+    grupos.get(m).push(d);
+  });
+  if (!grupos.size) return docs;
+  const elegida = {};
+  grupos.forEach((lista, k) => {
+    let mejor = null, mejorKm = Infinity, mejorAbierto = false;
+    lista.forEach(d => {
+      const x = d.data() || {};
+      if (x.ciudad && String(x.ciudad).toLowerCase() !== String(miCiudad).toLowerCase()) return;
+      const abierto = String(x.estado || "").toUpperCase() !== "CERRADO";
+      const la = Number(x.latitud) || 0, lo = Number(x.longitud) || 0;
+      const km = (!la || !lo) ? 1e300 : calcularDistanciaKm(miLat, miLon, la, lo);
+      if (!mejor || (abierto && !mejorAbierto) || (abierto === mejorAbierto && km < mejorKm)) {
+        mejor = d; mejorKm = km; mejorAbierto = abierto;
+      }
+    });
+    if (mejor) elegida[k] = mejor.id;
+  });
+  return docs.filter(d => {
+    const m = String((d.data() || {}).marca_id || "").trim().toLowerCase();
+    if (!m) return true;
+    const id = elegida[m];
+    return !id || id === d.id;
+  });
+}
+
+function _vSnapMarca(snap) {
+  if (!snap || !snap.docs) return snap;
+  const docs = unaSucursalPorMarca(snap.docs);
+  return { docs: docs, size: docs.length, empty: docs.length === 0, metadata: snap.metadata, forEach: fn => docs.forEach(d => fn(d)) };
+}
+
+(function () {
+  const colBase = db.collection.bind(db);
+  db.collection = function (path) {
+    const c = colBase.apply(null, arguments);
+    if (path === "restaurantes") {
+      const getBase = c.get.bind(c);
+      c.get = function (o) { return getBase(o).then(_vSnapMarca); };
+    }
+    return c;
+  };
+})();
+
+firmaRest = function (snap) {
+  return snap.docs.map(d => {
+    const x = d.data() || {};
+    return [d.id, x.nombre, x.estado, x.latitud, x.longitud, x.marca_id, String(x.logoUrl || "").length].join(":");
+  }).sort().join("|");
+};
+
+let _vLocKey = "";
+const _vLocalesBusquedaBase = _vLocalesBusqueda;
+_vLocalesBusqueda = function () {
+  const k = miLat + "," + miLon + "," + miCiudad;
+  if (k !== _vLocKey) { _vLocKey = k; _vLocales = null; }
+  return _vLocalesBusquedaBase();
+};
