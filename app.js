@@ -702,6 +702,17 @@ function verTodosLosRestaurantes() {
 
 // 10. MENÚ DE UN RESTAURANTE
 async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
+  // Blindaje de seguridad: Si el local está cerrado, bloquear apertura
+  try {
+    const docCheck = await db.collection("restaurantes").doc(rId).get();
+    if (docCheck.exists) {
+      const rData = docCheck.data();
+      if (String(rData.estado || "").toUpperCase() === "CERRADO") {
+        alert({ titulo: rData.nombre || rNom, mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(rData.logoUrl || logoUrl) });
+        return;
+      }
+    }
+  } catch(e) {}
   restIdSeleccionadoTemp = rId;
   rNombreTemp = rNom;
   restauranteLatTemp = rLat;
