@@ -17,7 +17,7 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
-try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+try { db.settings({ experimentalAutoDetectLongPolling: false, merge: true }); } catch (e) {}
 try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
@@ -4217,3 +4217,49 @@ if (window.MutationObserver) {
     return orig.apply(this, arguments);
   };
 });
+
+// ===== OPTIMIZACION ANTI-CUELGUES =====
+(function () {
+  // 1. Retrasar la descarga secundaria masiva para no asfixiar la red al abrir la app
+  const oldCola = window.colaProductos;
+  if (typeof oldCola === "function" && !window._colaParcheada) {
+    window._colaParcheada = true;
+    let arranque = true;
+    window.colaProductos = function (fn) {
+      return oldCola(function () {
+        // Pausa de 3.5s solo al arrancar, luego corre normal
+        const delay = arranque ? 3500 : 0;
+        arranque = false;
+        return new Promise(r => setTimeout(r, delay)).then(() => fn());
+      });
+    };
+  }
+
+  // 2. Paracaídas de Firebase: Si la red falla o se cuelga >4.5s, forzar lectura de caché
+  try {
+    function parchear(proto) {
+      if (!proto) return;
+      const oldGet = proto.get;
+      proto.get = function (opts) {
+        const reqOriginal = oldGet.apply(this, arguments);
+        // Si ya especifica de dónde sacar los datos, no interferimos
+        if (opts && (opts.source === "cache" || opts.source === "server")) return reqOriginal;
+        
+        // Creamos una bomba de tiempo de 4.5 segundos
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), 4500));
+        
+        // Competencia: Gana el servidor o gana el timeout
+        return Promise.race([reqOriginal, timeout]).catch(err => {
+          if (err.message === "TIMEOUT_RED") {
+            console.warn("Red inestable detectada. Rescatando menú desde caché offline...");
+            return oldGet.call(this, { source: "cache" });
+          }
+          throw err;
+        });
+      };
+    }
+    // Aplicar a consultas generales y a documentos específicos
+    parchear(firebase.firestore.Query.prototype);
+    parchear(firebase.firestore.DocumentReference.prototype);
+  } catch (e) {}
+})();
