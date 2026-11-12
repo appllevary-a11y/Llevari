@@ -4293,7 +4293,7 @@ if (window.MutationObserver) {
         </div>
       </div>
       <div id="listMenuPlatos" style="margin-top:10px">
-        <div style="padding:40px;text-align:center;color:var(--c-muted);font-weight:bold;">🍽️ Sirviendo platos...</div>
+        <div class="llv-in" data-llv="1" style="margin-top:40px; justify-content:center;"><span class="llv-mini"><span class="llv-mini-ring"></span><span class="llv-mini-moto">🛵</span></span><span class="llv-in-t" style="font-size:16px;">Sirviendo platos...</span></div>
       </div>
     `;
     
@@ -4380,7 +4380,7 @@ if (window.MutationObserver) {
         <h3 style="flex:1; margin-left:14px">Todos los locales</h3>
       </div>
       <div id="gridTodosLocales" class="grid-2">
-        <div style="padding:40px; grid-column: 1 / -1; text-align:center; color:var(--c-muted); font-weight:bold;">🏪 Cargando locales...</div>
+        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px;"><div class="llv-skc" data-llv="1"><div class="llv-sk-img"></div><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div></div><div class="llv-skc" data-llv="1"><div class="llv-sk-img"></div><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div></div><div class="llv-skc" data-llv="1"><div class="llv-sk-img"></div><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div></div></div>
       </div>
     `;
     
@@ -4425,5 +4425,51 @@ if (window.MutationObserver) {
           renderLocales(res);
        });
     }
+  };
+})();
+
+
+// ===== OPTIMIZACION NAVEGACION INSTANTANEA =====
+(function() {
+  // A. Guardar la pantalla de inicio tal como está antes de abrir un restaurante
+  const _origAbrir = window.abrirMenuRestaurante;
+  window.abrirMenuRestaurante = async function() {
+    const cont = document.getElementById("contRestaurantes");
+    // Solo guardamos si realmente estamos en el Inicio (detectado por el banner slider)
+    if (cont && cont.querySelector(".hero-slider-wrap")) {
+      window._homeDOMCache = [];
+      while (cont.firstChild) {
+        window._homeDOMCache.push(cont.firstChild);
+        cont.removeChild(cont.firstChild);
+      }
+    }
+    return _origAbrir.apply(this, arguments);
+  };
+
+  // B. Restaurar la pantalla de inicio guardada en vez de reconstruirla
+  const _origInicio = window.cargarInicioPrincipal;
+  window.cargarInicioPrincipal = function() {
+    // Limpiar buscador
+    const et = document.getElementById("etBuscador");
+    if (window._vMenuId !== null && et) et.value = "";
+    window._vMenuId = null;
+    if (typeof _vPonerBuscador === 'function') _vPonerBuscador(false);
+
+    const cont = document.getElementById("contRestaurantes");
+    // Si tenemos una memoria guardada, la pegamos instantáneamente
+    if (window._homeDOMCache && window._homeDOMCache.length > 0 && cont) {
+      cont.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      window._homeDOMCache.forEach(node => frag.appendChild(node));
+      cont.appendChild(frag);
+      window._homeDOMCache = null; // Limpiar para liberar memoria RAM
+      
+      // Reactivamos el slider animado
+      if (typeof iniciarSliderPublicitario === 'function') iniciarSliderPublicitario();
+      return; // Retorno inmediato (0 milisegundos de procesamiento)
+    }
+    
+    // Si no hay caché, carga normal
+    return _origInicio.apply(this, arguments);
   };
 })();
