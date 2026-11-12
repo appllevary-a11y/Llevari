@@ -1427,3 +1427,55 @@ mark.v-hl { color: inherit; padding: 0 1px; border-radius: 3px; background: line
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }
+
+/* ===== ESTILO ANDROID PREMIUM ===== */
+/* Apagamos el desenfoque pesado, pero usamos degradados "Glass" falsos y sombras premium */
+html.is-android .bottom-nav,
+html.is-android #colUbi,
+html.is-android .header-actions .circle-btn,
+html.is-android .llv {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Barra inferior: Blanco translúcido (96%) con sombra fina morada */
+html.is-android .bottom-nav {
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 -8px 24px rgba(139, 43, 255, 0.12) !important;
+  border-top: 1px solid rgba(139, 43, 255, 0.05);
+}
+
+/* Botón de ubicación: Degradado cristalino estático y borde fino (ilusión de cristal) */
+html.is-android #colUbi {
+  background: linear-gradient(145deg, rgba(255,255,255,0.25), rgba(255,255,255,0.08)) !important;
+  border: 1px solid rgba(255,255,255,0.4) !important;
+  box-shadow: 0 4px 12px rgba(20,0,50,0.2) !important;
+}
+
+/* Botones redondos: Estilo esmerilado ligero */
+html.is-android .header-actions .circle-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Header: Apagamos el fondo animado que ahoga el CPU, dejamos un degradado fijo espectacular */
+html.is-android .header-bar {
+  animation: none !important;
+  background: linear-gradient(135deg, var(--c-primary-deep), var(--c-primary-dark), var(--c-primary)) !important;
+}
+
+/* Apagamos los brillos constantes (animaciones infinitas) que matan los FPS en gama baja */
+html.is-android .btn,
+html.is-android .btn-huge,
+html.is-android .service-bottom-bar .btn,
+html.is-android .hero-slider-wrap::after,
+html.is-android .search-row {
+  animation-name: none !important;
+}
+
+/* Barra de búsqueda con sombra estática suave */
+html.is-android .search-row {
+  background: #fff !important;
+  box-shadow: 0 8px 20px rgba(139, 43, 255, 0.15) !important;
+  border: 1px solid rgba(139, 43, 255, 0.1) !important;
+}

@@ -4263,3 +4263,9 @@ if (window.MutationObserver) {
     parchear(firebase.firestore.DocumentReference.prototype);
   } catch (e) {}
 })();
+// ===== DETECCION ANDROID PRO =====
+(function() {
+  if (/android/i.test(navigator.userAgent)) {
+    document.documentElement.classList.add("is-android");
+  }
+})();
