@@ -1412,29 +1412,18 @@ mark.v-hl { color: inherit; padding: 0 1px; border-radius: 3px; background: line
 .llv-skc .llv-sk-line{margin:0 4px}
 .product-thumb-box:has(img.img-fill),.rest-card-cover:has(img.img-fill){background:linear-gradient(100deg,#E9E3F7 30%,#F8F5FF 50%,#E9E3F7 70%);background-size:220% 100%;animation:llvBrillo 1.25s linear infinite}
 
-/* ===== OPTIMIZACION ANDROID / CHROME ===== */
-/* Apagamos el "backdrop-filter" (blur) que destruye los FPS en Android */
-html.is-android .bottom-nav, 
-html.is-android #colUbi, 
-html.is-android .llv,
-html.is-android .bn-tag,
-html.is-android .circle-btn {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+/* ===== ACELERACION GPU PRO ===== */
+/* Fuerza a Android a usar la Tarjeta Gráfica para los difuminados y animaciones, evitando tirones sin quitar el diseño */
+.bottom-nav, #colUbi, .circle-btn, .header-bar, .llv, .hero-slider-wrap::after, .tracking-island {
+  will-change: transform, backdrop-filter;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
-html.is-android .bottom-nav { 
-  background: #ffffff !important; 
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.08) !important; 
-}
-html.is-android #colUbi { 
-  background: #ffffff !important; 
-  border: 1px solid #E4DEF5 !important; 
-}
-html.is-android .circle-btn { 
-  background: #E4DEF5 !important; 
-  color: var(--c-primary-dark) !important; 
-  border: none !important; 
-}
-html.is-android .hero-slider-wrap::after { 
-  display: none !important; /* Quita el brillo animado pesado sobre las fotos del slider */ 
+/* Suaviza el zoom de las fotos y animaciones pesadas */
+.hero-bg-img, .cat-big-icon-wrap, .cat-chip-ico, .search-icon-badge, .bn-slide {
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
