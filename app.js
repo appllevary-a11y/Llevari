@@ -3938,3 +3938,226 @@ cancelarPedidoActivo = async function () {
     toast("No se pudo cancelar el pedido: " + e.message);
   }
 };
+
+// ===== LOADER PRO =====
+const LLV = { activos: {}, seq: 0, el: null, desde: 0, tOcultar: null, rot: null, t1: null, t2: null, i: 0 };
+const LLV_TIPS = ["Preparando todo para ti", "Ya casi está", "Un momentito más"];
+
+function llvCrear() {
+  if (LLV.el) return LLV.el;
+  const d = document.createElement("div");
+  d.id = "llvOverlay";
+  d.className = "llv";
+  d.setAttribute("role", "status");
+  d.setAttribute("aria-live", "polite");
+  d.innerHTML = '<div class="llv-box">' +
+    '<div class="llv-scene"><span class="llv-halo"></span><span class="llv-ring"></span>' +
+    '<span class="llv-orbit"><i></i></span><span class="llv-orbit llv-o2"><i></i></span>' +
+    '<div class="llv-core"><span class="llv-moto">🛵</span><span class="llv-sombra"></span></div></div>' +
+    '<div class="llv-brand">LLEVARI</div>' +
+    '<div id="llvMsg" class="llv-msg">Cargando</div>' +
+    '<div class="llv-bar"><i></i></div>' +
+    '<div id="llvTip" class="llv-tip"></div></div>';
+  document.body.appendChild(d);
+  LLV.el = d;
+  return d;
+}
+
+function llvTip(txt) {
+  const t = document.getElementById("llvTip");
+  if (!t) return;
+  t.classList.remove("in");
+  void t.offsetWidth;
+  t.textContent = txt;
+  t.classList.add("in");
+}
+
+function llvRotar(on) {
+  clearInterval(LLV.rot); clearTimeout(LLV.t1); clearTimeout(LLV.t2);
+  if (!on) return;
+  LLV.i = 0;
+  llvTip(LLV_TIPS[0]);
+  LLV.rot = setInterval(() => { LLV.i = (LLV.i + 1) % LLV_TIPS.length; llvTip(LLV_TIPS[LLV.i]); }, 2600);
+  LLV.t1 = setTimeout(() => { clearInterval(LLV.rot); llvTip("Tu conexión está un poco lenta, seguimos intentando"); }, 9000);
+  LLV.t2 = setTimeout(() => { llvTip("Sigue sin cargar. Revisa tu internet por favor"); }, 22000);
+}
+
+function llvUltimoMsg() {
+  const ids = Object.keys(LLV.activos);
+  return ids.length ? LLV.activos[ids[ids.length - 1]] : "";
+}
+
+function llvPintar() {
+  if (!Object.keys(LLV.activos).length) return;
+  const el = llvCrear();
+  const m = document.getElementById("llvMsg");
+  if (m) m.textContent = llvUltimoMsg();
+  clearTimeout(LLV.tOcultar);
+  if (!el.classList.contains("on")) {
+    LLV.desde = Date.now();
+    el.classList.add("on");
+    llvRotar(true);
+  }
+}
+
+function llvShow(msg, o) {
+  o = o || {};
+  const id = ++LLV.seq;
+  LLV.activos[id] = msg || "Un momento";
+  const d = o.delay === undefined ? 140 : o.delay;
+  if (d <= 0) llvPintar(); else setTimeout(llvPintar, d);
+  setTimeout(() => llvHide(id), o.max || 35000);
+  return id;
+}
+
+function llvHide(id) {
+  if (id !== undefined) delete LLV.activos[id];
+  if (Object.keys(LLV.activos).length) {
+    const m = document.getElementById("llvMsg");
+    if (m) m.textContent = llvUltimoMsg();
+    return;
+  }
+  const el = LLV.el;
+  if (!el || !el.classList.contains("on")) return;
+  clearTimeout(LLV.tOcultar);
+  LLV.tOcultar = setTimeout(() => {
+    if (Object.keys(LLV.activos).length) return;
+    el.classList.remove("on");
+    llvRotar(false);
+  }, Math.max(0, 450 - (Date.now() - LLV.desde)));
+}
+
+function llvEnvolver(nombre, msg, o) {
+  const orig = window[nombre];
+  if (typeof orig !== "function") return;
+  window[nombre] = function () {
+    const t = llvShow(msg, o);
+    let r;
+    try { r = orig.apply(this, arguments); } catch (e) { llvHide(t); throw e; }
+    Promise.resolve(r).then(() => llvHide(t), () => llvHide(t));
+    return r;
+  };
+}
+
+llvEnvolver("iniciarSesion", "Entrando a tu cuenta");
+llvEnvolver("enviarRecuperacion", "Enviando el enlace");
+llvEnvolver("validarPaso1Registro", "Verificando tus datos");
+llvEnvolver("finalizarRegistro", "Creando tu cuenta");
+llvEnvolver("guardarDatosPerfil", "Guardando tus cambios");
+llvEnvolver("guardarNuevaUbicacionCuenta", "Guardando tu ubicación");
+llvEnvolver("pedirDesdeCarrito", "Revisando tu pedido");
+llvEnvolver("cancelarPedidoActivo", "Verificando tu pedido");
+llvEnvolver("eliminarCuentaWeb", "Eliminando tu cuenta");
+llvEnvolver("abrirMenuRestaurante", "Abriendo el menú");
+
+// Confirmar pedido: el loader se quita solo cuando aparece la pantalla de animación del pedido
+(function () {
+  const orig = window.confirmarCreacionPedido;
+  if (typeof orig !== "function") return;
+  window.confirmarCreacionPedido = async function () {
+    const t = llvShow("Confirmando tu pedido", { delay: 0 });
+    const anim = document.getElementById("layoutAnimacion");
+    let ob = null;
+    if (anim && window.MutationObserver) {
+      ob = new MutationObserver(() => { if (!anim.classList.contains("hidden")) llvHide(t); });
+      ob.observe(anim, { attributes: true, attributeFilter: ["class"] });
+    }
+    try { return await orig.apply(this, arguments); }
+    finally { if (ob) ob.disconnect(); llvHide(t); }
+  };
+})();
+
+// Mapa: si la librería del mapa aún no cargó, mostrar loader hasta que esté lista
+["abrirPantallaSeguimientoEnVivo", "abrirMapaNuevaDireccion"].forEach(n => {
+  const orig = window[n];
+  if (typeof orig !== "function") return;
+  window[n] = function () {
+    if (!window.maplibregl) {
+      const t = llvShow("Cargando el mapa", { delay: 0, max: 20000 });
+      document.addEventListener("maplibre-listo", () => llvHide(t), { once: true });
+    }
+    return orig.apply(this, arguments);
+  };
+});
+
+// Pantalla de inicio: loader hasta que Firebase confirme la sesión
+(function () {
+  const t = llvShow("Iniciando LLEVARI", { delay: 0, max: 12000 });
+  try { auth.onAuthStateChanged(() => llvHide(t)); } catch (e) { llvHide(t); }
+})();
+
+// Esqueletos y loaders pequeños: reemplazan cualquier texto "Cargando..." / "Preparando..."
+function llvInline(txt) {
+  return '<div class="llv-in" data-llv="1"><span class="llv-mini"><span class="llv-mini-ring"></span><span class="llv-mini-moto">🛵</span></span><span class="llv-in-t">' + txt + '</span></div>';
+}
+
+function llvSkelInicio() {
+  const card = '<div class="llv-sk-card"><div class="llv-sk-img"></div><div class="llv-sk-col"><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div><div class="llv-sk-line w55"></div></div></div>';
+  return '<div class="llv-sk-hero">' + llvInline("Preparando tus antojos") + '</div>' + card + card + card;
+}
+
+function llvRevisar(n) {
+  if (!n || n.nodeType !== 1 || (n.dataset && n.dataset.llv)) return;
+  const sel = ".empty-box,.perfil-load,.sub-muted";
+  const lista = [];
+  if (n.matches && n.matches(sel)) lista.push(n);
+  if (n.querySelectorAll) n.querySelectorAll(sel).forEach(x => lista.push(x));
+  lista.forEach(x => {
+    if (x.dataset.llv || x.querySelector("[data-llv]")) return;
+    const t = (x.textContent || "").replace(/^[^A-Za-zÁ-ú]+/, "").trim();
+    if (t.length > 60 || !/^(cargando|preparando)/i.test(t)) return;
+    x.dataset.llv = "1";
+    if (/^preparando tus antojos/i.test(t)) {
+      x.className = "llv-skwrap";
+      x.removeAttribute("style");
+      x.innerHTML = llvSkelInicio();
+    } else {
+      x.innerHTML = llvInline(t.replace(/[.…\s]+$/, ""));
+    }
+  });
+}
+
+if (window.MutationObserver) {
+  new MutationObserver(ms => { ms.forEach(m => m.addedNodes.forEach(llvRevisar)); })
+    .observe(document.body, { childList: true, subtree: true });
+}
+
+// "Todos los locales": tarjetas fantasma hasta que lleguen los reales
+(function () {
+  const orig = window.verTodosLosRestaurantes;
+  if (typeof orig !== "function") return;
+  window.verTodosLosRestaurantes = function () {
+    const r = orig.apply(this, arguments);
+    const g = document.getElementById("gridTodosLocales");
+    if (g) {
+      g.innerHTML = [1, 2, 3, 4].map(() => '<div class="llv-skc" data-llv="1"><div class="llv-sk-img"></div><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div></div>').join("");
+      const quitar = () => g.querySelectorAll(":scope > .llv-skc").forEach(e => e.remove());
+      const ob = new MutationObserver(() => {
+        if (g.querySelector(":scope > :not(.llv-skc)")) { quitar(); ob.disconnect(); }
+      });
+      ob.observe(g, { childList: true });
+      setTimeout(() => { quitar(); ob.disconnect(); }, 15000);
+    }
+    return r;
+  };
+})();
+
+// Buscador del mapa: "Buscando..." mientras responde el servidor de direcciones
+(function () {
+  const f = window.fetch;
+  if (typeof f !== "function") return;
+  window.fetch = function (u) {
+    const p = f.apply(this, arguments);
+    try {
+      if (typeof u === "string" && u.indexOf("nominatim.openstreetmap.org/search") > -1) {
+        const g = document.getElementById("geoResults");
+        if (g) {
+          g.innerHTML = '<div data-llv="1" style="cursor:default">' + llvInline("Buscando") + '</div>';
+          g.classList.remove("hidden");
+          p.catch(() => { if (g.querySelector("[data-llv]")) { g.innerHTML = ""; g.classList.add("hidden"); } });
+        }
+      }
+    } catch (e) {}
+    return p;
+  };
+})();

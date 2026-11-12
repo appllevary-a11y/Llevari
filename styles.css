@@ -1359,3 +1359,55 @@ mark.v-hl { color: inherit; padding: 0 1px; border-radius: 3px; background: line
 .bn-seg.hecho i { width: 100%; }
 .bn-seg.act i { animation-name: bnFill; animation-timing-function: linear; animation-fill-mode: forwards; }
 .bn-wrap.bn-pausa .bn-seg i, .bn-wrap.bn-pausa .bn-img { animation-play-state: paused; }
+
+/* ===== LOADER PRO ===== */
+.llv{position:fixed;top:0;left:0;right:0;bottom:0;z-index:150;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,rgba(124,58,237,.94),rgba(59,7,100,.97) 72%);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .28s ease,visibility 0s linear .28s;touch-action:none}
+.llv.on{opacity:1;visibility:visible;transition:opacity .28s ease}
+.llv-box{display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px;max-width:86%;transform:scale(.94);transition:transform .35s cubic-bezier(.2,.9,.3,1.2)}
+.llv.on .llv-box{transform:none}
+.llv-scene{position:relative;width:150px;height:150px}
+.llv-halo{position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;background:radial-gradient(circle,rgba(255,138,0,.55),rgba(255,138,0,0) 70%);animation:llvLatido 1.8s ease-in-out infinite}
+.llv-ring{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;background:conic-gradient(rgba(255,138,0,0) 0deg,#FF8A00 200deg,#FFD08A 340deg,rgba(255,255,255,0) 360deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));animation:llvGiro 1.2s linear infinite}
+.llv-orbit{position:absolute;top:0;left:0;right:0;bottom:0;animation:llvGiro 2.8s linear infinite reverse}
+.llv-orbit i{position:absolute;top:-4px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#fff;box-shadow:0 0 12px 3px rgba(255,255,255,.7)}
+.llv-o2{top:16px;left:16px;right:16px;bottom:16px;animation:llvGiro 3.9s linear infinite}
+.llv-o2 i{width:7px;height:7px;margin-left:-3.5px;top:-3px;background:#FF8A00;box-shadow:0 0 10px 3px rgba(255,138,0,.8)}
+.llv-core{position:absolute;top:22px;left:22px;right:22px;bottom:22px;border-radius:50%;background:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 2px 10px rgba(255,255,255,.18),0 12px 30px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+.llv-moto{font-size:46px;line-height:1;animation:llvMoto .55s ease-in-out infinite alternate;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
+.llv-sombra{position:absolute;bottom:20px;left:50%;width:40px;height:7px;margin-left:-20px;border-radius:50%;background:rgba(0,0,0,.28);animation:llvSombra .55s ease-in-out infinite alternate}
+.llv-brand{margin-top:24px;font-size:26px;font-weight:900;letter-spacing:7px;padding-left:7px;background:linear-gradient(90deg,#fff 0%,#FFD9A8 45%,#fff 90%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:llvBrilloTxt 2.4s linear infinite}
+.llv-msg{margin-top:8px;color:#fff;font-size:16px;font-weight:700;min-height:22px}
+.llv-msg::after,.llv-in-t::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:llvPuntos 1.4s steps(1) infinite}
+.llv-bar{width:170px;height:5px;margin-top:18px;border-radius:5px;background:rgba(255,255,255,.18);overflow:hidden}
+.llv-bar i{display:block;width:42%;height:100%;border-radius:5px;background:linear-gradient(90deg,#FF8A00,#FFD08A);animation:llvBarra 1.25s ease-in-out infinite}
+.llv-tip{margin-top:14px;min-height:17px;font-size:12.5px;color:#DDD6FE}
+.llv-tip.in{animation:llvFundir .5s ease}
+@keyframes llvGiro{to{transform:rotate(360deg)}}
+@keyframes llvLatido{0%,100%{transform:scale(.9);opacity:.6}50%{transform:scale(1.12);opacity:1}}
+@keyframes llvMoto{from{transform:translateY(-3px) rotate(-3deg)}to{transform:translateY(2px) rotate(2deg)}}
+@keyframes llvSombra{from{transform:scaleX(.8);opacity:.5}to{transform:scaleX(1.1);opacity:.9}}
+@keyframes llvBrilloTxt{from{background-position:220% 0}to{background-position:-20% 0}}
+@keyframes llvBarra{0%{transform:translateX(-110%)}100%{transform:translateX(250%)}}
+@keyframes llvFundir{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes llvPuntos{0%{content:""}25%{content:"."}50%{content:".."}75%,100%{content:"..."}}
+@keyframes llvBrillo{from{background-position:120% 0}to{background-position:-120% 0}}
+
+/* Loader pequeño dentro de listas */
+.llv-in{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 4px;color:var(--c-primary-dark);font-weight:700;font-size:14px}
+.llv-mini{position:relative;width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center}
+.llv-mini-ring{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;background:conic-gradient(rgba(124,58,237,0) 0deg,#7C3AED 220deg,#FF8A00 340deg,rgba(255,138,0,0) 360deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:llvGiro .9s linear infinite}
+.llv-mini-moto{font-size:19px;line-height:1;animation:llvMoto .55s ease-in-out infinite alternate}
+
+/* Esqueletos (tarjetas fantasma con brillo) */
+.llv-sk-hero,.llv-sk-img,.llv-sk-line{background:linear-gradient(100deg,#E9E3F7 30%,#F8F5FF 50%,#E9E3F7 70%);background-size:220% 100%;animation:llvBrillo 1.25s linear infinite}
+.llv-skwrap{padding:14px 16px}
+.llv-sk-hero{height:176px;border-radius:var(--radius-xl);display:flex;align-items:center;justify-content:center}
+.llv-sk-card{display:flex;gap:12px;margin-top:14px;padding:12px;background:#fff;border-radius:var(--radius-lg);box-shadow:0 2px 10px rgba(59,7,100,.06)}
+.llv-sk-img{width:84px;height:84px;border-radius:16px;flex:none}
+.llv-sk-col{flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center}
+.llv-sk-line{height:12px;border-radius:8px}
+.llv-sk-line.w70{width:70%}.llv-sk-line.w40{width:40%}.llv-sk-line.w55{width:55%}
+.llv-skc{background:#fff;border-radius:var(--radius-lg);padding:8px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(59,7,100,.06)}
+.llv-skc .llv-sk-img{width:100%;height:96px}
+.llv-skc .llv-sk-line{margin:0 4px}
+.product-thumb-box:has(img.img-fill),.rest-card-cover:has(img.img-fill){background:linear-gradient(100deg,#E9E3F7 30%,#F8F5FF 50%,#E9E3F7 70%);background-size:220% 100%;animation:llvBrillo 1.25s linear infinite}
