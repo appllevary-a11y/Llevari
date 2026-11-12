@@ -4269,3 +4269,161 @@ if (window.MutationObserver) {
     document.documentElement.classList.add("is-android");
   }
 })();
+
+
+// ===== OPTIMIZACION ULTRA VELOCIDAD ANDROID =====
+(function() {
+  // 1. Quitar bloqueos de red al abrir restaurantes (apertura instantánea)
+  window.abrirMenuRestaurante = async function(rId, rNom, rLat, rLon, logoUrl) {
+    // A. Calcular rutas en fondo, SIN trabar el celular (quitamos el await)
+    if (rLat && rLon && typeof window.precargarRutasWeb === "function") {
+      window.precargarRutasWeb([{ lat: rLat, lon: rLon }], 1000).catch(()=>{});
+    }
+
+    const cont = document.getElementById("contRestaurantes");
+    if (!cont) return;
+
+    // B. Pintar la cabecera casi al instante
+    cont.innerHTML = `
+      <div class="section-header">
+        <button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button>
+        <div style="flex:1; margin-left: 14px">
+          <h3 style="font-size:18px">${esc(rNom)}</h3>
+          <span class="sub-muted">🛵 Envío L. ${envioPara(rLat, rLon)}</span>
+        </div>
+      </div>
+      <div id="listMenuPlatos" style="margin-top:10px">
+        <div style="padding:40px;text-align:center;color:var(--c-muted);font-weight:bold;">🍽️ Sirviendo platos...</div>
+      </div>
+    `;
+    
+    // Configurar buscador
+    window.restIdSeleccionadoTemp = rId;
+    window.rNombreTemp = rNom;
+    window.restauranteLatTemp = rLat;
+    window.restauranteLonTemp = rLon;
+    if(typeof _vPonerBuscador === 'function') {
+      window._vMenuId = rId;
+      _vPonerBuscador(true, rNom);
+    }
+
+    // C. Buscar directo en la memoria RAM del celular (sin tocar Firebase)
+    const platosEnMemoria = (window.todosLosProductosCache || []).filter(p => p.rId === rId);
+    const list = document.getElementById("listMenuPlatos");
+    
+    const renderizar = (lista) => {
+      if (!list) return;
+      list.innerHTML = "";
+      if(!lista.length) {
+        list.innerHTML = '<div class="empty-box"><p>No hay platos registrados</p></div>';
+        return;
+      }
+      
+      // D. DocumentFragment evita que el celular se congele al pintar muchos platos
+      const frag = document.createDocumentFragment();
+      lista.forEach(p => {
+        const finalPrice = precioVisible(p.pPrec, rLat, rLon);
+        const imgSrc = p.pImg || logoUrl;
+        const row = document.createElement("div");
+        row.className = "product-row-card";
+        row.innerHTML = `
+          <div class="product-info-left">
+            <div>
+              <h4>${esc(p.pNom)}</h4>
+              <p>${esc(p.pDesc || '')}</p>
+            </div>
+            <div class="product-price">L. ${finalPrice.toFixed(2)}</div>
+          </div>
+          <div class="product-thumb-box">
+            ${imgSrc ? '<img src="'+imgSrc+'" class="img-fill" loading="lazy" decoding="async"/>' : '🍽️'}
+            <button class="btn-plus-abs">+</button>
+          </div>
+        `;
+        row.onclick = () => mostrarPlatoPro(rId, rNom, p.pNom, p.pDesc || "", p.pPrec, imgSrc, p.pOps || "", rLat, rLon);
+        frag.appendChild(row);
+      });
+      list.appendChild(frag);
+    };
+
+    if (platosEnMemoria.length > 0) {
+      setTimeout(() => renderizar(platosEnMemoria), 10);
+    } else {
+      // Fallback por si la RAM falla (Casi nunca pasará)
+      try {
+        const snap = await db.collection("restaurantes").doc(rId).collection("productos").get({source: "cache"}).catch(() => db.collection("restaurantes").doc(rId).collection("productos").get());
+        const bajados = [];
+        snap.forEach(d => {
+           const pt = d.data();
+           bajados.push({
+             rId: rId, rNom: rNom, rLat: rLat, rLon: rLon,
+             pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio,
+             pImg: formatearImagen(pt.imagenUrl || logoUrl), pOps: pt.opciones || ""
+           });
+        });
+        renderizar(bajados);
+      } catch(e) { renderizar([]); }
+    }
+    
+    // E. Quitar de inmediato el loader intrusivo morado de "Abriendo menú"
+    if (typeof llvHide === 'function' && window.LLV) {
+       Object.keys(window.LLV.activos || {}).forEach(k => llvHide(k));
+    }
+  };
+
+  // 2. Hacer que "Ver Todos los Locales" también sea instantáneo
+  window.verTodosLosRestaurantes = function() {
+    const cont = document.getElementById("contRestaurantes");
+    if (!cont) return;
+    cont.innerHTML = `
+      <div class="section-header">
+        <button class="circle-btn back-btn" onclick="cargarInicioPrincipal()">❮</button>
+        <h3 style="flex:1; margin-left:14px">Todos los locales</h3>
+      </div>
+      <div id="gridTodosLocales" class="grid-2">
+        <div style="padding:40px; grid-column: 1 / -1; text-align:center; color:var(--c-muted); font-weight:bold;">🏪 Cargando locales...</div>
+      </div>
+    `;
+    
+    const grid = document.getElementById("gridTodosLocales");
+    const renderLocales = (locs) => {
+       if(!grid) return;
+       grid.innerHTML = "";
+       const frag = document.createDocumentFragment();
+       locs.forEach(r => {
+          if (r.ciudad && String(r.ciudad).toLowerCase() !== String(window.miCiudad).toLowerCase()) return;
+          const rLat = r.latitud || r.lat || 0;
+          const rLon = r.longitud || r.lon || 0;
+          const cerrado = (r.estado || r.cerrado ? "CERRADO" : "ABIERTO") === "CERRADO";
+          const logoSrc = formatearImagen(r.logoUrl || r.logo);
+          const card = document.createElement("div");
+          card.className = "rest-card-grid";
+          card.innerHTML = `
+            <div class="rest-card-cover">
+              ${logoSrc ? '<img src="'+logoSrc+'" class="img-fill" loading="lazy" decoding="async"/>' : '🍽️'}
+              <span class="badge-status ${cerrado ? 'cerrado' : 'abierto'}">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</span>
+            </div>
+            <div class="rest-card-body">
+              <h4>${esc(r.nombre || r.rNom)}</h4>
+              <span class="sub-muted">🛵 L. ${envioPara(rLat, rLon)}</span>
+            </div>
+          `;
+          card.onclick = () => {
+            if (cerrado) return alert("Este local está cerrado actualmente 🛑");
+            abrirMenuRestaurante(r.id || r.rId, r.nombre || r.rNom, rLat, rLon, logoSrc);
+          };
+          frag.appendChild(card);
+       });
+       grid.appendChild(frag);
+    };
+
+    if (window._vLocales && window._vLocales.length > 0) {
+       setTimeout(() => renderLocales(window._vLocales), 10);
+    } else {
+       db.collection("restaurantes").get({source:"cache"}).catch(()=>db.collection("restaurantes").get()).then(snap => {
+          const res = [];
+          snap.forEach(d => res.push(Object.assign({id: d.id}, d.data())));
+          renderLocales(res);
+       });
+    }
+  };
+})();
