@@ -4429,3 +4429,54 @@ if (window.MutationObserver) {
 })();
 
 
+
+
+// ===== ALERTAS PREMIUM 3D =====
+(function() {
+  // 1. Crear el HTML de la ventana 3D
+  const overlay = document.createElement("div");
+  overlay.id = "llvAlertOverlay";
+  overlay.className = "llv-alert-backdrop hidden";
+  overlay.innerHTML = `
+    <div class="llv-alert-card">
+      <div class="llv-alert-icon" id="llvAlertIcon">🔔</div>
+      <h3 class="llv-alert-title">LLEVARI</h3>
+      <p class="llv-alert-msg" id="llvAlertMsg"></p>
+      <button class="llv-alert-btn" id="llvAlertBtn">Aceptar</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // 2. Animación de cierre
+  const btn = document.getElementById("llvAlertBtn");
+  btn.onclick = () => {
+    const card = overlay.querySelector('.llv-alert-card');
+    card.style.animation = "llvAlertOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards";
+    setTimeout(() => {
+      overlay.classList.add("hidden");
+      card.style.animation = "";
+    }, 280);
+  };
+
+  // 3. Interceptar window.alert nativo
+  window.alert = function(msg) {
+    msg = String(msg);
+    document.getElementById("llvAlertMsg").textContent = msg;
+    const i = document.getElementById("llvAlertIcon");
+    
+    // Asignar íconos inteligentes según el texto del mensaje
+    if (msg.includes("cerrado") || msg.includes("🛑")) {
+        i.innerHTML = "🏪<span class='badge-closed'>CERRADO</span>";
+    } else if (msg.includes("❌") || /error|incorrecto|falló|completa/i.test(msg)) {
+        i.innerHTML = "⚠️";
+    } else if (msg.includes("✅") || msg.includes("🎉") || msg.includes("éxito")) {
+        i.innerHTML = "✨";
+    } else if (msg.includes("🛒")) {
+        i.innerHTML = "🛒";
+    } else {
+        i.innerHTML = "🔔";
+    }
+
+    overlay.classList.remove("hidden");
+  };
+})();
