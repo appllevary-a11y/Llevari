@@ -4534,3 +4534,231 @@ if (window.MutationObserver) {
     overlay.classList.remove("hidden");
   };
 })();
+
+// ===== LLV-NAV: BOTÓN ATRÁS (Android/iPhone) Y VOLVER AL MOMENTO ANTERIOR =====
+(function () {
+  if (window.__llvNav) return;
+  const V = { actual: { k: "home", t: "home" }, pila: [], restaurando: false, interno: false, tabAntesSeg: 0 };
+  window.__llvNav = V;
+
+  const $ = id => document.getElementById(id);
+  const vis = id => { const e = $(id); return !!e && !e.classList.contains("hidden"); };
+  const clic = id => { const e = $(id); if (e) e.click(); };
+  const ocultar = id => { const e = $(id); if (e) e.classList.add("hidden"); };
+  const sesion = () => { try { return !!(auth.currentUser && miTelefono); } catch (e) { return false; } };
+  const tabIdx = () => { try { return tabActualIndex; } catch (e) { return 0; } };
+
+  // ---- scroll de Inicio (para volver justo donde estabas) ----
+  const leerScroll = () => { const s = $("tabInicio"); return s ? s.scrollTop : 0; };
+  const ponerScroll = y => {
+    if (!y) return;
+    [60, 250, 600].forEach(ms => setTimeout(() => { const s = $("tabInicio"); if (s) s.scrollTop = y; }, ms));
+  };
+
+  // ---- vistas dentro de Inicio (menú, ver todos, búsqueda, etc.) ----
+  function entrar(d, scrollPrevio) {
+    if (V.actual.k === d.k) { Object.assign(V.actual, d); return; }
+    V.actual.scroll = scrollPrevio === undefined ? leerScroll() : scrollPrevio;
+    V.pila.push(V.actual);
+    V.actual = d;
+    agendar();
+  }
+
+  function reiniciarVistas() {
+    V.pila = [];
+    V.actual = { k: "home", t: "home" };
+    agendar();
+  }
+
+  function restaurar(v) {
+    const et = $("etBuscador");
+    V.restaurando = true;
+    try {
+      if (v.t !== "menu") { try { _vMenuId = null; _vPonerBuscador(false); } catch (e) {} }
+      if (et && v.t !== "busq" && v.t !== "menu") { et.value = ""; try { _vSyncX(); } catch (e) {} }
+      if (v.t === "home") cargarInicioPrincipal();
+      else if (v.t === "busq") {
+        if (et) et.value = v.q || "";
+        try { _vSyncX(); } catch (e) {}
+        const c = $("contRestaurantes"); if (c) c.innerHTML = "";
+        filtrarResultados(v.q || "");
+      }
+      else if (v.t === "todos") verTodosLosRestaurantes();
+      else if (v.t === "precio") mostrarPlatosPorPrecio(v.a);
+      else if (v.t === "hasta") mostrarPlatosHasta(v.a);
+      else if (v.t === "menu") abrirMenuRestaurante.apply(null, v.a);
+    } catch (e) { console.error(e); }
+    finally { V.restaurando = false; }
+    ponerScroll(v.scroll);
+  }
+
+  function volverVista() {
+    const prev = V.pila.pop();
+    if (!prev) return;
+    V.actual = prev;
+    restaurar(prev);
+    agendar();
+  }
+
+  function volverATabInicio() {
+    mostrarTabInicioSinRecargar();
+    const c = $("contRestaurantes");
+    if (c && !c.children.length) cargarInicioPrincipal();
+  }
+
+  function cerrarSeguimiento() {
+    const tab = V.tabAntesSeg;
+    clic("bCerrarSeg");
+    if (tab === 1 || tab === 2) setTimeout(() => { try { cambiarTab(tab); } catch (e) {} }, 0);
+  }
+
+  // ---- capas abiertas ahora mismo (de abajo hacia arriba) ----
+  function capas() {
+    const L = [];
+    const logueado = sesion();
+    const authCtx = vis("layoutAuth") || (vis("layoutMapa") && !logueado);
+    if (authCtx) {
+      if (vis("layoutRecuperar")) L.push({ id: "rec", cerrar: () => clic("lnkVolverLogin") });
+      if (vis("layoutRegistro")) {
+        L.push({ id: "reg", cerrar: () => clic("lnkRegVolverLog") });
+        if (vis("layoutRegPaso2")) L.push({ id: "reg2", cerrar: () => clic("lnkRegVolverPaso1") });
+      }
+    }
+    if (logueado && !vis("layoutAuth")) {
+      if (tabIdx() !== 0) L.push({ id: "tab", cerrar: volverATabInicio });
+      V.pila.forEach((_, i) => L.push({ id: "vista" + i, cerrar: volverVista }));
+    }
+    if (vis("layoutMapa")) L.push({ id: "mapa", cerrar: () => clic("btnCerrarMapa") });
+    if (vis("modalDetalleDir")) L.push({ id: "dir", cerrar: () => ocultar("modalDetalleDir") });
+    if (vis("layoutTipoServicio")) L.push({ id: "serv", cerrar: () => clic("btnVolverServicio") });
+    if (vis("layoutAnimacion")) L.push({ id: "anim", cerrar: () => {} });
+    if (vis("layoutSeguimiento")) L.push({ id: "seg", cerrar: cerrarSeguimiento });
+    if (vis("modalPlatoPro")) L.push({ id: "plato", cerrar: () => clic("btnCloseModalPlato") });
+    if (vis("modalSelectorUbicaciones")) L.push({ id: "ubis", cerrar: () => clic("btnModalCerrarUbi") });
+    const aj = $("modalAjustes");
+    if (aj && !aj.classList.contains("hidden")) {
+      L.push({ id: "ajustes", cerrar: () => aj.classList.add("hidden") });
+      const lv = $("legVol");
+      const sub = $("pfVolver") || (lv && /Volver/.test(lv.textContent || "") ? lv : null);
+      if (sub) L.push({ id: "ajsub", cerrar: () => sub.click() });
+    }
+    const al = $("llvAlertOverlay");
+    if (al && !al.classList.contains("hidden")) {
+      const card = al.querySelector(".llv-alert-card");
+      if (!(card && card.style.animation)) L.push({ id: "alerta", cerrar: () => clic("llvAlertBtn") });
+    }
+    return L;
+  }
+
+  function cerrarCapa(c) {
+    V.interno = true;
+    try { c.cerrar(); } catch (e) { console.error(e); }
+    finally { V.interno = false; }
+  }
+
+  // ---- historial del navegador sincronizado con las capas ----
+  let histDepth = 0, esperando = false, idsPrev = [], tSync = null;
+  try { history.scrollRestoration = "manual"; } catch (e) {}
+  try { history.replaceState({ llv: 0 }, ""); } catch (e) {}
+
+  function agendar() { if (tSync) return; tSync = setTimeout(() => { tSync = null; sync(); }, 0); }
+
+  function sync() {
+    const L = capas();
+    const ids = L.map(x => x.id);
+    if (ids.indexOf("seg") >= 0 && idsPrev.indexOf("seg") < 0) V.tabAntesSeg = tabIdx();
+    idsPrev = ids;
+    if (esperando) return;
+    const n = L.length;
+    if (n > histDepth) {
+      for (let i = histDepth; i < n; i++) history.pushState({ llv: i + 1 }, "");
+      histDepth = n;
+    } else if (n < histDepth) {
+      const k = histDepth - n;
+      esperando = true;
+      histDepth = n;
+      history.go(-k);
+      setTimeout(() => { if (esperando) { esperando = false; sync(); } }, 700);
+    }
+  }
+
+  window.addEventListener("popstate", e => {
+    const d = (e.state && typeof e.state.llv === "number") ? e.state.llv : 0;
+    if (esperando) { esperando = false; histDepth = d; agendar(); return; }
+    histDepth = d;
+    let veces = capas().length - d;
+    while (veces-- > 0) {
+      const L = capas();
+      if (!L.length) break;
+      cerrarCapa(L[L.length - 1]);
+    }
+    agendar();
+  });
+
+  function atras() {
+    if (histDepth > 0) { history.back(); return; }
+    const L = capas();
+    if (L.length) cerrarCapa(L[L.length - 1]);
+  }
+  window.LLVNav = { atras: atras, capas: () => capas().map(c => c.id), pila: () => V.pila.map(v => v.k), depth: () => histDepth };
+
+  // Botones ❮ de la página: ahora regresan un paso (no directo a Inicio)
+  document.addEventListener("click", e => {
+    if (V.interno) return;
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const b = t.closest(".back-btn");
+    if ((b && b.closest("#contRestaurantes")) || t.closest("#bCerrarSeg")) {
+      e.stopPropagation();
+      e.preventDefault();
+      atras();
+    }
+  }, true);
+
+  // ---- registrar cada vista nueva de Inicio ----
+  const _menu = abrirMenuRestaurante;
+  abrirMenuRestaurante = async function () {
+    const restaur = V.restaurando, sc = leerScroll(), antes = $("listMenuPlatos");
+    const args = Array.prototype.slice.call(arguments);
+    const r = await _menu.apply(this, arguments);
+    const ahora = $("listMenuPlatos");
+    if (!restaur && ahora && ahora !== antes) entrar({ k: "menu:" + args[0], t: "menu", a: args }, sc);
+    return r;
+  };
+
+  const _inicio = cargarInicioPrincipal;
+  cargarInicioPrincipal = function () {
+    if (!V.restaurando && (V.pila.length || V.actual.k !== "home")) reiniciarVistas();
+    return _inicio.apply(this, arguments);
+  };
+
+  const _todos = verTodosLosRestaurantes;
+  verTodosLosRestaurantes = function () {
+    if (!V.restaurando) entrar({ k: "todos", t: "todos" });
+    return _todos.apply(this, arguments);
+  };
+
+  const _precio = mostrarPlatosPorPrecio;
+  mostrarPlatosPorPrecio = function (pO) {
+    if (!V.restaurando) entrar({ k: "precio:" + pO, t: "precio", a: pO });
+    return _precio.apply(this, arguments);
+  };
+
+  const _hasta = mostrarPlatosHasta;
+  mostrarPlatosHasta = function (tope) {
+    if (!V.restaurando) entrar({ k: "hasta:" + tope, t: "hasta", a: tope });
+    return _hasta.apply(this, arguments);
+  };
+
+  const _filtrar = filtrarResultados;
+  filtrarResultados = function (q) {
+    if (!V.restaurando && q && !$("listMenuPlatos")) {
+      const et = $("etBuscador");
+      entrar({ k: "busq", t: "busq", q: (et && et.value) || q });
+    }
+    return _filtrar.apply(this, arguments);
+  };
+
+  try { new MutationObserver(agendar).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] }); } catch (e) {}
+  setInterval(sync, 400);
+})();
