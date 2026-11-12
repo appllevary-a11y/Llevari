@@ -4263,3 +4263,33 @@ if (window.MutationObserver) {
     parchear(firebase.firestore.DocumentReference.prototype);
   } catch (e) {}
 })();
+
+// ===== OPTIMIZACION ANDROID / CHROME =====
+(function() {
+  // A. Detectar Android para apagar efectos gráficos pesados
+  if (/android/i.test(navigator.userAgent)) {
+    document.documentElement.classList.add("is-android");
+  }
+  
+  // B. Neutralizar MutationObservers que congelan el scroll en Android
+  if (window.MutationObserver) {
+    const oldObserve = window.MutationObserver.prototype.observe;
+    window.MutationObserver.prototype.observe = function(target, options) {
+      if (target === document.body && options && options.subtree) {
+        // Ignoramos los observadores globales que asfixian el DOM
+        return;
+      }
+      return oldObserve.apply(this, arguments);
+    };
+  }
+  
+  // C. Alternativa súper ligera (1 vez cada 1.5s en vez de miles de veces por segundo)
+  setInterval(function() {
+    if (typeof llvRevisar === "function") {
+      document.querySelectorAll('.empty-box:not([data-llv]), .perfil-load:not([data-llv]), .sub-muted:not([data-llv])').forEach(llvRevisar);
+    }
+    document.querySelectorAll('.rest-card-cover img:not([loading]), .product-thumb-box img:not([loading]), .sug-thumb img:not([loading])').forEach(function(im) {
+      im.loading = "lazy"; im.decoding = "async";
+    });
+  }, 1500);
+})();
