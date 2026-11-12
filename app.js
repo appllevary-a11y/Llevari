@@ -4393,7 +4393,7 @@ if (window.MutationObserver) {
           if (r.ciudad && String(r.ciudad).toLowerCase() !== String(window.miCiudad).toLowerCase()) return;
           const rLat = r.latitud || r.lat || 0;
           const rLon = r.longitud || r.lon || 0;
-          const cerrado = (r.estado || r.cerrado ? "CERRADO" : "ABIERTO") === "CERRADO";
+          const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
           const logoSrc = formatearImagen(r.logoUrl || r.logo);
           const card = document.createElement("div");
           card.className = "rest-card-grid";
@@ -4429,47 +4429,3 @@ if (window.MutationObserver) {
 })();
 
 
-// ===== OPTIMIZACION NAVEGACION INSTANTANEA =====
-(function() {
-  // A. Guardar la pantalla de inicio tal como está antes de abrir un restaurante
-  const _origAbrir = window.abrirMenuRestaurante;
-  window.abrirMenuRestaurante = async function() {
-    const cont = document.getElementById("contRestaurantes");
-    // Solo guardamos si realmente estamos en el Inicio (detectado por el banner slider)
-    if (cont && cont.querySelector(".hero-slider-wrap")) {
-      window._homeDOMCache = [];
-      while (cont.firstChild) {
-        window._homeDOMCache.push(cont.firstChild);
-        cont.removeChild(cont.firstChild);
-      }
-    }
-    return _origAbrir.apply(this, arguments);
-  };
-
-  // B. Restaurar la pantalla de inicio guardada en vez de reconstruirla
-  const _origInicio = window.cargarInicioPrincipal;
-  window.cargarInicioPrincipal = function() {
-    // Limpiar buscador
-    const et = document.getElementById("etBuscador");
-    if (window._vMenuId !== null && et) et.value = "";
-    window._vMenuId = null;
-    if (typeof _vPonerBuscador === 'function') _vPonerBuscador(false);
-
-    const cont = document.getElementById("contRestaurantes");
-    // Si tenemos una memoria guardada, la pegamos instantáneamente
-    if (window._homeDOMCache && window._homeDOMCache.length > 0 && cont) {
-      cont.innerHTML = "";
-      const frag = document.createDocumentFragment();
-      window._homeDOMCache.forEach(node => frag.appendChild(node));
-      cont.appendChild(frag);
-      window._homeDOMCache = null; // Limpiar para liberar memoria RAM
-      
-      // Reactivamos el slider animado
-      if (typeof iniciarSliderPublicitario === 'function') iniciarSliderPublicitario();
-      return; // Retorno inmediato (0 milisegundos de procesamiento)
-    }
-    
-    // Si no hay caché, carga normal
-    return _origInicio.apply(this, arguments);
-  };
-})();
