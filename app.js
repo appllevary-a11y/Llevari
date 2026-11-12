@@ -701,7 +701,29 @@ function verTodosLosRestaurantes() {
 }
 
 // 10. MENÚ DE UN RESTAURANTE
+
 async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
+  // CANDADO DE SEGURIDAD ABSOLUTO: Verificar si está cerrado antes de hacer nada
+  try {
+    const docCheck = await db.collection("restaurantes").doc(rId).get();
+    if (docCheck.exists) {
+      const rData = docCheck.data();
+      const estadoLocal = String(rData.estado || "").toUpperCase();
+      if (estadoLocal === "CERRADO") {
+        // Ocultar cualquier loader activo
+        if (typeof llvHide === 'function' && window.LLV) {
+           Object.keys(window.LLV.activos || {}).forEach(k => llvHide(k));
+        }
+        alert({ 
+          titulo: rData.nombre || rNom || "Local", 
+          mensaje: "Este local está cerrado actualmente 🛑", 
+          imagen: formatearImagen(rData.logoUrl || logoUrl) 
+        });
+        return; // FRENADO TOTAL: Impide por completo que se abra el menú
+      }
+    }
+  } catch(e) {}
+
   // Blindaje de seguridad: Si el local está cerrado, bloquear apertura
   try {
     const docCheck = await db.collection("restaurantes").doc(rId).get();
