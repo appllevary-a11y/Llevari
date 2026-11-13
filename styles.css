@@ -2085,3 +2085,29 @@ body::before {
 
 /* ===== iPhone: color de la barra de estado = morado del encabezado ===== */
 body { background-color: var(--c-primary-deep); }
+
+/* ===== SOLO cuando está instalada como app (pantalla de inicio) ===== */
+html.is-app {
+  --app-top: 12px;                                      /* cuánto bajar lo de arriba */
+  --app-bot: max(env(safe-area-inset-bottom, 0px), 18px); /* cuánto subir lo de abajo */
+}
+html.is-app .header-bar { padding-top: calc(14px + var(--app-top)); }
+html.is-app .map-topbar,
+html.is-app .service-top { padding-top: calc(14px + var(--app-top)); }
+html.is-app #mapSearch { top: calc(68px + var(--app-top)); }
+html.is-app .map-float-btn.left-top,
+html.is-app .map-float-btn.right-top { top: calc(20px + var(--app-top)); }
+html.is-app .tracking-island { top: calc(76px + var(--app-top)); }
+
+html.is-app .bottom-nav {
+  height: calc(68px + var(--app-bot));
+  padding-bottom: calc(4px + var(--app-bot));
+}
+html.is-app .scroll-content { padding-bottom: calc(84px + var(--app-bot)); }
+html.is-app .pad-16 { padding-bottom: calc(84px + var(--app-bot)); }
+html.is-app .service-bottom-bar { padding-bottom: calc(14px + var(--app-bot)); }
+html.is-app .btn-cancel-fixed { bottom: calc(24px + var(--app-bot)); }
+html.is-app .map-card-confirm { bottom: calc(20px + var(--app-bot)); }
+html.is-app .map-addr-pill { bottom: calc(130px + var(--app-bot)); }
+html.is-app .map-fab-btn { bottom: calc(190px + var(--app-bot)); }
+html.is-app .modal-scroll { padding-bottom: calc(20px + var(--app-bot)); }
