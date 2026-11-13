@@ -5009,7 +5009,7 @@ if (window.MutationObserver) {
 // ===== DETECCION IOS =====
 (function () {
   var ua = navigator.userAgent || "";
-  if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+  if (llvEsIOS()) {
     document.documentElement.classList.add("is-ios");
   }
 })();
@@ -5279,7 +5279,7 @@ function armarProductosDetalleWeb() {
 const LLV_VAPID = "BAV0edsgJB5Ho1skokgH6mlBmODdTIggx0KflIlvZem97epTj0mX_0SneY-6IkkSNQwBNU_wDmqjniHf1wrIBl4";
 let llvPushTok = null, llvMsgFg = false, llvInstEvt = null;
 function llvEsIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && /apple/i.test(navigator.vendor || "") && !/android/i.test(navigator.userAgent);
 }
 function llvStandalone() {
   return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;

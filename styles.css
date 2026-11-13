@@ -2116,3 +2116,15 @@ html.is-ios.is-app .modal-scroll { padding-bottom: calc(20px + var(--app-bot)); 
 @media (min-aspect-ratio: 53/100) {
   html.is-ios.is-app { --app-top: 10px; --app-bot: 0px; }
 }
+
+/* ===== Botón recargar (solo en modo app) ===== */
+.btn-recargar { display: none; }
+html.is-app .btn-recargar { display: flex; }
+.btn-recargar svg {
+  width: 20px; height: 20px;
+  fill: none; stroke: #fff; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.btn-recargar:active svg { transform: rotate(120deg); transition: transform .2s; }
+.btn-recargar.girando svg { animation: llvRecGiro .75s linear infinite; }
+@keyframes llvRecGiro { to { transform: rotate(360deg); } }
