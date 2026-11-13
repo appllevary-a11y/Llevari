@@ -5597,6 +5597,12 @@ function llvGuiaAndroid() {
       box.id = "dishResumen";
       box.className = "dish-resumen";
       bar.insertBefore(box, ar);
+      const tg = document.createElement("button");
+      tg.id = "dishResumenBtn";
+      tg.type = "button";
+      tg.className = "dish-res-btn";
+      tg.onclick = () => { box.classList.toggle("abierto"); recalcularModalPlato(); };
+      bar.insertBefore(tg, box);
     }
     const money = x => "L. " + Number(x).toFixed(2);
     const fila = (q, nombre, detalle, precio) =>
@@ -5612,6 +5618,12 @@ function llvGuiaAndroid() {
     h += '<div class="res-tot final"><span>Total a pagar</span><span>' + money(r.total) + '</span></div>';
     h += '<div class="res-nota">Lo que escojas + L. ' + r.t.envio + ' del envío. No hay otros cargos.</div>';
     box.innerHTML = h;
+    const tb = $("dishResumenBtn");
+    if (tb) {
+      const ab = box.classList.contains("abierto");
+      tb.classList.toggle("abierto", ab);
+      tb.innerHTML = '<span>🧾 ' + (ab ? 'Ocultar resumen' : 'Ver resumen del pedido') + '</span><b>L. ' + r.total + '</b><i>' + (ab ? '▾' : '▴') + '</i>';
+    }
 
     let nb = $("modalDishNota");
     if (!nb) {
@@ -5682,6 +5694,8 @@ function llvGuiaAndroid() {
   mostrarPlatoPro = function () {
     combos = [];
     filas = [];
+    const rz = $("dishResumen");
+    if (rz) rz.classList.remove("abierto");
     const r = _mostrarBase.apply(this, arguments);
     $("btnDishOrderNow").onclick = pedirAhora;
     $("btnDishAddToCart").onclick = agregarTodo;
