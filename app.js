@@ -660,7 +660,7 @@ async function cargarInicioPrincipal() {
           const itemProd = {
             rId: doc.id, rNom: r.nombre, rLat, rLon, rCerrado: cerrado,
             pNom: pData.nombre, pDesc: pData.descripcion || "",
-            pPrec: pData.precio, pImg: formatearImagen(pData.imagenUrl || r.logoUrl),
+            pPrec: pData.precio, pImg: formatearImagen(pData.imagenHD || pData.imagenUrl || r.logoUrl),
             pOps: pData.opciones || ""
           };
           todosLosProductosCache.push(itemProd);
@@ -761,7 +761,7 @@ async function abrirMenuRestaurante(rId, rNom, rLat, rLon, logoUrl) {
   snap.forEach(doc => {
     const p = doc.data();
     const finalPrice = precioVisible(p.precio, rLat, rLon);
-    const imgSrc = formatearImagen(p.imagenUrl || logoUrl);
+    const imgSrc = formatearImagen(p.imagenHD || p.imagenUrl || logoUrl);
     const row = document.createElement("div");
     row.className = "product-row-card";
     row.innerHTML = `
@@ -3068,7 +3068,7 @@ async function cargarSugerenciasPlato(token) {
       items = [];
       snap.forEach(doc => {
         const x = doc.data();
-        items.push({ pNom: x.nombre, pDesc: x.descripcion || "", pPrec: Number(x.precio) || 0, pImg: formatearImagen(x.imagenUrl), pOps: x.opciones || "" });
+        items.push({ pNom: x.nombre, pDesc: x.descripcion || "", pPrec: Number(x.precio) || 0, pImg: formatearImagen(x.imagenHD || x.imagenUrl), pOps: x.opciones || "" });
       });
     } catch (e) { return; }
   }
@@ -3259,7 +3259,7 @@ async function _vProductosLocal(rId) {
     items = [];
     snap.forEach(d => {
       const p = d.data();
-      if (p.nombre) items.push({ rId: rId, rNom: rNombreTemp, rLat: restauranteLatTemp, rLon: restauranteLonTemp, pNom: p.nombre, pDesc: p.descripcion || "", pPrec: p.precio, pImg: formatearImagen(p.imagenUrl || ""), pOps: p.opciones || "" });
+      if (p.nombre) items.push({ rId: rId, rNom: rNombreTemp, rLat: restauranteLatTemp, rLon: restauranteLonTemp, pNom: p.nombre, pDesc: p.descripcion || "", pPrec: p.precio, pImg: formatearImagen(p.imagenHD || p.imagenUrl || ""), pOps: p.opciones || "" });
     });
   }
   _vMenuItems[rId] = items;
@@ -4427,7 +4427,7 @@ if (window.MutationObserver) {
            bajados.push({
              rId: rId, rNom: rNom, rLat: rLat, rLon: rLon,
              pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio,
-             pImg: formatearImagen(pt.imagenUrl || logoUrl), pOps: pt.opciones || ""
+             pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || ""
            });
         });
         if (!todosLosProductosCache.some(x => x.rId === rId)) bajados.forEach(b => todosLosProductosCache.push(b));
