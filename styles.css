@@ -2024,3 +2024,17 @@ html.is-ios .llv-alert-card {
     0 16px 30px -6px rgba(20,10,60,.5);
 }
 html.is-ios .modal-sheet { box-shadow: 0 -4px 8px rgba(0,0,0,.2), 0 -16px 30px -6px rgba(0,0,0,.35); }
+
+/* ===== ANDROID: MENOS CAPAS GPU ===== */
+html.is-android .bottom-nav,
+html.is-android #colUbi,
+html.is-android .circle-btn,
+html.is-android .header-bar,
+html.is-android .llv,
+html.is-android .hero-slider-wrap::after,
+html.is-android .tracking-island,
+html.is-android .hero-bg-img,
+html.is-android .cat-big-icon-wrap,
+html.is-android .cat-chip-ico,
+html.is-android .search-icon-badge,
+html.is-android .bn-slide { will-change: auto !important; }

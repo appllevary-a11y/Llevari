@@ -17,7 +17,7 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
-try { db.settings({ experimentalAutoDetectLongPolling: false, merge: true }); } catch (e) {}
+try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
 try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
