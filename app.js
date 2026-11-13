@@ -5052,3 +5052,62 @@ if (window.MutationObserver) {
     } catch (e) {}
   };
 })();
+
+// ===== PARCHE LOGO-EN-LUGAR-DE-MOTO =====
+(function () {
+  const MOTO = "\uD83D\uDEF5";
+  const SKIP = "#llcGrid,#llcMsgs,textarea,input,script,style,title,option,svg";
+  try { new Image().src = "logo.png"; } catch (e) {}
+  function crearLogo() {
+    const im = document.createElement("img");
+    im.src = "logo.png"; im.alt = ""; im.className = "llv-logo-moto"; im.draggable = false;
+    return im;
+  }
+  function procesarTexto(tn) {
+    const v = tn.nodeValue;
+    if (!v || v.indexOf(MOTO) < 0) return;
+    const p = tn.parentElement;
+    if (!p || p.closest(SKIP)) return;
+    const partes = v.split(MOTO);
+    const frag = document.createDocumentFragment();
+    partes.forEach(function (txt, i) {
+      if (txt) frag.appendChild(document.createTextNode(txt));
+      if (i < partes.length - 1) frag.appendChild(crearLogo());
+    });
+    tn.parentNode.replaceChild(frag, tn);
+  }
+  function procesar(raiz) {
+    if (!raiz) return;
+    if (raiz.nodeType === 3) { procesarTexto(raiz); return; }
+    if (raiz.nodeType !== 1 && raiz.nodeType !== 11) return;
+    const w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, null);
+    const lista = [];
+    while (w.nextNode()) { if (w.currentNode.nodeValue.indexOf(MOTO) >= 0) lista.push(w.currentNode); }
+    lista.forEach(procesarTexto);
+  }
+  let pend = new Set(), prog = false;
+  function programar() {
+    if (prog) return; prog = true;
+    requestAnimationFrame(function () {
+      prog = false;
+      const l = Array.from(pend); pend = new Set();
+      l.forEach(function (n) { try { procesar(n); } catch (e) {} });
+    });
+  }
+  new MutationObserver(function (ms) {
+    ms.forEach(function (m) {
+      if (m.type === "characterData") { pend.add(m.target); }
+      else m.addedNodes.forEach(function (n) { pend.add(n); });
+    });
+    programar();
+  }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  procesar(document.body);
+  if (typeof marcadorSeg === "function") {
+    const _mSeg = marcadorSeg;
+    marcadorSeg = function (emoji, label, lng, lat) {
+      const m = _mSeg(emoji, label, lng, lat);
+      if (emoji === MOTO) { try { m.getElement().lastChild.style.fontSize = "26px"; } catch (e) {} }
+      return m;
+    };
+  }
+})();

@@ -2044,3 +2044,7 @@ html.is-android .bn-slide { will-change: auto !important; }
 .logo-box .img-fill { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .item-preview-info { flex: 1; min-width: 0; padding-left: 14px; }
 .rest-banner-info { flex: 1; min-width: 0; padding: 0 12px; }
+
+/* PARCHE LOGO-EN-LUGAR-DE-MOTO */
+.llv-logo-moto { display: inline-block; height: 1.3em; width: 1.3em; object-fit: cover; border-radius: 24%; vertical-align: -0.25em; margin: 0 0.08em; pointer-events: none; -webkit-user-drag: none; }
+.moto-badge .llv-logo-moto, .tracking-island-ico .llv-logo-moto, .cat-chip-ico .llv-logo-moto { width: 100%; height: 100%; border-radius: 50%; margin: 0; vertical-align: middle; }
