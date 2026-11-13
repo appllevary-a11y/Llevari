@@ -5500,3 +5500,212 @@ function llvGuiaAndroid() {
   try { auth.onAuthStateChanged(quitar); } catch (e) { quitar(); }
   setTimeout(function () { h.classList.remove("llv-boot"); }, 6000);
 })();
+
+// ===== LLV-COMBOS: sugerencias seleccionables dentro del mismo modal =====
+(function () {
+  let combos = [];
+  const $ = id => document.getElementById(id);
+
+  function extraDe(c) {
+    let e = 0;
+    c.grupos.forEach((g, gi) => { const o = g.ops[c.sel[gi]]; if (o) e += o.precio || 0; });
+    return e;
+  }
+  function textoOps(c) {
+    const p = [];
+    c.grupos.forEach((g, gi) => {
+      const o = g.ops[c.sel[gi]];
+      if (o && String(o.nombre).toLowerCase() !== "no gracias") p.push(g.nombre + ": " + o.nombre);
+    });
+    return p.join(" / ");
+  }
+  function totales() {
+    const d = currentDishData;
+    const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
+    let raw = mainSub;
+    combos.forEach(c => { raw += (Number(c.s.pPrec) + extraDe(c)) * c.qty; });
+    const sub = Math.round(raw);
+    const t = calcularTarifa(kmHaciaSync(d.rLat, d.rLon), sub);
+    return { mainSub: mainSub, raw: raw, sub: sub, t: t, totProd: sub + t.aumento, total: sub + t.aumento + t.envio };
+  }
+
+  recalcularModalPlato = function () {
+    if (!currentDishData || !currentDishData.rId) return;
+    const r = totales();
+    const mainVis = r.sub > 0 ? r.mainSub + r.t.aumento * r.mainSub / r.sub : r.mainSub;
+    $("modalDishPrice").textContent = "L. " + (mainVis / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
+    $("modalDishSubtotal").textContent = "L. " + r.totProd;
+    $("btnDishOrderNow").textContent = "Pedir • L. " + r.total;
+  };
+
+  function pedirAhora() {
+    const d = currentDishData, r = totales();
+    const ops = opcionesElegidasTexto();
+    const lineas = [currentDishQty + "x " + d.plato + (ops ? " (" + ops + ")" : "")];
+    const descs = [String(d.desc || "").replace(/\n/g, " ")];
+    combos.forEach(c => {
+      const o = textoOps(c);
+      lineas.push(c.qty + "x " + c.s.pNom + (o ? " (" + o + ")" : ""));
+      descs.push(String(c.s.pDesc || "").replace(/\n/g, " "));
+    });
+    carritoRestPendiente = null;
+    restIdSeleccionadoTemp = d.rId;
+    rNombreTemp = d.rNom;
+    imgPlatoTemp = d.imgD;
+    platoTemp = lineas.join("\n");
+    descPlatoTemp = descs.join("\n");
+    precioPlatoTemp = r.raw;
+    restauranteLatTemp = (d.rLat && d.rLon) ? d.rLat : (miLat + 0.003);
+    restauranteLonTemp = (d.rLat && d.rLon) ? d.rLon : (miLon + 0.003);
+    $("modalPlatoPro").classList.add("hidden");
+    abrirPantallaTipoServicio();
+    const nom = $("svItemNombre");
+    if (nom) nom.style.whiteSpace = "pre-line";
+  }
+
+  function agregarTodo() {
+    const d = currentDishData;
+    descCarritoTemp = String(d.desc || "");
+    agregarAlCarrito(d.rId, d.rNom, currentDishQty + "x " + d.plato, (currentDishBasePrice + currentDishExtra) * currentDishQty, opcionesElegidasTexto(), d.imgD, d.rLat, d.rLon);
+    combos.forEach(c => {
+      descCarritoTemp = String(c.s.pDesc || "");
+      agregarAlCarrito(d.rId, d.rNom, c.qty + "x " + c.s.pNom, (Number(c.s.pPrec) + extraDe(c)) * c.qty, textoOps(c), c.s.pImg, d.rLat, d.rLon);
+    });
+    $("modalPlatoPro").classList.add("hidden");
+  }
+
+  const _mostrarBase = mostrarPlatoPro;
+  mostrarPlatoPro = function () {
+    combos = [];
+    const r = _mostrarBase.apply(this, arguments);
+    const bo = $("btnDishOrderNow"), ba = $("btnDishAddToCart");
+    const oo = bo.onclick, oa = ba.onclick;
+    bo.onclick = function () { if (!combos.length) return oo.apply(this, arguments); pedirAhora(); };
+    ba.onclick = function () { if (!combos.length) return oa.apply(this, arguments); agregarTodo(); };
+    return r;
+  };
+
+  cargarSugerenciasPlato = async function (token) {
+    const d = currentDishData;
+    let items = todosLosProductosCache.filter(p => p.rId === d.rId).map(p => ({ pNom: p.pNom, pDesc: p.pDesc || "", pPrec: Number(p.pPrec) || 0, pImg: p.pImg || "", pOps: p.pOps || "" }));
+    if (items.length < 2) {
+      try {
+        const snap = await db.collection("restaurantes").doc(d.rId).collection("productos").get();
+        items = [];
+        snap.forEach(doc => {
+          const x = doc.data();
+          items.push({ pNom: x.nombre, pDesc: x.descripcion || "", pPrec: Number(x.precio) || 0, pImg: formatearImagen(x.imagenHD || x.imagenUrl), pOps: x.opciones || "" });
+        });
+      } catch (e) { return; }
+    }
+    if (token !== dishToken) return;
+    const vistos = {};
+    const lista = items.filter(p => {
+      if (!p.pNom || p.pNom === d.plato || p.pPrec <= 0 || vistos[p.pNom]) return false;
+      vistos[p.pNom] = true;
+      return true;
+    }).slice(0, 4);
+    if (!lista.length) return;
+    const cont = $("modalDishOptions");
+    if (!cont || $("dishSugs")) return;
+    const wrap = document.createElement("div");
+    wrap.id = "dishSugs";
+    const tt = document.createElement("div");
+    tt.className = "sug-title";
+    tt.textContent = "Otras personas lo combinaron con";
+    wrap.appendChild(tt);
+    const st = document.createElement("div");
+    st.className = "sug-sub";
+    st.textContent = "Toca para agregarlo a tu pedido";
+    wrap.appendChild(st);
+
+    lista.forEach(s => {
+      const item = document.createElement("div");
+      item.className = "sug-item";
+      const row = document.createElement("div");
+      row.className = "sug-row";
+      const th = document.createElement("div");
+      th.className = "sug-thumb";
+      th.textContent = "🍽️";
+      if (s.pImg) {
+        const im = document.createElement("img");
+        im.onerror = () => im.remove();
+        im.src = s.pImg;
+        th.appendChild(im);
+      }
+      const info = document.createElement("div");
+      info.className = "sug-info";
+      const nb = document.createElement("b");
+      nb.textContent = s.pNom;
+      const pv = document.createElement("span");
+      pv.textContent = "L. " + Math.round(precioVisible(s.pPrec, d.rLat, d.rLon));
+      info.appendChild(nb); info.appendChild(pv);
+      const bt = document.createElement("button");
+      bt.className = "sug-plus";
+      bt.textContent = "+";
+      row.appendChild(th); row.appendChild(info); row.appendChild(bt);
+      const opts = document.createElement("div");
+      opts.className = "sug-opts";
+      item.appendChild(row); item.appendChild(opts);
+
+      const buscar = () => combos.find(c => c.s.pNom === s.pNom);
+
+      function pintar() {
+        const c = buscar();
+        bt.textContent = c ? "✓" : "+";
+        bt.classList.toggle("on", !!c);
+        opts.innerHTML = "";
+        if (!c) return;
+        const q = document.createElement("div");
+        q.className = "sug-qty";
+        const mi = document.createElement("button"); mi.textContent = "－";
+        const nq = document.createElement("span"); nq.textContent = c.qty;
+        const ma = document.createElement("button"); ma.textContent = "＋";
+        mi.onclick = e => { e.stopPropagation(); if (c.qty > 1) { c.qty--; nq.textContent = c.qty; recalcularModalPlato(); } };
+        ma.onclick = e => { e.stopPropagation(); c.qty++; nq.textContent = c.qty; recalcularModalPlato(); };
+        q.appendChild(mi); q.appendChild(nq); q.appendChild(ma);
+        opts.appendChild(q);
+        c.grupos.forEach((g, gi) => {
+          const gc = document.createElement("div");
+          gc.className = "sug-og";
+          const h = document.createElement("h5");
+          h.textContent = g.nombre;
+          gc.appendChild(h);
+          g.ops.forEach((o, oi) => {
+            const r = document.createElement("div");
+            r.className = "sug-or" + (c.sel[gi] === oi ? " sel" : "");
+            const rd = document.createElement("span"); rd.className = "r";
+            const n = document.createElement("span"); n.className = "n"; n.textContent = o.nombre;
+            r.appendChild(rd); r.appendChild(n);
+            if (o.precio > 0) {
+              const p = document.createElement("span"); p.className = "p"; p.textContent = "+ L. " + o.precio.toFixed(2);
+              r.appendChild(p);
+            }
+            r.onclick = e => {
+              e.stopPropagation();
+              c.sel[gi] = oi;
+              gc.querySelectorAll(".sug-or").forEach(x => x.classList.remove("sel"));
+              r.classList.add("sel");
+              recalcularModalPlato();
+            };
+            gc.appendChild(r);
+          });
+          opts.appendChild(gc);
+        });
+      }
+
+      row.onclick = () => {
+        const c = buscar();
+        if (c) combos.splice(combos.indexOf(c), 1);
+        else {
+          const grupos = parsearOpciones(s.pOps);
+          combos.push({ s: s, qty: 1, grupos: grupos, sel: grupos.map(() => 0) });
+        }
+        pintar();
+        recalcularModalPlato();
+      };
+      wrap.appendChild(item);
+    });
+    cont.appendChild(wrap);
+  };
+})();

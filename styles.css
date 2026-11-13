@@ -2128,3 +2128,19 @@ html.is-app .btn-recargar { display: flex; }
 .btn-recargar:active svg { transform: rotate(120deg); transition: transform .2s; }
 .btn-recargar.girando svg { animation: llvRecGiro .75s linear infinite; }
 @keyframes llvRecGiro { to { transform: rotate(360deg); } }
+
+/* ===== LLV-COMBOS ===== */
+.sug-sub { font-size: 12.5px; color: var(--c-muted); padding: 0 18px 4px; }
+.sug-plus.on { background: var(--c-primary); color: #fff; }
+.sug-opts { padding: 0 18px 6px; }
+.sug-qty { display: inline-flex; align-items: center; background: #F1F2F6; border-radius: 20px; height: 38px; padding: 0 4px; margin: 4px 0 6px; }
+.sug-qty button { border: none; background: transparent; width: 34px; height: 100%; font-size: 18px; font-weight: 800; cursor: pointer; }
+.sug-qty span { min-width: 24px; text-align: center; font-weight: 800; }
+.sug-og { background: #fff; border: 1px solid #E4DEF5; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.sug-og h5 { font-size: 13px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+.sug-or { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+.sug-or .r { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--c-primary); position: relative; flex-shrink: 0; }
+.sug-or.sel .r::after { content: ""; position: absolute; top: 3px; left: 3px; right: 3px; bottom: 3px; border-radius: 50%; background: var(--c-primary); }
+.sug-or .n { flex: 1; font-size: 14px; }
+.sug-or.sel .n { font-weight: 700; }
+.sug-or .p { font-size: 13px; font-weight: 700; color: #64748B; }
