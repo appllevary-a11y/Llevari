@@ -5113,3 +5113,47 @@ if (window.MutationObserver) {
     };
   }
 })();
+
+// ===== PARCHE MENU-RAPIDO =====
+(function () {
+  const _origMenu = window.abrirMenuRestaurante;
+  if (typeof _origMenu !== "function") return;
+  function aItems(snap, rId, rNom, rLat, rLon, logoUrl) {
+    const r = [];
+    snap.forEach(function (d) {
+      const pt = d.data();
+      if (pt.nombre && pt.precio > 0) r.push({ rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" });
+    });
+    return r;
+  }
+  function firma(l) { return l.map(function (p) { return p.pNom + "|" + p.pPrec + "|" + String(p.pImg || "").length; }).sort().join("~"); }
+  function abrirConItems(args, items) {
+    todosLosProductosCache.push.apply(todosLosProductosCache, items);
+    let p;
+    try { p = _origMenu.apply(null, args); }
+    finally { todosLosProductosCache = todosLosProductosCache.filter(function (x) { return items.indexOf(x) < 0; }); }
+    return p;
+  }
+  window.abrirMenuRestaurante = async function (rId, rNom, rLat, rLon, logoUrl) {
+    const args = arguments;
+    let desdeCache = [];
+    try {
+      if (!(todosLosProductosCache || []).some(function (p) { return p.rId === rId; })) {
+        const col = db.collection("restaurantes").doc(rId).collection("productos");
+        const snap = await Promise.race([col.get({ source: "cache" }), new Promise(function (r) { setTimeout(function () { r(null); }, 700); })]);
+        if (snap && !snap.empty) desdeCache = aItems(snap, rId, rNom, rLat, rLon, logoUrl);
+      }
+    } catch (e) {}
+    if (!desdeCache.length) return _origMenu.apply(this, args);
+    const res = abrirConItems(args, desdeCache);
+    try {
+      db.collection("restaurantes").doc(rId).collection("productos").get({ source: "server" }).then(function (s) {
+        const frescos = aItems(s, rId, rNom, rLat, rLon, logoUrl);
+        if (!frescos.length || firma(frescos) === firma(desdeCache)) return;
+        if (!document.getElementById("listMenuPlatos") || String(restIdSeleccionadoTemp) !== String(rId)) return;
+        abrirConItems(args, frescos);
+      }).catch(function () {});
+    } catch (e) {}
+    return res;
+  };
+})();
