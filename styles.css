@@ -2082,3 +2082,6 @@ body::before {
   top: env(safe-area-inset-top, 0px);
   height: calc(100% - env(safe-area-inset-top, 0px));
 }
+
+/* ===== iPhone: color de la barra de estado = morado del encabezado ===== */
+body { background-color: var(--c-primary-deep); }
