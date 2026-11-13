@@ -5190,7 +5190,7 @@ if (window.MutationObserver) {
   window.abrirMenuRestaurante = function (rId) {
     const sinRam = !(todosLosProductosCache || []).some(function (p) { return p.rId === rId; });
     let pend = [];
-    if (sinRam && colaProd.length) pend = colaProd.splice(0, colaProd.length);
+    if (/android/i.test(navigator.userAgent) && sinRam && colaProd.length) pend = colaProd.splice(0, colaProd.length);
     const t0 = performance.now();
     const r = _o.apply(this, arguments);
     if (pend.length) {
@@ -5242,7 +5242,7 @@ if (window.MutationObserver) {
   window.abrirMenuRestaurante = async function (rId, rNom, rLat, rLon, logoUrl) {
     const args = arguments;
     const sinRam = !(todosLosProductosCache || []).some(function (p) { return p.rId === rId; });
-    if (!sinRam) return _o.apply(this, args);
+    if (!sinRam || !/android/i.test(navigator.userAgent)) return _o.apply(this, args);
     const t0 = performance.now();
     const docs = await pedirRest(rId);
     const items = (docs || []).filter(function (pt) { return pt.nombre && pt.precio > 0; }).map(function (pt) {
