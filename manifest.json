@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Llevari",
+  "short_name": "Llevari",
+  "description": "Tus antojos favoritos a la puerta",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0033ff",
+  "theme_color": "#0033ff",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
