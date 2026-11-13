@@ -1756,3 +1756,99 @@ html.is-ios .product-price, html.is-ios .section-link { color: var(--c-primary-d
 html.is-ios .btn-blue { background-color: #1560FF; }
 html.is-ios .btn-success { background-color: #00A874; }
 html.is-ios .btn-danger { background-color: #EE1C33; }
+
+/* ===== IOS CONTRASTE ===== */
+html.is-ios {
+  --c-text: #080414;
+  --c-muted: #3A3470;
+  --c-bg: #DCC8FF;
+  -webkit-font-smoothing: antialiased;
+}
+html.is-ios,
+html.is-ios body,
+html.is-ios #appRoot { background-image: linear-gradient(180deg, #D6BEFF 0%, #FFD2A0 100%); }
+
+/* Textos secundarios: más oscuros y firmes */
+html.is-ios .sub-muted,
+html.is-ios .card-desc,
+html.is-ios .opt-sub,
+html.is-ios .empty-text { color: #3A3470; font-weight: 600; }
+html.is-ios .product-info-left p { color: #3A3470; font-weight: 500; }
+html.is-ios .product-info-left h4,
+html.is-ios .rest-card-body h4 { color: #080414; font-weight: 800; }
+html.is-ios .section-header h3 { color: #080414; font-weight: 900; }
+html.is-ios .product-price { color: #3A0A9E; font-weight: 900; }
+html.is-ios .section-link { color: #4A0BC4; font-weight: 800; }
+
+/* Tarjetas: blanco sólido, borde y sombra que las separan del fondo */
+html.is-ios .card,
+html.is-ios .rest-card-big,
+html.is-ios .rest-card-grid,
+html.is-ios .product-row-card {
+  background: #fff;
+  border: 1px solid rgba(123,31,255,.22);
+  box-shadow: 0 8px 22px rgba(74,11,196,.30), 0 2px 6px rgba(74,11,196,.18);
+}
+html.is-ios .rest-card-body { background: #fff; }
+html.is-ios .rest-card-cover { background: linear-gradient(135deg, #C9A8FF, #FFB877); }
+html.is-ios .product-thumb-box { background: linear-gradient(135deg, #C9A8FF, #FFB877); }
+
+/* Barra inferior: sólida, texto oscuro */
+html.is-ios .bottom-nav {
+  background: #fff;
+  border-top: 2px solid rgba(123,31,255,.25);
+  box-shadow: 0 -8px 24px rgba(74,11,196,.28);
+}
+html.is-ios .nav-label { color: #3A3470; font-weight: 700; }
+html.is-ios .nav-icon { opacity: 1; }
+html.is-ios .nav-item.active .nav-label { color: #4A0BC4; font-weight: 900; }
+html.is-ios .nav-item.active .nav-pill { background: #C9A8FF; }
+
+/* Encabezado: cristales más opacos y letras blancas firmes */
+html.is-ios #colUbi {
+  background: linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.20));
+  border: 1px solid rgba(255,255,255,.6);
+}
+html.is-ios .header-actions .circle-btn {
+  background: linear-gradient(145deg, rgba(255,255,255,.46), rgba(255,255,255,.26));
+  border: 1px solid rgba(255,255,255,.6);
+}
+html.is-ios .saludo-text { color: #fff; font-weight: 600; }
+html.is-ios .ubi-text { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+
+/* Buscador */
+html.is-ios .search-row input { color: #080414; }
+html.is-ios .search-row input::placeholder { color: #4A4480; font-weight: 700; }
+
+/* Banner: textos y chips que sí se lean */
+html.is-ios .bn-sub { color: #fff; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+html.is-ios .bn-rest { color: #fff; opacity: 1; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+html.is-ios .bn-chips span { background: rgba(0,0,0,.62); color: #fff; }
+html.is-ios .bn-tag { background: rgba(0,0,0,.35); border-color: rgba(255,255,255,.6); }
+html.is-ios .bn-title { text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+
+/* Súper y Restaurantes */
+html.is-ios .cat-big span { text-shadow: 0 2px 6px rgba(0,0,0,.35); font-weight: 800; }
+html.is-ios .cat-big[style*="FFF1DC"] { background: linear-gradient(135deg, #FFC400, #FF5A00) !important; }
+html.is-ios .cat-big[style*="EDE9FE"] { background: linear-gradient(135deg, #9A5CFF, #5A0FE0) !important; }
+html.is-ios .cat-big[style*="FFF1DC"] span,
+html.is-ios .cat-big[style*="EDE9FE"] span { color: #fff; }
+html.is-ios .cat-big-icon-wrap { background: rgba(255,255,255,.7); }
+
+/* Insignias y tarifas */
+html.is-ios .badge-fee { color: #080414; font-weight: 900; border: 1px solid rgba(0,0,0,.08); }
+html.is-ios .badge-status { font-weight: 900; }
+
+/* Pestañas y campos */
+html.is-ios .filter-pill { color: #3A3470; font-weight: 800; }
+html.is-ios .seg-control, html.is-ios .tab-filter-row { background: #C9B2F5; }
+html.is-ios input[type="text"], html.is-ios input[type="email"], html.is-ios input[type="password"],
+html.is-ios input[type="tel"], html.is-ios select { background: #fff; border: 2px solid #B79CF0; color: #080414; }
+
+/* Fotos más vivas */
+html.is-ios .hero-bg-img,
+html.is-ios .rest-card-cover img,
+html.is-ios .product-thumb-box img,
+html.is-ios .img-fill,
+html.is-ios .sug-thumb img,
+html.is-ios .bn-img { filter: saturate(1.4) contrast(1.12); }
