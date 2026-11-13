@@ -5008,3 +5008,47 @@ if (window.MutationObserver) {
     document.documentElement.classList.add("is-ios");
   }
 })();
+
+// ===== PARCHE SERVICIO-FOTOS-ENVIO =====
+(function () {
+  const cacheLogo = {};
+  function setImg(id, src) {
+    const im = document.getElementById(id);
+    if (!im) return;
+    const ph = im.parentElement ? im.parentElement.querySelector(".ph-ico") : null;
+    if (!src) { im.removeAttribute("src"); im.classList.add("hidden"); if (ph) ph.style.display = ""; return; }
+    if (im.getAttribute("src") === src && !im.classList.contains("hidden")) return;
+    im.onload = function () { im.classList.remove("hidden"); if (ph) ph.style.display = "none"; };
+    im.onerror = function () { im.classList.add("hidden"); if (ph) ph.style.display = ""; };
+    im.src = src;
+  }
+  async function logoDe(rId) {
+    if (!rId) return "";
+    if (cacheLogo[rId]) return cacheLogo[rId];
+    let l = "";
+    try { const e = window.LLV_ESTADO && window.LLV_ESTADO[rId]; if (e && e.logo) l = e.logo; } catch (e) {}
+    if (!l) { try { const d = await db.collection("restaurantes").doc(rId).get(); if (d.exists) l = d.data().logoUrl || ""; } catch (e) {} }
+    if (l) cacheLogo[rId] = formatearImagen(l);
+    return cacheLogo[rId] || "";
+  }
+  const _prevServ = alternarModalidadServicio;
+  alternarModalidadServicio = function (deliv) {
+    _prevServ(deliv);
+    try {
+      const sub = Math.round(precioPlatoTemp);
+      const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+      const i1 = document.getElementById("svInfo1"), i2 = document.getElementById("svInfo2");
+      if (i1) i1.textContent = modalidadDelivery ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo";
+      if (i2) i2.textContent = modalidadDelivery ? "🛵 Envío L. " + t.envio : "Sin costo de envío";
+      const im = imgPlatoTemp ? formatearImagen(imgPlatoTemp) : "";
+      setImg("svImgItem", im);
+      const rId = restIdSeleccionadoTemp;
+      setImg("svLogoRest", cacheLogo[rId] || "");
+      logoDe(rId).then(function (l) {
+        if (rId !== restIdSeleccionadoTemp) return;
+        setImg("svLogoRest", l);
+        if (!im) setImg("svImgItem", l);
+      });
+    } catch (e) {}
+  };
+})();
