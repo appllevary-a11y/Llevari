@@ -5207,3 +5207,53 @@ if (window.MutationObserver) {
     return r;
   };
 })();
+
+// ===== PARCHE MENU-REST =====
+(function () {
+  const _o = window.abrirMenuRestaurante;
+  if (typeof _o !== "function") return;
+  function cv(x) {
+    if (!x) return null;
+    if ("stringValue" in x) return x.stringValue;
+    if ("integerValue" in x) return Number(x.integerValue);
+    if ("doubleValue" in x) return x.doubleValue;
+    if ("booleanValue" in x) return x.booleanValue;
+    if (x.arrayValue) return (x.arrayValue.values || []).map(cv);
+    if (x.mapValue) { const o = {}; const f = x.mapValue.fields || {}; Object.keys(f).forEach(function (k) { o[k] = cv(f[k]); }); return o; }
+    return null;
+  }
+  async function pedirRest(rId) {
+    const h = {};
+    try { if (auth.currentUser) h.Authorization = "Bearer " + (await auth.currentUser.getIdToken()); } catch (e) {}
+    const url = "https://firestore.googleapis.com/v1/projects/" + firebaseConfig.projectId + "/databases/(default)/documents/restaurantes/" + encodeURIComponent(rId) + "/productos?pageSize=300&key=" + firebaseConfig.apiKey;
+    const ctl = new AbortController();
+    const to = setTimeout(function () { ctl.abort(); }, 4000);
+    try {
+      const resp = await fetch(url, { headers: h, signal: ctl.signal });
+      if (!resp.ok) return null;
+      const j = await resp.json();
+      return (j.documents || []).map(function (d) {
+        const o = {}; const f = d.fields || {};
+        Object.keys(f).forEach(function (k) { o[k] = cv(f[k]); });
+        return o;
+      });
+    } catch (e) { return null; } finally { clearTimeout(to); }
+  }
+  window.abrirMenuRestaurante = async function (rId, rNom, rLat, rLon, logoUrl) {
+    const args = arguments;
+    const sinRam = !(todosLosProductosCache || []).some(function (p) { return p.rId === rId; });
+    if (!sinRam) return _o.apply(this, args);
+    const t0 = performance.now();
+    const docs = await pedirRest(rId);
+    const items = (docs || []).filter(function (pt) { return pt.nombre && pt.precio > 0; }).map(function (pt) {
+      return { rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" };
+    });
+    try { toast("⚡ REST " + Math.round(performance.now() - t0) + " ms · " + (docs ? items.length + " platos" : "falló")); } catch (e) {}
+    if (!items.length) return _o.apply(this, args);
+    todosLosProductosCache.push.apply(todosLosProductosCache, items);
+    let p;
+    try { p = _o.apply(this, args); }
+    finally { todosLosProductosCache = todosLosProductosCache.filter(function (x) { return items.indexOf(x) < 0; }); }
+    return p;
+  };
+})();
