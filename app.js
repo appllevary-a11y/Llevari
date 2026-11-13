@@ -2507,7 +2507,7 @@ function abrirPantallaSeguimientoEnVivo() {
         ? "💵 Pagas en el local: L. " + to.toFixed(2)
         : "💵 Pagas al repartidor: L. " + to.toFixed(2) + "\n(productos L. " + (sb + au).toFixed(2) + " + envío L. " + en.toFixed(2) + ")";
     }
-    const rN = String(d.repartidor_nombre || "").trim();
+    const rN = String(d.repartidor_nombre || "").trim().split(" ")[0];
     const asignado = rN !== "" && !/^buscando/i.test(rN);
     const ub = ubicacionRepartidorSeg(d);
     const rLa = ub[0], rLo = ub[1];
@@ -2516,7 +2516,7 @@ function abrirPantallaSeguimientoEnVivo() {
     const haciaCliente = es === "EN_CAMINO" || es === "DESPACHADO";
     const restLa = numSeg(d.restaurante_lat) || restauranteLatTemp, restLo = numSeg(d.restaurante_lon) || restauranteLonTemp;
     const cliLa = numSeg(d.cliente_lat) || miLat, cliLo = numSeg(d.cliente_lon) || miLon;
-    actualizarSeguimientoMapa(restLa, restLo, cliLa, cliLo, rLa, rLo, rN, asignado && tieneGps && !enNuevo, haciaCliente);
+    actualizarSeguimientoMapa(restLa, restLo, cliLa, cliLo, rLa, rLo, rN, asignado && tieneGps && haciaCliente, haciaCliente);
     const stEl = document.getElementById("tvEstadoSeguimiento"), infEl = document.getElementById("tvInfoRepartidor");
     const dKm = tieneGps ? calcularDistanciaKm(rLa, rLo, cliLa, cliLo) : calcularDistanciaKm(restLa, restLo, cliLa, cliLo);
     if (enNuevo) {
@@ -2529,7 +2529,7 @@ function abrirPantallaSeguimientoEnVivo() {
       detenerTimerSeg();
     } else if (asignado && !haciaCliente) {
       stEl.textContent = "Repartidor asignado"; stEl.style.color = "#2563EB";
-      infEl.textContent = rN + " va en camino al local." + (tieneGps ? "" : " (📡 sin señal GPS)");
+      infEl.textContent = rN + " va en camino al local.";
       detenerTimerSeg();
     } else if (haciaCliente) {
       stEl.textContent = "🛵 En camino"; stEl.style.color = "#059669";

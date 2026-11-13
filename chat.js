@@ -170,7 +170,7 @@
   function crearNodo(d, yo) {
     var row = document.createElement("div"); row.className = "llc-row" + (yo ? " yo" : "");
     var bub = document.createElement("div"); bub.className = "llc-bub";
-    if (!yo) { var nm = document.createElement("div"); nm.className = "llc-nom"; nm.textContent = d.remitente_nombre || d.nombre || "Repartidor"; bub.appendChild(nm); }
+    if (!yo) { var nm = document.createElement("div"); nm.className = "llc-nom"; nm.textContent = String(d.remitente_nombre || d.nombre || "Repartidor").trim().split(" ")[0]; bub.appendChild(nm); }
     var txt = d.texto || d.mensaje || "";
     if (txt) { var sp = document.createElement("span"); sp.textContent = txt; bub.appendChild(sp); }
     if (d.imagen_base64) {
@@ -261,7 +261,7 @@
     curPed = ped; curRest = rest;
     orderUnsub = db.collection("restaurantes").doc(rest).collection("pedidos").doc(ped).onSnapshot(function (doc) {
       if (!doc.exists || ped !== curPed) return;
-      var rn = String((doc.data() || {}).repartidor_nombre || "").trim();
+      var rn = String((doc.data() || {}).repartidor_nombre || "").trim().split(" ")[0];
       var a = rn !== "" && !/^buscando/i.test(rn);
       repName = a ? rn : ""; pintarRep();
       if (a !== asignado) { asignado = a; if (a) startUnread(); else stopUnread(); }
