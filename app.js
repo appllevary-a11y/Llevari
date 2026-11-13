@@ -5501,9 +5501,10 @@ function llvGuiaAndroid() {
   setTimeout(function () { h.classList.remove("llv-boot"); }, 6000);
 })();
 
-// ===== LLV-COMBOS: sugerencias seleccionables dentro del mismo modal =====
+
+// ===== LLV-SUMA: sugerencias seleccionables con precios consistentes =====
 (function () {
-  let combos = [];
+  let combos = [], filas = [];
   const $ = id => document.getElementById(id);
 
   function extraDe(c) {
@@ -5511,6 +5512,7 @@ function llvGuiaAndroid() {
     c.grupos.forEach((g, gi) => { const o = g.ops[c.sel[gi]]; if (o) e += o.precio || 0; });
     return e;
   }
+  function unit(c) { return Number(c.s.pPrec) + extraDe(c); }
   function textoOps(c) {
     const p = [];
     c.grupos.forEach((g, gi) => {
@@ -5519,23 +5521,37 @@ function llvGuiaAndroid() {
     });
     return p.join(" / ");
   }
-  function totales() {
+  function totales(adicional) {
     const d = currentDishData;
     const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
     let raw = mainSub;
-    combos.forEach(c => { raw += (Number(c.s.pPrec) + extraDe(c)) * c.qty; });
+    combos.forEach(c => { raw += unit(c) * c.qty; });
+    if (adicional) raw += adicional;
     const sub = Math.round(raw);
     const t = calcularTarifa(kmHaciaSync(d.rLat, d.rLon), sub);
-    return { mainSub: mainSub, raw: raw, sub: sub, t: t, totProd: sub + t.aumento, total: sub + t.aumento + t.envio };
+    const totProd = sub + t.aumento;
+    return { mainSub: mainSub, raw: raw, sub: sub, t: t, totProd: totProd, total: totProd + t.envio, k: raw > 0 ? totProd / raw : 1 };
+  }
+
+  function pintarPrecios() {
+    const r = totales();
+    filas.forEach(f => {
+      const c = combos.find(x => x.s.pNom === f.s.pNom);
+      if (c) f.pv.textContent = "L. " + (unit(c) * c.qty * r.k).toFixed(2);
+      else {
+        const m = totales(Number(f.s.pPrec));
+        f.pv.textContent = "+ L. " + (m.totProd - r.totProd).toFixed(2);
+      }
+    });
   }
 
   recalcularModalPlato = function () {
     if (!currentDishData || !currentDishData.rId) return;
     const r = totales();
-    const mainVis = r.sub > 0 ? r.mainSub + r.t.aumento * r.mainSub / r.sub : r.mainSub;
-    $("modalDishPrice").textContent = "L. " + (mainVis / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
+    $("modalDishPrice").textContent = "L. " + (r.mainSub * r.k / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
     $("modalDishSubtotal").textContent = "L. " + r.totProd;
     $("btnDishOrderNow").textContent = "Pedir • L. " + r.total;
+    pintarPrecios();
   };
 
   function pedirAhora() {
@@ -5554,7 +5570,7 @@ function llvGuiaAndroid() {
     imgPlatoTemp = d.imgD;
     platoTemp = lineas.join("\n");
     descPlatoTemp = descs.join("\n");
-    precioPlatoTemp = r.raw;
+    precioPlatoTemp = r.sub;
     restauranteLatTemp = (d.rLat && d.rLon) ? d.rLat : (miLat + 0.003);
     restauranteLonTemp = (d.rLat && d.rLon) ? d.rLon : (miLon + 0.003);
     $("modalPlatoPro").classList.add("hidden");
@@ -5569,7 +5585,7 @@ function llvGuiaAndroid() {
     agregarAlCarrito(d.rId, d.rNom, currentDishQty + "x " + d.plato, (currentDishBasePrice + currentDishExtra) * currentDishQty, opcionesElegidasTexto(), d.imgD, d.rLat, d.rLon);
     combos.forEach(c => {
       descCarritoTemp = String(c.s.pDesc || "");
-      agregarAlCarrito(d.rId, d.rNom, c.qty + "x " + c.s.pNom, (Number(c.s.pPrec) + extraDe(c)) * c.qty, textoOps(c), c.s.pImg, d.rLat, d.rLon);
+      agregarAlCarrito(d.rId, d.rNom, c.qty + "x " + c.s.pNom, unit(c) * c.qty, textoOps(c), c.s.pImg, d.rLat, d.rLon);
     });
     $("modalPlatoPro").classList.add("hidden");
   }
@@ -5577,6 +5593,7 @@ function llvGuiaAndroid() {
   const _mostrarBase = mostrarPlatoPro;
   mostrarPlatoPro = function () {
     combos = [];
+    filas = [];
     const r = _mostrarBase.apply(this, arguments);
     const bo = $("btnDishOrderNow"), ba = $("btnDishAddToCart");
     const oo = bo.onclick, oa = ba.onclick;
@@ -5608,6 +5625,7 @@ function llvGuiaAndroid() {
     if (!lista.length) return;
     const cont = $("modalDishOptions");
     if (!cont || $("dishSugs")) return;
+    filas = [];
     const wrap = document.createElement("div");
     wrap.id = "dishSugs";
     const tt = document.createElement("div");
@@ -5638,8 +5656,8 @@ function llvGuiaAndroid() {
       const nb = document.createElement("b");
       nb.textContent = s.pNom;
       const pv = document.createElement("span");
-      pv.textContent = "L. " + Math.round(precioVisible(s.pPrec, d.rLat, d.rLon));
       info.appendChild(nb); info.appendChild(pv);
+      filas.push({ s: s, pv: pv });
       const bt = document.createElement("button");
       bt.className = "sug-plus";
       bt.textContent = "+";
@@ -5707,5 +5725,6 @@ function llvGuiaAndroid() {
       wrap.appendChild(item);
     });
     cont.appendChild(wrap);
+    pintarPrecios();
   };
 })();
