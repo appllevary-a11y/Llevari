@@ -5068,7 +5068,9 @@ if (window.MutationObserver) {
     if (!v || v.indexOf(MOTO) < 0) return;
     const p = tn.parentElement;
     if (!p || p.closest(SKIP)) return;
-    const partes = v.split(MOTO);
+    // PARCHE MOTO-ENVIO
+    const partes = v.split(/\uD83D\uDEF5(?!\s*(?:Env[ií]o\s*)?L\.)/);
+    if (partes.length < 2) return;
     const frag = document.createDocumentFragment();
     partes.forEach(function (txt, i) {
       if (txt) frag.appendChild(document.createTextNode(txt));
