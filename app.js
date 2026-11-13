@@ -612,7 +612,9 @@ async function cargarInicioPrincipal() {
   bestRow.className = "horizontal-scroller";
   cont.appendChild(bestRow);
 
-  todosLosProductosCache = [];
+  const _hayProd = todosLosProductosCache.length > 0 && window._prodKey === miCiudad && window._prodP && window._prodP.n === 0 && Date.now() - (window._prodT || 0) < 180000;
+  if (!_hayProd) { todosLosProductosCache = []; window._prodKey = miCiudad; window._prodT = Date.now(); window._prodP = { n: 0 }; }
+  const _P = window._prodP;
   listaPublicitariaGlobal = [];
 
   snapR.forEach(doc => {
@@ -644,7 +646,7 @@ async function cargarInicioPrincipal() {
     };
     bestRow.appendChild(card);
 
-    colaProductos(() => db.collection("restaurantes").doc(doc.id).collection("productos").get()).then(pSnap => {
+    (_hayProd ? Promise.resolve([]) : (_P.n++, colaProductos(() => db.collection("restaurantes").doc(doc.id).collection("productos").get()).finally(() => { _P.n--; }))).then(pSnap => {
       pSnap.forEach(pd => {
         const pData = pd.data();
         if (pData.nombre && pData.precio > 0) {
@@ -3678,7 +3680,7 @@ iniciarSliderPublicitario = function () {
   if (!wrap) return;
   wrap.classList.add("bn-wrap");
   _bnGestos(wrap);
-  let ultimoN = -1, intentos = 0;
+  let ultimoN = todosLosProductosCache.length, intentos = 0;
   const espera = () => {
     if (gen !== _bn.gen || !wrap.isConnected) return;
     if (wrap.offsetParent === null) { setTimeout(espera, 1200); return; }
@@ -4787,7 +4789,15 @@ if (window.MutationObserver) {
     } catch (e) {}
   }
   const _rr = restaurantesRapido;
-  restaurantesRapido = async function () { const s = await _rr.apply(this, arguments); anotar(s); return s; };
+  restaurantesRapido = async function () {
+    const k = miCiudad + "|" + miLat + "|" + miLon;
+    const m = window._rrMemo;
+    if (m && m.k === k && Date.now() - m.t < 90000) return m.s;
+    const s = await _rr.apply(this, arguments);
+    anotar(s);
+    window._rrMemo = { k: k, t: Date.now(), s: s };
+    return s;
+  };
   const _fr = firmaRest;
   firmaRest = function (snap) { anotar(snap); return _fr.apply(this, arguments); };
 })();
