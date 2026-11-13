@@ -17,8 +17,7 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
-// PARCHE FIRESTORE-ANDROID
-try { db.settings(/android/i.test(navigator.userAgent) ? { experimentalForceLongPolling: true, useFetchStreams: false, merge: true } : { experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
 try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
