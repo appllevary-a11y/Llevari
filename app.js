@@ -4369,7 +4369,6 @@ if (window.MutationObserver) {
     
     const renderizar = (lista) => {
       if (!list) return;
-      if (/android/i.test(navigator.userAgent)) { try { toast("Menú " + lista.length + " platos · " + _org + " · " + Math.round(performance.now() - _t0) + " ms"); } catch (e) {} }
       list.innerHTML = "";
       if(!lista.length) {
         list.innerHTML = '<div class="empty-box"><p>No hay platos registrados</p></div>';
