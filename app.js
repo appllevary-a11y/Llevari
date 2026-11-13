@@ -4348,7 +4348,7 @@ if (window.MutationObserver) {
         </div>
       </div>
       <div id="listMenuPlatos" style="margin-top:10px">
-        <div class="llv-in" data-llv="1" style="margin-top:40px; justify-content:center;"><span class="llv-mini"><span class="llv-mini-ring"></span><span class="llv-mini-moto">🛵</span></span><span class="llv-in-t" style="font-size:16px;">Sirviendo platos...</span></div>
+        <div class="llv-in" data-llv="1" style="margin-top:40px; justify-content:center;"><span class="llv-mini"><span class="llv-mini-ring"></span><span class="llv-mini-moto">🛵</span></span><span class="llv-in-t" style="font-size:16px;">Sirviendo platos</span></div><div style="padding:0 4px"><div class="llv-sk-card"><div class="llv-sk-img"></div><div class="llv-sk-col"><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div><div class="llv-sk-line w55"></div></div></div><div class="llv-sk-card"><div class="llv-sk-img"></div><div class="llv-sk-col"><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div><div class="llv-sk-line w55"></div></div></div><div class="llv-sk-card"><div class="llv-sk-img"></div><div class="llv-sk-col"><div class="llv-sk-line w70"></div><div class="llv-sk-line w40"></div><div class="llv-sk-line w55"></div></div></div></div>
       </div>
     `;
     
