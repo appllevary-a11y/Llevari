@@ -5521,37 +5521,56 @@ function llvGuiaAndroid() {
     });
     return p.join(" / ");
   }
-  function totales(adicional) {
+
+  // Total de productos (con el aumento de las reglas) para una suma cruda dada
+  function T(raw) {
     const d = currentDishData;
+    const sub = Math.round(raw);
+    const t = calcularTarifa(kmHaciaSync(d.rLat, d.rLon), sub);
+    return { sub: sub, t: t, totProd: sub + t.aumento };
+  }
+
+  function totales() {
     const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
     let raw = mainSub;
     combos.forEach(c => { raw += unit(c) * c.qty; });
-    if (adicional) raw += adicional;
-    const sub = Math.round(raw);
-    const t = calcularTarifa(kmHaciaSync(d.rLat, d.rLon), sub);
-    const totProd = sub + t.aumento;
-    return { mainSub: mainSub, raw: raw, sub: sub, t: t, totProd: totProd, total: totProd + t.envio, k: raw > 0 ? totProd / raw : 1 };
+    const f = T(raw);
+    return { mainSub: mainSub, raw: raw, sub: f.sub, t: f.t, totProd: f.totProd, total: f.totProd + f.t.envio };
+  }
+
+  // Reparto SECUENCIAL: el plato principal conserva su precio y cada
+  // sugerencia cuesta exactamente lo que subió el total al agregarla.
+  function repartir() {
+    const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
+    let acc = mainSub;
+    const mainT = T(acc).totProd;
+    let prev = mainT;
+    combos.forEach(c => {
+      acc += unit(c) * c.qty;
+      const t = T(acc).totProd;
+      c.precioMostrado = t - prev;
+      prev = t;
+    });
+    return { mainT: mainT, acc: acc, prev: prev };
   }
 
   function pintarPrecios() {
-    const r = totales();
+    const rp = repartir();
     filas.forEach(f => {
       const c = combos.find(x => x.s.pNom === f.s.pNom);
-      if (c) f.pv.textContent = "L. " + (unit(c) * c.qty * r.k).toFixed(2);
-      else {
-        const m = totales(Number(f.s.pPrec));
-        f.pv.textContent = "+ L. " + (m.totProd - r.totProd).toFixed(2);
-      }
+      if (c) f.pv.textContent = "L. " + c.precioMostrado.toFixed(2);
+      else f.pv.textContent = "+ L. " + (T(rp.acc + Number(f.s.pPrec)).totProd - rp.prev).toFixed(2);
     });
+    return rp;
   }
 
   recalcularModalPlato = function () {
     if (!currentDishData || !currentDishData.rId) return;
     const r = totales();
-    $("modalDishPrice").textContent = "L. " + (r.mainSub * r.k / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
+    const rp = pintarPrecios();
+    $("modalDishPrice").textContent = "L. " + (rp.mainT / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
     $("modalDishSubtotal").textContent = "L. " + r.totProd;
     $("btnDishOrderNow").textContent = "Pedir • L. " + r.total;
-    pintarPrecios();
   };
 
   function pedirAhora() {
