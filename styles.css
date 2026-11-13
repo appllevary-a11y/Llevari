@@ -2088,8 +2088,8 @@ body { background-color: var(--c-primary-deep); }
 
 /* ===== SOLO cuando está instalada como app (pantalla de inicio) ===== */
 html.is-app {
-  --app-top: 12px;                                      /* cuánto bajar lo de arriba */
-  --app-bot: max(env(safe-area-inset-bottom, 0px), 18px); /* cuánto subir lo de abajo */
+  --app-top: 34px;                                      /* cuánto bajar lo de arriba */
+  --app-bot: max(env(safe-area-inset-bottom, 0px), 38px); /* cuánto subir lo de abajo */
 }
 html.is-app .header-bar { padding-top: calc(14px + var(--app-top)); }
 html.is-app .map-topbar,
