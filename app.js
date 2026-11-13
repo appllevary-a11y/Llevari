@@ -5539,24 +5539,25 @@ function llvGuiaAndroid() {
   }
 
   // Cada producto sale con su precio CON aumento (como si fuera solo).
-  // Al combinarlos, el aumento fijo se comparte: el total baja a lo que
-  // marcan las reglas y esa baja se reparte proporcional entre los productos.
+  // El plato principal NUNCA cambia de precio por lo que se agregue.
+  // Cada sugerencia seleccionada cuesta lo que realmente sube el total al
+  // sumarla (el aumento fijo ya lo paga el principal), y el precio "solo"
+  // queda tachado. Nada sube al agregar: solo baja o se queda igual.
   const r2 = x => Math.round(x * 100) / 100;
 
   function repartir() {
     const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
-    const items = [{ raw: mainSub, c: null }];
-    combos.forEach(c => items.push({ raw: unit(c) * c.qty, c: c }));
-    let rawTot = 0, suma = 0;
-    items.forEach(it => { it.solo = T(it.raw).totProd; rawTot += it.raw; suma += it.solo; });
-    const tot = T(rawTot).totProd;
-    const k = suma > 0 ? tot / suma : 1;
-    let acum = 0;
-    items.forEach((it, i) => {
-      it.mostrado = (i === items.length - 1) ? r2(tot - acum) : r2(it.solo * k);
-      acum += it.mostrado;
+    const mainT = T(mainSub).totProd;
+    const items = [{ raw: mainSub, c: null, solo: mainT, mostrado: mainT }];
+    let acc = mainSub, prev = mainT;
+    combos.forEach(c => {
+      const raw = unit(c) * c.qty;
+      acc += raw;
+      const t = T(acc).totProd;
+      items.push({ raw: raw, c: c, solo: T(raw).totProd, mostrado: r2(t - prev) });
+      prev = t;
     });
-    return { items: items, tot: tot };
+    return { items: items, tot: prev };
   }
 
   function htmlPrecio(solo, mostrado) {
