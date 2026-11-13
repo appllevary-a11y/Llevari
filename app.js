@@ -969,6 +969,7 @@ async function confirmarCreacionPedido() {
     pago_motorista: deliv ? t.pago : 0.0,
     ganancia: deliv ? t.ganancia : 0.0,
     nombre_plato: platoTemp,
+    productos_detalle: armarProductosDetalleWeb(),
     fecha: fechaApp(),
     hora_creacion: horaCreacionApp(),
     cliente_nombre: miNombre,
@@ -1535,7 +1536,7 @@ function leerCarrito() {
   return (localStorage.getItem("carrito") || "").split(";;").filter(x => x.trim()).map(raw => {
     const p = raw.split("||");
     if (p.length < 5) return null;
-    return { raw: raw, rId: p[0], rNom: p[1], nombre: p[2], precio: parseFloat(p[3]) || 0, ops: p[4], img: p[5] || "", lat: parseFloat(p[6]) || 0, lon: parseFloat(p[7]) || 0 };
+    return { raw: raw, rId: p[0], rNom: p[1], nombre: p[2], precio: parseFloat(p[3]) || 0, ops: p[4], img: p[5] || "", lat: parseFloat(p[6]) || 0, lon: parseFloat(p[7]) || 0, desc: p[8] || "" };
   }).filter(Boolean);
 }
 
@@ -1547,7 +1548,7 @@ function agregarAlCarrito(rId, rNom, nombre, precioTotal, opciones, img, lat, lo
   const lim = s => String(s == null ? "" : s).replace(/\|/g, "/").replace(/;/g, ",");
   if (!lat || !lon) { lat = miLat + 0.003; lon = miLon + 0.003; }
   const imagen = (img && img.length < 150000) ? img : "";
-  const armar = im => [lim(rId), lim(rNom), lim(nombre), Number(precioTotal).toFixed(2), lim(opciones), im, lat, lon].join("||") + ";;";
+  const armar = im => [lim(rId), lim(rNom), lim(nombre), Number(precioTotal).toFixed(2), lim(opciones), im, lat, lon, lim(String(descCarritoTemp || "").replace(/\n/g, " "))].join("||") + ";;";
   const curr = localStorage.getItem("carrito") || "";
   try {
     localStorage.setItem("carrito", curr + armar(imagen));
@@ -1684,6 +1685,7 @@ async function pedirDesdeCarrito(rId) {
     restIdSeleccionadoTemp = rId;
     rNombreTemp = items[0].rNom;
     platoTemp = items.map(i => i.nombre + (i.ops ? " (" + i.ops + ")" : "")).join("\n");
+    descPlatoTemp = items.map(i => i.desc || "").join("\n");
     precioPlatoTemp = sum;
     imgPlatoTemp = items[0].img;
     restauranteLatTemp = lat;
@@ -3035,6 +3037,7 @@ function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon)
 
   document.getElementById("btnDishAddToCart").onclick = () => {
     const u = (currentDishBasePrice + currentDishExtra) * currentDishQty;
+    descCarritoTemp = String(desc || "");
     agregarAlCarrito(rId, rNom, currentDishQty + "x " + plato, u, opcionesElegidasTexto(), imgD, rLat, rLon);
     document.getElementById("modalPlatoPro").classList.add("hidden");
   };
@@ -3046,6 +3049,7 @@ function mostrarPlatoPro(rId, rNom, plato, desc, baseP, imgD, opStr, rLat, rLon)
     rNombreTemp = rNom;
     imgPlatoTemp = imgD;
     platoTemp = currentDishQty + "x " + plato + (ops ? " (" + ops + ")" : "");
+    descPlatoTemp = String(desc || "").replace(/\n/g, " ");
     precioPlatoTemp = (currentDishBasePrice + currentDishExtra) * currentDishQty;
     restauranteLatTemp = (rLat && rLon) ? rLat : (miLat + 0.003);
     restauranteLonTemp = (rLat && rLon) ? rLon : (miLon + 0.003);
@@ -5256,3 +5260,18 @@ if (window.MutationObserver) {
     return p;
   };
 })();
+
+// ===== PARCHE DESC-PEDIDO =====
+let descPlatoTemp = "";
+let descCarritoTemp = "";
+function armarProductosDetalleWeb() {
+  const ns = String(platoTemp || "").split("\n"), ds = String(descPlatoTemp || "").split("\n");
+  const r = [];
+  ns.forEach(function (n, i) {
+    if (!n.trim()) return;
+    const it = { nombre: n.trim(), cantidad: 1, descripcion: String(ds[i] || "").trim() };
+    if (ns.length === 1) it.precio = Number(precioPlatoTemp) || 0;
+    r.push(it);
+  });
+  return r;
+}
