@@ -1614,3 +1614,25 @@ html.is-android .circle-btn,
 html.is-android .bn-tag { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 html.is-android .modal-backdrop,
 html.is-android .modal-backdrop-alert { background: rgba(0,0,0,0.62) !important; }
+
+/* ===== RENDIMIENTO ANDROID 2 ===== */
+html.is-android .hero-bg-img,
+html.is-android .rest-card-cover img,
+html.is-android .product-thumb-box img,
+html.is-android .img-fill,
+html.is-android .sug-thumb img,
+html.is-android .bn-img { filter: none !important; }
+html.is-android .product-thumb-box:has(img.img-fill),
+html.is-android .rest-card-cover:has(img.img-fill) { animation: none !important; background: #E9E3F7 !important; }
+html.is-android .product-row-card,
+html.is-android .rest-card-grid,
+html.is-android .sug-row,
+html.is-android .tab-view.active { animation: none !important; }
+html.is-android .card,
+html.is-android .rest-card-big,
+html.is-android .rest-card-grid,
+html.is-android .product-row-card { box-shadow: 0 2px 8px rgba(139,43,255,.16) !important; }
+html.is-android .v-onda { display: none !important; }
+html.is-android .llv:not(.on),
+html.is-android .llv:not(.on) * { animation-play-state: paused !important; }
+html.is-android .llv { will-change: auto !important; transform: none !important; -webkit-transform: none !important; }

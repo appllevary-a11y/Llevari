@@ -4390,14 +4390,14 @@ if (window.MutationObserver) {
             <div class="product-price">L. ${finalPrice.toFixed(2)}</div>
           </div>
           <div class="product-thumb-box">
-            ${imgSrc ? '<img src="'+imgSrc+'" class="img-fill" loading="lazy" decoding="async"/>' : '🍽️'}
+            ${imgSrc ? '<img data-src="'+imgSrc+'" class="img-fill" decoding="async"/>' : '🍽️'}
             <button class="btn-plus-abs">+</button>
           </div>
         `;
         row.onclick = () => mostrarPlatoPro(rId, rNom, p.pNom, p.pDesc || "", p.pPrec, imgSrc, p.pOps || "", rLat, rLon);
         frag.appendChild(row);
       });
-      list.appendChild(frag);
+      list.appendChild(frag); if (window.llvLazyImgs) llvLazyImgs(list);
     };
 
     if (platosEnMemoria.length > 0) {
@@ -4457,7 +4457,7 @@ if (window.MutationObserver) {
           card.className = "rest-card-grid";
           card.innerHTML = `
             <div class="rest-card-cover">
-              ${logoSrc ? '<img src="'+logoSrc+'" class="img-fill" loading="lazy" decoding="async"/>' : '🍽️'}
+              ${logoSrc ? '<img data-src="'+logoSrc+'" class="img-fill" decoding="async"/>' : '🍽️'}
               <span class="badge-status ${cerrado ? 'cerrado' : 'abierto'}">${cerrado ? '🛑 CERRADO' : '🟢 ABIERTO'}</span>
             </div>
             <div class="rest-card-body">
@@ -4471,7 +4471,7 @@ if (window.MutationObserver) {
           };
           frag.appendChild(card);
        });
-       grid.appendChild(frag);
+       grid.appendChild(frag); if (window.llvLazyImgs) llvLazyImgs(grid);
     };
 
     Promise.resolve(restaurantesRapido()).then(function (snap) {
@@ -4908,5 +4908,81 @@ if (window.MutationObserver) {
       }
     }
     return _ct.apply(this, arguments);
+  };
+})();
+
+
+// ===== LLV-ANDROID: fotos livianas y menos trabajo por plato =====
+(function () {
+  const cache = new Map(), cola = [];
+  let activos = 0, io = null;
+
+  function clave(s) { const m = Math.floor(s.length / 2); return s.length + "|" + s.substr(m, 50) + "|" + s.slice(-50); }
+
+  function paso() {
+    while (activos < 2 && cola.length) {
+      const t = cola.shift();
+      activos++;
+      t().then(function () {}, function () {}).then(function () { activos--; paso(); });
+    }
+  }
+
+  function miniatura(src) {
+    const k = clave(src);
+    if (cache.has(k)) return cache.get(k);
+    const p = new Promise(function (res) {
+      cola.push(function () {
+        return fetch(src).then(function (r) { return r.blob(); })
+          .then(function (b) { return createImageBitmap(b, { resizeWidth: 260, resizeQuality: "medium" }); })
+          .then(function (bmp) {
+            const c = document.createElement("canvas");
+            c.width = bmp.width; c.height = bmp.height;
+            const x = c.getContext("2d");
+            x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+            x.drawImage(bmp, 0, 0);
+            if (bmp.close) bmp.close();
+            return new Promise(function (r2) { c.toBlob(function (bl) { r2(bl ? URL.createObjectURL(bl) : src); }, "image/jpeg", 0.82); });
+          })
+          .then(function (u) { res(u); }, function () { res(src); });
+      });
+      paso();
+    });
+    cache.set(k, p);
+    return p;
+  }
+
+  function cargar(img) {
+    const s = img.getAttribute("data-src");
+    if (!s) return;
+    img.removeAttribute("data-src");
+    if (s.indexOf("data:") === 0 && s.length > 40000 && window.createImageBitmap) miniatura(s).then(function (u) { img.src = u; });
+    else img.src = s;
+  }
+
+  window.llvLazyImgs = function () {
+    const imgs = document.querySelectorAll("img[data-src]");
+    if (io) { io.disconnect(); io = null; }
+    if (!imgs.length) return;
+    const raiz = document.getElementById("tabInicio");
+    if (!("IntersectionObserver" in window) || !raiz) { imgs.forEach(cargar); return; }
+    io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { io.unobserve(e.target); cargar(e.target); } });
+    }, { root: raiz, rootMargin: "600px 0px" });
+    imgs.forEach(function (i) { io.observe(i); });
+  };
+
+  // km hacia el local: si la ruta aún no llega, no releer localStorage por cada plato
+  const _kmMiss = {};
+  const _kmBase = kmHaciaSync;
+  kmHaciaSync = function (rLat, rLon) {
+    const la = Number(rLat), lo = Number(rLon);
+    const a = (!la || !lo) ? miLat + 0.003 : la, b = (!la || !lo) ? miLon + 0.003 : lo;
+    const k = claveRutaKm(a, b);
+    const g = cacheKmRuta[k];
+    if (g) return g;
+    const t = _kmMiss[k];
+    if (t && Date.now() - t < 1500) return calcularDistanciaKm(a, b, miLat, miLon) * 1.3;
+    _kmMiss[k] = Date.now();
+    return _kmBase.apply(this, arguments);
   };
 })();
