@@ -4363,11 +4363,13 @@ if (window.MutationObserver) {
     }
 
     // C. Buscar directo en la memoria RAM del celular (sin tocar Firebase)
+    const _t0 = performance.now(); let _org = "RAM";
     const platosEnMemoria = (todosLosProductosCache || []).filter(p => p.rId === rId);
     const list = document.getElementById("listMenuPlatos");
     
     const renderizar = (lista) => {
       if (!list) return;
+      if (/android/i.test(navigator.userAgent)) { try { toast("Menú " + lista.length + " platos · " + _org + " · " + Math.round(performance.now() - _t0) + " ms"); } catch (e) {} }
       list.innerHTML = "";
       if(!lista.length) {
         list.innerHTML = '<div class="empty-box"><p>No hay platos registrados</p></div>';
@@ -4418,7 +4420,7 @@ if (window.MutationObserver) {
       try {
         const colP = db.collection("restaurantes").doc(rId).collection("productos");
         let snap = null;
-        try { snap = await colP.get({ source: "cache" }); } catch (e1) { snap = null; }
+        _org = "SERVIDOR";
         if (!snap || snap.empty) snap = await colP.get();
         const bajados = [];
         snap.forEach(d => {
