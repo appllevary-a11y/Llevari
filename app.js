@@ -46,6 +46,8 @@ let filtroPedidos = 0;
 
 let platoTemp = "";
 let precioPlatoTemp = 0.0;
+let extrasPlatoTemp = 0.0;
+let extraCarritoTemp = 0;
 let imgPlatoTemp = "";
 let modalidadDelivery = true;
 let tipoServicioElegido = "DELIVERY";
@@ -86,16 +88,17 @@ async function kmRuta(rLat, rLon, cLat, cLon) {
   return calcularDistanciaKm(rLat, rLon, cLat, cLon) * 1.3;
 }
 
-function calcularTarifa(kmReal, subtotal) {
+function calcularTarifa(kmReal, subtotal, ext) {
   const kmCobro = Math.max(KM_MIN, Math.min(KM_MAX, Math.ceil(kmReal)));
   const pago = cfgPagoKm[kmCobro - KM_MIN] || 40;
   const cubrir = pago + cfgGanancia;
   const envio = Math.min(cubrir, cfgEnvioMax);
   const base = cubrir - envio;
   const minimo = kmCobro >= cfgKmMinimo ? cfgMinimoLargo : 0;
-  const maximo = Math.round(subtotal * cfgTopePct / 100.0);
+  const sb = Math.max(0, subtotal - (Number(ext) || 0));
+  const maximo = Math.round(sb * cfgTopePct / 100.0);
   const holgura = Math.max(0, maximo - base);
-  const extra = Math.min(holgura, Math.round(subtotal * cfgExtraPct / 100.0));
+  const extra = Math.min(holgura, Math.round(sb * cfgExtraPct / 100.0));
   const aumento = base + extra;
   const ganancia = cfgGanancia + extra;
   return { kmCobro, pago, envio, base, minimo, extra, aumento, ganancia };
@@ -923,7 +926,7 @@ function alternarModalidadServicio(deliv) {
   if (btnPic) btnPic.classList.toggle("active", !deliv);
 
   const sub = Math.round(precioPlatoTemp);
-  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub, extrasPlatoTemp);
   const prods = sub + (deliv ? t.aumento : 0);
   const total = deliv ? (prods + t.envio) : sub;
 
@@ -955,7 +958,7 @@ async function confirmarCreacionPedido() {
 
   const deliv = modalidadDelivery;
   const sub = Math.round(precioPlatoTemp);
-  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub, extrasPlatoTemp);
   const envio = deliv ? t.envio : 0.0;
   const aumento = deliv ? t.aumento : 0.0;
   const total = sub + aumento + envio;
@@ -1537,7 +1540,7 @@ function leerCarrito() {
   return (localStorage.getItem("carrito") || "").split(";;").filter(x => x.trim()).map(raw => {
     const p = raw.split("||");
     if (p.length < 5) return null;
-    return { raw: raw, rId: p[0], rNom: p[1], nombre: p[2], precio: parseFloat(p[3]) || 0, ops: p[4], img: p[5] || "", lat: parseFloat(p[6]) || 0, lon: parseFloat(p[7]) || 0, desc: p[8] || "" };
+    return { raw: raw, rId: p[0], rNom: p[1], nombre: p[2], precio: parseFloat(p[3]) || 0, ops: p[4], img: p[5] || "", lat: parseFloat(p[6]) || 0, lon: parseFloat(p[7]) || 0, desc: p[8] || "", ext: parseFloat(p[9]) || 0 };
   }).filter(Boolean);
 }
 
@@ -1549,7 +1552,7 @@ function agregarAlCarrito(rId, rNom, nombre, precioTotal, opciones, img, lat, lo
   const lim = s => String(s == null ? "" : s).replace(/\|/g, "/").replace(/;/g, ",");
   if (!lat || !lon) { lat = miLat + 0.003; lon = miLon + 0.003; }
   const imagen = (img && img.length < 150000) ? img : "";
-  const armar = im => [lim(rId), lim(rNom), lim(nombre), Number(precioTotal).toFixed(2), lim(opciones), im, lat, lon, lim(String(descCarritoTemp || "").replace(/\n/g, " "))].join("||") + ";;";
+  const armar = im => [lim(rId), lim(rNom), lim(nombre), Number(precioTotal).toFixed(2), lim(opciones), im, lat, lon, lim(String(descCarritoTemp || "").replace(/\n/g, " ")), String(Number(extraCarritoTemp) || 0)].join("||") + ";;";
   const curr = localStorage.getItem("carrito") || "";
   try {
     localStorage.setItem("carrito", curr + armar(imagen));
@@ -1595,7 +1598,8 @@ function dibujarCarrito() {
   cont.appendChild(tit);
 
   lista.forEach(g => {
-    const t = calcularTarifa(kmHaciaSync(g.lat, g.lon), Math.round(g.subtotal));
+    const gExt = g.items.reduce((a, it) => a + (it.ext || 0), 0);
+    const t = calcularTarifa(kmHaciaSync(g.lat, g.lon), Math.round(g.subtotal), gExt);
     const total = g.subtotal + t.aumento + t.envio;
     const falta = t.minimo > 0 && Math.round(g.subtotal) < t.minimo;
 
@@ -1610,7 +1614,8 @@ function dibujarCarrito() {
     cont.appendChild(head);
 
     g.items.forEach(it => {
-      const visible = it.precio + (g.subtotal > 0 ? t.aumento * it.precio / g.subtotal : 0);
+      const baseG = g.subtotal - gExt;
+      const visible = it.precio + (baseG > 0 ? t.aumento * Math.max(0, it.precio - (it.ext || 0)) / baseG : 0);
       const row = document.createElement("div");
       row.className = "card card-row";
       row.style.cssText = "padding:12px;margin-bottom:12px";
@@ -1675,7 +1680,8 @@ async function pedirDesdeCarrito(rId) {
     } catch (e) { toast("No se pudo verificar el local. Revisa tu conexión."); return; }
 
     let sum = 0;
-    items.forEach(i => { sum += i.precio; });
+    let ext = 0;
+    items.forEach(i => { sum += i.precio; ext += i.ext || 0; });
     const lat = items[0].lat || (miLat + 0.003), lon = items[0].lon || (miLon + 0.003);
     const t = calcularTarifa(kmHaciaSync(lat, lon), Math.round(sum));
     if (t.minimo > 0 && Math.round(sum) < t.minimo) {
@@ -1688,6 +1694,7 @@ async function pedirDesdeCarrito(rId) {
     platoTemp = items.map(i => i.nombre + (i.ops ? " (" + i.ops + ")" : "")).join("\n");
     descPlatoTemp = items.map(i => i.desc || "").join("\n");
     precioPlatoTemp = sum;
+    extrasPlatoTemp = ext;
     imgPlatoTemp = items[0].img;
     restauranteLatTemp = lat;
     restauranteLonTemp = lon;
@@ -2257,7 +2264,7 @@ alternarModalidadServicio = function (deliv) {
   if (deliv === false) { toast("💳 Pago con tarjeta: próximamente disponible"); return; }
   _alternarOrig(true);
   const sub = Math.round(precioPlatoTemp);
-  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+  const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub, extrasPlatoTemp);
   const falta = t.minimo > 0 && sub < t.minimo;
   const av = document.getElementById("svAviso");
   if (av) {
@@ -2277,7 +2284,7 @@ const _confirmarOrig = confirmarCreacionPedido;
 confirmarCreacionPedido = async function () {
   if (modalidadDelivery) {
     const sub = Math.round(precioPlatoTemp);
-    const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+    const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub, extrasPlatoTemp);
     if (t.minimo > 0 && sub < t.minimo) {
       toast("Pedido mínimo para delivery a tu distancia: L. " + t.minimo + ". Te faltan L. " + (t.minimo - sub) + ".");
       return;
@@ -2885,7 +2892,7 @@ const _confirmarTarifas = confirmarCreacionPedido;
 confirmarCreacionPedido = async function () {
   const total = () => {
     const sub = Math.round(precioPlatoTemp);
-    const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+    const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub, extrasPlatoTemp);
     return modalidadDelivery ? sub + t.aumento + t.envio : sub;
   };
   const antes = total();
@@ -5041,7 +5048,7 @@ if (window.MutationObserver) {
     _prevServ(deliv);
     try {
       const sub = Math.round(precioPlatoTemp);
-      const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub);
+      const t = calcularTarifa(kmHaciaSync(restauranteLatTemp, restauranteLonTemp), sub, extrasPlatoTemp);
       const i1 = document.getElementById("svInfo1"), i2 = document.getElementById("svInfo2");
       if (i1) i1.textContent = modalidadDelivery ? "⏱ Recibes en 20-35 min" : "🏪 Pasas por tu pedido cuando esté listo";
       if (i2) i2.textContent = modalidadDelivery ? "🛵 Envío L. " + t.envio : "Sin costo de envío";
@@ -5523,19 +5530,20 @@ function llvGuiaAndroid() {
   }
 
   // Total de productos (con el aumento de las reglas) para una suma cruda dada
-  function T(raw) {
+  function extrasMain() { return currentDishExtra * currentDishQty; }
+  function T(raw, ext) {
     const d = currentDishData;
     const sub = Math.round(raw);
-    const t = calcularTarifa(kmHaciaSync(d.rLat, d.rLon), sub);
+    const t = calcularTarifa(kmHaciaSync(d.rLat, d.rLon), sub, ext || 0);
     return { sub: sub, t: t, totProd: sub + t.aumento };
   }
 
   function totales() {
     const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
-    let raw = mainSub;
-    combos.forEach(c => { raw += unit(c) * c.qty; });
-    const f = T(raw);
-    return { mainSub: mainSub, raw: raw, sub: f.sub, t: f.t, totProd: f.totProd, total: f.totProd + f.t.envio };
+    let raw = mainSub, ext = extrasMain();
+    combos.forEach(c => { raw += unit(c) * c.qty; ext += extraDe(c) * c.qty; });
+    const f = T(raw, ext);
+    return { mainSub: mainSub, raw: raw, ext: ext, sub: f.sub, t: f.t, totProd: f.totProd, total: f.totProd + f.t.envio };
   }
 
   // Cada producto sale con su precio CON aumento (como si fuera solo).
@@ -5547,14 +5555,15 @@ function llvGuiaAndroid() {
 
   function repartir() {
     const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
-    const mainT = T(mainSub).totProd;
+    const mainE = extrasMain();
+    const mainT = T(mainSub, mainE).totProd;
     const items = [{ raw: mainSub, c: null, solo: mainT, mostrado: mainT }];
-    let acc = mainSub, prev = mainT;
+    let acc = mainSub, accE = mainE, prev = mainT;
     combos.forEach(c => {
-      const raw = unit(c) * c.qty;
-      acc += raw;
-      const t = T(acc).totProd;
-      items.push({ raw: raw, c: c, solo: T(raw).totProd, mostrado: r2(t - prev) });
+      const raw = unit(c) * c.qty, e = extraDe(c) * c.qty;
+      acc += raw; accE += e;
+      const t = T(acc, accE).totProd;
+      items.push({ raw: raw, c: c, solo: T(raw, e).totProd, mostrado: r2(t - prev) });
       prev = t;
     });
     return { items: items, tot: prev };
@@ -5603,6 +5612,7 @@ function llvGuiaAndroid() {
     platoTemp = lineas.join("\n");
     descPlatoTemp = descs.join("\n");
     precioPlatoTemp = r.sub;
+    extrasPlatoTemp = r.ext;
     restauranteLatTemp = (d.rLat && d.rLon) ? d.rLat : (miLat + 0.003);
     restauranteLonTemp = (d.rLat && d.rLon) ? d.rLon : (miLon + 0.003);
     $("modalPlatoPro").classList.add("hidden");
@@ -5613,12 +5623,16 @@ function llvGuiaAndroid() {
 
   function agregarTodo() {
     const d = currentDishData;
-    descCarritoTemp = String(d.desc || "");
-    agregarAlCarrito(d.rId, d.rNom, currentDishQty + "x " + d.plato, (currentDishBasePrice + currentDishExtra) * currentDishQty, opcionesElegidasTexto(), d.imgD, d.rLat, d.rLon);
-    combos.forEach(c => {
-      descCarritoTemp = String(c.s.pDesc || "");
-      agregarAlCarrito(d.rId, d.rNom, c.qty + "x " + c.s.pNom, unit(c) * c.qty, textoOps(c), c.s.pImg, d.rLat, d.rLon);
-    });
+    try {
+      descCarritoTemp = String(d.desc || "");
+      extraCarritoTemp = extrasMain();
+      agregarAlCarrito(d.rId, d.rNom, currentDishQty + "x " + d.plato, (currentDishBasePrice + currentDishExtra) * currentDishQty, opcionesElegidasTexto(), d.imgD, d.rLat, d.rLon);
+      combos.forEach(c => {
+        descCarritoTemp = String(c.s.pDesc || "");
+        extraCarritoTemp = extraDe(c) * c.qty;
+        agregarAlCarrito(d.rId, d.rNom, c.qty + "x " + c.s.pNom, unit(c) * c.qty, textoOps(c), c.s.pImg, d.rLat, d.rLon);
+      });
+    } finally { extraCarritoTemp = 0; }
     $("modalPlatoPro").classList.add("hidden");
   }
 
@@ -5627,10 +5641,8 @@ function llvGuiaAndroid() {
     combos = [];
     filas = [];
     const r = _mostrarBase.apply(this, arguments);
-    const bo = $("btnDishOrderNow"), ba = $("btnDishAddToCart");
-    const oo = bo.onclick, oa = ba.onclick;
-    bo.onclick = function () { if (!combos.length) return oo.apply(this, arguments); pedirAhora(); };
-    ba.onclick = function () { if (!combos.length) return oa.apply(this, arguments); agregarTodo(); };
+    $("btnDishOrderNow").onclick = pedirAhora;
+    $("btnDishAddToCart").onclick = agregarTodo;
     return r;
   };
 
