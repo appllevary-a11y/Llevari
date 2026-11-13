@@ -5341,8 +5341,8 @@ const LLV_BCSS = "position:fixed;left:10px;right:10px;bottom:84px;z-index:99999;
   + "background:#0033ff;color:#fff;border-radius:14px;padding:12px 14px;"
   + "display:flex;align-items:center;gap:10px;"
   + "box-shadow:0 6px 20px rgba(0,0,0,.35);font:600 14px/1.3 system-ui,sans-serif";
-const LLV_TXT_IOS = "Para recibir avisos de tu pedido instala Llevari: "
-  + "toca Compartir y luego Añadir a pantalla de inicio.";
+const LLV_TXT_IOS = "Instala Llevari para recibir avisos de tu pedido "
+  + "aunque tengas el celular bloqueado.";
 const LLV_TXT_AND = "Instala Llevari para recibir avisos de tu pedido "
   + "aunque tengas el celular bloqueado.";
 function llvBanner() {
@@ -5360,7 +5360,7 @@ function llvBanner() {
     t.style.flex = "1";
     t.textContent = ios ? LLV_TXT_IOS : LLV_TXT_AND;
     b.appendChild(t);
-    if (!ios) b.appendChild(llvBtnInstalar());
+    b.appendChild(llvBtnInstalar());
     b.appendChild(llvBtnCerrar());
     document.body.appendChild(b);
   } catch (e) {}
@@ -5371,6 +5371,7 @@ function llvBtnInstalar() {
   bi.style.cssText = "background:#fff;color:#0033ff;border:0;"
     + "border-radius:10px;padding:8px 12px;font:700 13px system-ui,sans-serif";
   bi.onclick = async function () {
+    if (llvEsIOS()) { llvGuiaIOS(); return; }
     try { llvInstEvt.prompt(); await llvInstEvt.userChoice; } catch (e) {}
     llvInstEvt = null; llvBannerQuitar();
   };
@@ -5409,3 +5410,31 @@ auth.onAuthStateChanged(function (u) {
       .doc(t.token).delete().catch(function () {});
   } catch (e) {}
 });
+function llvGuiaIOS() {
+  if (document.getElementById("llvGuia")) return;
+  const g = document.createElement("div");
+  g.id = "llvGuia";
+  g.style.cssText = "position:fixed;inset:0;z-index:100000;"
+    + "background:rgba(0,0,0,.78);display:flex;align-items:center;"
+    + "justify-content:center;padding:18px";
+  const c = document.createElement("div");
+  c.style.cssText = "background:#fff;color:#111;border-radius:20px;"
+    + "padding:22px 18px;max-width:340px;width:100%;text-align:left;"
+    + "font:600 16px/1.45 system-ui,sans-serif";
+  c.innerHTML = "<div style='font-size:20px;font-weight:800;"
+    + "text-align:center;margin-bottom:14px'>Instala Llevari en 3 pasos</div>"
+    + "<div style='margin-bottom:12px'>1️⃣ Toca el botón <b>Compartir</b> "
+    + "⬆️ de Safari (abajo). Si no lo ves, toca <b>⋯</b> o <b>≡</b> y ahí sale.</div>"
+    + "<div style='margin-bottom:12px'>2️⃣ Baja y toca <b>Añadir a pantalla "
+    + "de inicio</b> ➕ y luego <b>Añadir</b>.</div>"
+    + "<div style='margin-bottom:16px'>3️⃣ Abre Llevari desde el ícono nuevo "
+    + "y toca <b>Permitir</b> en las notificaciones.</div>";
+  const ok = document.createElement("button");
+  ok.textContent = "Entendido";
+  ok.style.cssText = "width:100%;background:#0033ff;color:#fff;border:0;"
+    + "border-radius:12px;padding:12px;font:700 16px system-ui,sans-serif";
+  ok.onclick = function () { g.remove(); };
+  c.appendChild(ok);
+  g.appendChild(c);
+  document.body.appendChild(g);
+}
