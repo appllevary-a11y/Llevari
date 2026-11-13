@@ -1582,3 +1582,35 @@ html.is-android .llv-alert-backdrop {
 }
 html.is-android .llv-alert-card { transform: none; animation: vPop 0.4s cubic-bezier(.2,1.2,.4,1) backwards; }
 html.is-android .llv-alert-icon-wrap, html.is-android .llv-alert-title, html.is-android .llv-alert-msg, html.is-android .llv-alert-btn { transform: none; }
+
+/* ===== RENDIMIENTO ANDROID ===== */
+@keyframes vEntraLite { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+html.is-android .btn-plus-abs,
+html.is-android .search-icon-badge,
+html.is-android .badge-status.abierto,
+html.is-android .section-header h3,
+html.is-android .cat-big-icon-wrap,
+html.is-android .cat-chip-ico,
+html.is-android .rest-mini-logo,
+html.is-android .hero-cta,
+html.is-android .brand-title,
+html.is-android #btnHeaderConfig,
+html.is-android #btnHeaderCarrito,
+html.is-android .nav-item.active .nav-icon,
+html.is-android .bn-emoji { animation: none !important; }
+html.is-android .bn-price { animation: bnSello .6s .25s cubic-bezier(.3,1.5,.5,1) backwards !important; }
+html.is-android .rest-card-big,
+html.is-android .rest-card-grid,
+html.is-android .product-row-card,
+html.is-android .cat-big,
+html.is-android .cat-chip,
+html.is-android .sug-row,
+html.is-android .card,
+html.is-android .section-header,
+html.is-android .summary-card { animation: vEntraLite .28s ease-out backwards !important; }
+html.is-android .modal-backdrop,
+html.is-android .modal-backdrop-alert,
+html.is-android .circle-btn,
+html.is-android .bn-tag { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.is-android .modal-backdrop,
+html.is-android .modal-backdrop-alert { background: rgba(0,0,0,0.62) !important; }

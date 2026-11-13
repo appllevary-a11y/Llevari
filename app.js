@@ -612,9 +612,16 @@ async function cargarInicioPrincipal() {
   bestRow.className = "horizontal-scroller";
   cont.appendChild(bestRow);
 
-  const _hayProd = todosLosProductosCache.length > 0 && window._prodKey === miCiudad && window._prodP && window._prodP.n === 0 && Date.now() - (window._prodT || 0) < 180000;
-  if (!_hayProd) { todosLosProductosCache = []; window._prodKey = miCiudad; window._prodT = Date.now(); window._prodP = { n: 0 }; }
+  const _hayProd = !!window._prodP && window._prodKey === miCiudad && Date.now() - (window._prodT || 0) < 180000 && (window._prodP.n > 0 || todosLosProductosCache.length > 0);
+  if (!_hayProd) { todosLosProductosCache = []; window._prodKey = miCiudad; window._prodT = Date.now(); window._prodP = { n: 0, ids: {} }; }
   const _P = window._prodP;
+  if (_hayProd) {
+    const _ids = {};
+    snapR.forEach(d => { _ids[d.id] = 1; });
+    Object.keys(_P.ids).forEach(k => { if (!_ids[k]) delete _P.ids[k]; });
+    todosLosProductosCache = todosLosProductosCache.filter(p => _ids[p.rId]);
+    todosLosProductosCache.forEach(p => { const e = (window.LLV_ESTADO || {})[p.rId]; if (e) p.rCerrado = e.cerrado; });
+  }
   listaPublicitariaGlobal = [];
 
   snapR.forEach(doc => {
@@ -646,7 +653,7 @@ async function cargarInicioPrincipal() {
     };
     bestRow.appendChild(card);
 
-    (_hayProd ? Promise.resolve([]) : (_P.n++, colaProductos(() => db.collection("restaurantes").doc(doc.id).collection("productos").get()).finally(() => { _P.n--; }))).then(pSnap => {
+    (_P.ids[doc.id] ? Promise.resolve([]) : (_P.ids[doc.id] = 1, _P.n++, colaProductos(() => db.collection("restaurantes").doc(doc.id).collection("productos").get()).finally(() => { _P.n--; }).catch(() => { delete _P.ids[doc.id]; return []; }))).then(pSnap => { if (window._prodP !== _P) return;
       pSnap.forEach(pd => {
         const pData = pd.data();
         if (pData.nombre && pData.precio > 0) {
@@ -1293,11 +1300,13 @@ async function revisarPedidoActivo() {
     const res = await Promise.all(snap.docs.map(async d => {
       const p = d.data();
       if (!p.rId || !p.pId) return null;
+      if (window._histFin && window._histFin[p.pId]) return null;
       try {
         const r = await db.collection("restaurantes").doc(p.rId).collection("pedidos").doc(p.pId).get();
         if (!r.exists) return null;
         const x = r.data();
         const est = (x.estado || "").toUpperCase();
+        if (finales.includes(est)) (window._histFin = window._histFin || {})[p.pId] = x;
         if (est && !finales.includes(est)) return { rId: p.rId, pId: p.pId, nombre: x.restaurante_nombre || "Restaurante", lat: x.restaurante_lat, lon: x.restaurante_lon };
       } catch (e) {}
       return null;
@@ -1966,8 +1975,13 @@ async function cargarHistorial() {
     const d = doc.data();
     if (!d.rId || !d.pId) return null;
     try {
+      const _hc = window._histFin && window._histFin[d.pId];
+      if (_hc) return { d, r: _hc };
       const r = await db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId).get();
-      return r.exists ? { d, r: r.data() } : null;
+      if (!r.exists) return null;
+      const _rd = r.data();
+      if (ESTADOS_FINALES.includes(String(_rd.estado || "NUEVO").toUpperCase())) (window._histFin = window._histFin || {})[d.pId] = _rd;
+      return { d, r: _rd };
     } catch (e) { return null; }
   }));
   if (miFiltro !== filtroPedidos) return;
@@ -2763,7 +2777,6 @@ function firmaRest(snap) {
 }
 
 async function restaurantesRapido() {
-  colaProd.length = 0;
   const col = db.collection("restaurantes");
   let cache = null;
   try {
@@ -4435,7 +4448,7 @@ if (window.MutationObserver) {
        grid.innerHTML = "";
        const frag = document.createDocumentFragment();
        locs.forEach(r => {
-          if (r.ciudad && String(r.ciudad).toLowerCase() !== String(window.miCiudad).toLowerCase()) return;
+          if (r.ciudad && String(r.ciudad).toLowerCase() !== String(miCiudad).toLowerCase()) return;
           const rLat = r.latitud || r.lat || 0;
           const rLon = r.longitud || r.lon || 0;
           const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
@@ -4461,15 +4474,11 @@ if (window.MutationObserver) {
        grid.appendChild(frag);
     };
 
-    if (window._vLocales && window._vLocales.length > 0) {
-       setTimeout(() => renderLocales(window._vLocales), 10);
-    } else {
-       db.collection("restaurantes").get({source:"cache"}).catch(()=>db.collection("restaurantes").get()).then(snap => {
-          const res = [];
-          snap.forEach(d => res.push(Object.assign({id: d.id}, d.data())));
-          renderLocales(res);
-       });
-    }
+    Promise.resolve(restaurantesRapido()).then(function (snap) {
+      const res = [];
+      snap.forEach(d => res.push(Object.assign({ id: d.id }, d.data())));
+      renderLocales(res);
+    }).catch(function () { renderLocales([]); });
   };
 })();
 
@@ -4800,4 +4809,104 @@ if (window.MutationObserver) {
   };
   const _fr = firmaRest;
   firmaRest = function (snap) { anotar(snap); return _fr.apply(this, arguments); };
+})();
+
+
+// ===== LLV-RAPIDO: locales en tiempo real + inicio sin reconstruir =====
+(function () {
+  let un = null, raw = null, sig = "", primera = true, tRef = null;
+
+  function refrescarUI() {
+    window._homeT = 0;
+    if (!miTelefono) return;
+    const app = document.getElementById("layoutAppMain");
+    if (!app || app.classList.contains("hidden") || tabActualIndex !== 0) return;
+    const cont = document.getElementById("contRestaurantes");
+    if (!cont) return;
+    if (document.getElementById("listMenuPlatos")) {
+      const e = (window.LLV_ESTADO || {})[restIdSeleccionadoTemp];
+      if (e && e.cerrado) {
+        alert({ titulo: e.nombre || "Local", mensaje: "Este local acaba de cerrar 🛑", imagen: formatearImagen(e.logo) });
+        if (window.LLVNav) window.LLVNav.atras();
+      }
+      return;
+    }
+    const q = document.getElementById("etBuscador");
+    if (q && q.value.trim()) { filtrarResultados(q.value.trim()); return; }
+    if (document.getElementById("gridTodosLocales")) { verTodosLosRestaurantes(); return; }
+    if (cont.querySelector(".hero-slider-wrap")) cargarInicioPrincipal();
+  }
+
+  function iniciar() {
+    if (un) return;
+    try {
+      un = db.collection("restaurantes").onSnapshot(function (snap) {
+        if (snap.empty && snap.metadata.fromCache) return;
+        raw = snap;
+        const s = firmaRest(_vSnapMarca(snap));
+        if (primera) { primera = false; sig = s; return; }
+        if (s === sig) return;
+        sig = s;
+        clearTimeout(tRef);
+        tRef = setTimeout(refrescarUI, 500);
+      }, function () { raw = null; });
+    } catch (e) { un = null; }
+  }
+
+  function detener() {
+    if (un) { try { un(); } catch (e) {} }
+    un = null; raw = null; sig = ""; primera = true;
+  }
+
+  try { auth.onAuthStateChanged(function (u) { if (u) iniciar(); else detener(); }); } catch (e) {}
+
+  const _rrAntes = restaurantesRapido;
+  restaurantesRapido = async function () {
+    if (raw) return _vSnapMarca(raw);
+    return _rrAntes.apply(this, arguments);
+  };
+
+  const _lbAntes = _vLocalesBusqueda;
+  _vLocalesBusqueda = async function () {
+    if (!raw) return _lbAntes.apply(this, arguments);
+    const lista = [];
+    _vSnapMarca(raw).forEach(function (doc) {
+      const r = doc.data();
+      if (r.ciudad && String(r.ciudad).toLowerCase() !== String(miCiudad).toLowerCase()) return;
+      lista.push({ id: doc.id, nombre: r.nombre || "", lat: r.latitud || 0, lon: r.longitud || 0, cerrado: String(r.estado || "").toUpperCase() === "CERRADO", logo: r.logoUrl || "" });
+    });
+    return lista;
+  };
+
+  const claveHome = function () { return miCiudad + "|" + miLat + "|" + miLon; };
+
+  const _ci = cargarInicioPrincipal;
+  cargarInicioPrincipal = function () {
+    window._homeK = claveHome();
+    window._homeT = Date.now();
+    return _ci.apply(this, arguments);
+  };
+
+  const _rpt = refrescarPorTarifas;
+  refrescarPorTarifas = function () {
+    window._homeT = 0;
+    return _rpt.apply(this, arguments);
+  };
+
+  const _ct = cambiarTab;
+  cambiarTab = function (idx) {
+    if (idx === 0 && tabActualIndex !== 0) {
+      const c = document.getElementById("contRestaurantes");
+      const q = document.getElementById("etBuscador");
+      if (c && c.querySelector(".hero-slider-wrap") && window._homeK === claveHome() && Date.now() - (window._homeT || 0) < 180000 && !(q && q.value.trim())) {
+        tabActualIndex = 0;
+        document.querySelectorAll(".nav-item[data-tab]").forEach(function (el) { el.classList.toggle("active", parseInt(el.getAttribute("data-tab")) === 0); });
+        document.querySelectorAll(".tab-view").forEach(function (t, i) { t.classList.toggle("active", i === 0); });
+        actualizarBadgeCarrito();
+        if (pedidoActivoId || document.getElementById("bannerActivo")) revisarPedidoActivo();
+        return;
+      }
+    }
+    return _ct.apply(this, arguments);
+  };
 })();
