@@ -2068,3 +2068,17 @@ html.is-android .llv-mini::before { animation: none; }
 html.is-android .llv-mini-moto { filter: none; animation: llvMoto .55s ease-in-out infinite alternate; }
 html.is-android .llv-in::after { animation: none; background: linear-gradient(90deg, rgba(124,58,237,.15), #7C3AED, #FF8A00, rgba(255,138,0,.15)); }
 html.is-android .llv-sk-hero, html.is-android .llv-sk-img, html.is-android .llv-sk-line { animation: none; background: #EAE5F6; }
+
+/* ===== iPhone: barra de estado morada (pantalla completa) ===== */
+body::before {
+  content: "";
+  position: fixed; top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--c-primary-deep);
+  z-index: 99999;
+  pointer-events: none;
+}
+.screen {
+  top: env(safe-area-inset-top, 0px);
+  height: calc(100% - env(safe-area-inset-top, 0px));
+}

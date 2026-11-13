@@ -5287,8 +5287,7 @@ function llvStandalone() {
 function llvOpcionesNotif(d) {
   return {
     body: d.body || "",
-    icon: "icon-192.png",
-    badge: "icon-192.png",
+    icon: "logo.png",
     tag: (d.pedidoId || "pedido") + "-" + (d.tipo || "aviso"),
     renotify: true,
     requireInteraction: true,

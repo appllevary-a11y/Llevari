@@ -18,8 +18,7 @@ messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {};
   return self.registration.showNotification(d.title || "LLEVARI", {
     body: d.body || "",
-    icon: "icon-192.png",
-    badge: "icon-192.png",
+    icon: "logo.png",
     tag: (d.pedidoId || "pedido") + "-" + (d.tipo || "aviso"),
     renotify: true,
     requireInteraction: true,
