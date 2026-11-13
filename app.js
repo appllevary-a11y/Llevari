@@ -4297,20 +4297,23 @@ if (window.MutationObserver) {
 (function() {
   // 1. Quitar bloqueos de red al abrir restaurantes (apertura instantánea)
   window.abrirMenuRestaurante = async function(rId, rNom, rLat, rLon, logoUrl) {
-    // CANDADO: si el local está cerrado, solo se muestra la alerta y NO se abre el menú
-    try {
-      let dc = null;
-      try { dc = await db.collection("restaurantes").doc(rId).get({ source: "cache" }); } catch (e1) { dc = null; }
-      if (!dc || !dc.exists) dc = await db.collection("restaurantes").doc(rId).get();
-      if (dc && dc.exists) {
-        const rd = dc.data() || {};
-        if (String(rd.estado || "").toUpperCase() === "CERRADO") {
-          if (typeof llvHide === "function" && window.LLV) Object.keys(window.LLV.activos || {}).forEach(k => llvHide(k));
+    // CANDADO RÁPIDO: usa el estado en memoria (no espera internet)
+    const _est = (window.LLV_ESTADO || {})[rId];
+    if (_est && _est.cerrado) {
+      if (typeof llvHide === "function" && window.LLV) Object.keys(window.LLV.activos || {}).forEach(k => llvHide(k));
+      alert({ titulo: _est.nombre || rNom || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(_est.logo || logoUrl) });
+      return;
+    }
+    if (!_est) {
+      // Estado desconocido: se abre normal y se verifica en segundo plano
+      db.collection("restaurantes").doc(rId).get().then(function (d) {
+        if (d.exists && String(d.data().estado || "").toUpperCase() === "CERRADO" && document.getElementById("listMenuPlatos") && String(restIdSeleccionadoTemp) === String(rId)) {
+          const rd = d.data();
           alert({ titulo: rd.nombre || rNom || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(rd.logoUrl || logoUrl) });
-          return;
+          if (window.LLVNav) window.LLVNav.atras();
         }
-      }
-    } catch (e) {}
+      }).catch(function () {});
+    }
 
     // A. Calcular rutas en fondo, SIN trabar el celular (quitamos el await)
     if (rLat && rLon && typeof window.precargarRutasWeb === "function") {
@@ -4335,17 +4338,17 @@ if (window.MutationObserver) {
     `;
     
     // Configurar buscador
-    window.restIdSeleccionadoTemp = rId;
-    window.rNombreTemp = rNom;
-    window.restauranteLatTemp = rLat;
-    window.restauranteLonTemp = rLon;
+    restIdSeleccionadoTemp = rId;
+    rNombreTemp = rNom;
+    restauranteLatTemp = rLat;
+    restauranteLonTemp = rLon;
     if(typeof _vPonerBuscador === 'function') {
-      window._vMenuId = rId;
+      _vMenuId = rId;
       _vPonerBuscador(true, rNom);
     }
 
     // C. Buscar directo en la memoria RAM del celular (sin tocar Firebase)
-    const platosEnMemoria = (window.todosLosProductosCache || []).filter(p => p.rId === rId);
+    const platosEnMemoria = (todosLosProductosCache || []).filter(p => p.rId === rId);
     const list = document.getElementById("listMenuPlatos");
     
     const renderizar = (lista) => {
@@ -4387,7 +4390,10 @@ if (window.MutationObserver) {
     } else {
       // Fallback por si la RAM falla (Casi nunca pasará)
       try {
-        const snap = await db.collection("restaurantes").doc(rId).collection("productos").get({source: "cache"}).catch(() => db.collection("restaurantes").doc(rId).collection("productos").get());
+        const colP = db.collection("restaurantes").doc(rId).collection("productos");
+        let snap = null;
+        try { snap = await colP.get({ source: "cache" }); } catch (e1) { snap = null; }
+        if (!snap || snap.empty) snap = await colP.get();
         const bajados = [];
         snap.forEach(d => {
            const pt = d.data();
@@ -4717,13 +4723,19 @@ if (window.MutationObserver) {
 
   // ---- registrar cada vista nueva de Inicio ----
   const _menu = abrirMenuRestaurante;
-  abrirMenuRestaurante = async function () {
+  abrirMenuRestaurante = function () {
     const restaur = V.restaurando, sc = leerScroll(), antes = $("listMenuPlatos");
     const args = Array.prototype.slice.call(arguments);
-    const r = await _menu.apply(this, arguments);
-    const ahora = $("listMenuPlatos");
-    if (!restaur && ahora && ahora !== antes) entrar({ k: "menu:" + args[0], t: "menu", a: args }, sc);
-    return r;
+    let hecho = false;
+    const chequear = () => {
+      if (hecho || restaur) return;
+      const ahora = $("listMenuPlatos");
+      if (ahora && ahora !== antes) { hecho = true; entrar({ k: "menu:" + args[0], t: "menu", a: args }, sc); }
+    };
+    const p = _menu.apply(this, arguments);
+    chequear();
+    Promise.resolve(p).then(chequear, chequear);
+    return p;
   };
 
   const _inicio = cargarInicioPrincipal;
@@ -4761,4 +4773,21 @@ if (window.MutationObserver) {
 
   try { new MutationObserver(agendar).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] }); } catch (e) {}
   setInterval(sync, 400);
+})();
+
+// ===== LLV-ESTADO: estado de los locales en memoria (abrir menú sin esperar internet) =====
+(function () {
+  window.LLV_ESTADO = window.LLV_ESTADO || {};
+  function anotar(snap) {
+    try {
+      snap.forEach(function (d) {
+        const x = d.data() || {};
+        window.LLV_ESTADO[d.id] = { cerrado: String(x.estado || "").toUpperCase() === "CERRADO", nombre: x.nombre || "", logo: x.logoUrl || "" };
+      });
+    } catch (e) {}
+  }
+  const _rr = restaurantesRapido;
+  restaurantesRapido = async function () { const s = await _rr.apply(this, arguments); anotar(s); return s; };
+  const _fr = firmaRest;
+  firmaRest = function (snap) { anotar(snap); return _fr.apply(this, arguments); };
 })();
