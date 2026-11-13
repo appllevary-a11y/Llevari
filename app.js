@@ -4265,7 +4265,7 @@ if (window.MutationObserver) {
     window.colaProductos = function (fn) {
       return oldCola(function () {
         // Pausa de 3.5s solo al arrancar, luego corre normal
-        const delay = arranque ? 3500 : 0;
+        const delay = arranque ? 800 : 0;
         arranque = false;
         return new Promise(r => setTimeout(r, delay)).then(() => fn());
       });
@@ -4283,7 +4283,7 @@ if (window.MutationObserver) {
         if (opts && (opts.source === "cache" || opts.source === "server")) return reqOriginal;
         
         // Creamos una bomba de tiempo de 4.5 segundos
-        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), 10000));
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), 2500));
         
         // Competencia: Gana el servidor o gana el timeout
         return Promise.race([reqOriginal, timeout]).catch(err => {
@@ -4379,7 +4379,7 @@ if (window.MutationObserver) {
       const frag = document.createDocumentFragment();
       const _pintar = (p, frag) => {
         const finalPrice = precioVisible(p.pPrec, rLat, rLon);
-        const imgSrc = p.pImg || logoUrl;
+        const imgSrc = (p.pImg && p.pImg.length < 90000) ? p.pImg : ((logoUrl && String(logoUrl).length < 90000) ? logoUrl : "");
         const row = document.createElement("div");
         row.className = "product-row-card";
         row.innerHTML = `
@@ -4420,7 +4420,10 @@ if (window.MutationObserver) {
         const colP = db.collection("restaurantes").doc(rId).collection("productos");
         let snap = null;
         _org = "SERVIDOR";
-        if (!snap || snap.empty) snap = await colP.get();
+        if (!snap || snap.empty) {
+          try { snap = await Promise.race([colP.get({ source: "cache" }), new Promise(r => setTimeout(() => r(null), 900))]); } catch (e) { snap = null; }
+          if (!snap || snap.empty) snap = await colP.get();
+        }
         const bajados = [];
         snap.forEach(d => {
            const pt = d.data();
@@ -4691,7 +4694,7 @@ if (window.MutationObserver) {
   try { history.scrollRestoration = "manual"; } catch (e) {}
   try { history.replaceState({ llv: 0 }, ""); } catch (e) {}
 
-  function agendar() { if (tSync) return; tSync = setTimeout(() => { tSync = null; sync(); }, 0); }
+  function agendar() { clearTimeout(tSync); tSync = setTimeout(() => { tSync = null; sync(); }, 150); }
 
   function sync() {
     const L = capas();
@@ -5158,26 +5161,3 @@ if (window.MutationObserver) {
   };
 })();
 
-// ===== PARCHE MEDIR-MENU =====
-(function () {
-  const _o = window.abrirMenuRestaurante;
-  if (typeof _o !== "function") return;
-  window.abrirMenuRestaurante = async function (rId) {
-    const t0 = performance.now();
-    const enRam = (todosLosProductosCache || []).some(function (p) { return p.rId === rId; });
-    const r = _o.apply(this, arguments);
-    let tFila = 0, tImg = 0;
-    const iv = setInterval(function () {
-      const list = document.getElementById("listMenuPlatos");
-      if (list) {
-        if (!tFila && list.querySelector(".product-row-card")) tFila = performance.now() - t0;
-        if (tFila && !tImg) { const im = list.querySelector("img.img-fill"); if (im && im.complete && im.naturalWidth > 0) tImg = performance.now() - t0; }
-      }
-      if ((tFila && tImg) || performance.now() - t0 > 20000) {
-        clearInterval(iv);
-        try { toast("⏱ Menú " + (enRam ? "con RAM" : "sin RAM") + " | 1ª fila " + (tFila ? Math.round(tFila) : "—") + " ms | 1ª foto " + (tImg ? Math.round(tImg) : "—") + " ms"); } catch (e) {}
-      }
-    }, 100);
-    return r;
-  };
-})();
