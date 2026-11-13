@@ -4999,3 +4999,12 @@ if (window.MutationObserver) {
     return _kmBase.apply(this, arguments);
   };
 })();
+
+
+// ===== DETECCION IOS =====
+(function () {
+  var ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    document.documentElement.classList.add("is-ios");
+  }
+})();

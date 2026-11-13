@@ -1698,3 +1698,61 @@ html.is-android #gridTodosLocales .rest-card-grid {
   contain-intrinsic-size: auto 124px;
 }
 html.is-android #gridTodosLocales .rest-card-grid { contain-intrinsic-size: auto 170px; }
+
+/* ===== IOS COLORES ===== */
+html.is-ios {
+  --c-primary: #7B1FFF;
+  --c-primary-dark: #4A0BC4;
+  --c-primary-deep: #25057A;
+  --c-primary-light: #DCC8FF;
+  --c-accent: #FF9A00;
+  --c-accent-dark: #FF4500;
+  --c-bg: #E8DCFF;
+  --c-text: #0F0A24;
+  --c-muted: #47427A;
+}
+@media (color-gamut: p3) {
+  html.is-ios {
+    --c-primary: color(display-p3 0.50 0.14 1);
+    --c-primary-dark: color(display-p3 0.28 0.05 0.78);
+    --c-primary-deep: color(display-p3 0.15 0.02 0.47);
+    --c-accent: color(display-p3 1 0.62 0.08);
+    --c-accent-dark: color(display-p3 1 0.32 0.04);
+  }
+}
+html.is-ios html, html.is-ios body, html.is-ios #appRoot,
+html.is-ios, html.is-ios body, html.is-ios #appRoot {
+  background-image: linear-gradient(180deg, #E4D6FF 0%, #FFE3C4 100%);
+}
+html.is-ios #colUbi {
+  background: linear-gradient(145deg, rgba(255,255,255,.36), rgba(255,255,255,.14));
+  border: 1px solid rgba(255,255,255,.45);
+}
+html.is-ios .header-actions .circle-btn {
+  background: linear-gradient(145deg, rgba(255,255,255,.40), rgba(255,255,255,.16));
+  border: 1px solid rgba(255,255,255,.45);
+}
+html.is-ios .bottom-nav { background: rgba(255,255,255,.95); }
+html.is-ios .nav-item.active .nav-pill { background: #DCC8FF; box-shadow: 0 4px 12px rgba(123,31,255,.35); }
+html.is-ios .card,
+html.is-ios .rest-card-big,
+html.is-ios .rest-card-grid,
+html.is-ios .product-row-card { box-shadow: 0 10px 26px rgba(123,31,255,.28), 0 2px 6px rgba(123,31,255,.14); }
+html.is-ios .cat-chip-ico { background: linear-gradient(135deg, #DCC8FF, #B58CFF); }
+html.is-ios .rest-card-cover { background: linear-gradient(135deg, #DCC8FF, #FFC896); }
+html.is-ios .product-thumb-box { background: linear-gradient(135deg, #DCC8FF, #FFD0A0); }
+html.is-ios .hero-bg-img,
+html.is-ios .rest-card-cover img,
+html.is-ios .product-thumb-box img,
+html.is-ios .img-fill,
+html.is-ios .sug-thumb img,
+html.is-ios .bn-img { filter: saturate(1.35) contrast(1.08); }
+html.is-ios .filter-pill { color: var(--c-muted); }
+html.is-ios .filter-pill.active { background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark)); }
+html.is-ios .seg-control, html.is-ios .tab-filter-row { background: #D8C8FA; }
+html.is-ios input[type="text"], html.is-ios input[type="email"], html.is-ios input[type="password"],
+html.is-ios input[type="tel"], html.is-ios select { border-color: #C9B4F5; }
+html.is-ios .product-price, html.is-ios .section-link { color: var(--c-primary-dark); }
+html.is-ios .btn-blue { background-color: #1560FF; }
+html.is-ios .btn-success { background-color: #00A874; }
+html.is-ios .btn-danger { background-color: #EE1C33; }
