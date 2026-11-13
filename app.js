@@ -4283,7 +4283,7 @@ if (window.MutationObserver) {
         if (opts && (opts.source === "cache" || opts.source === "server")) return reqOriginal;
         
         // Creamos una bomba de tiempo de 4.5 segundos
-        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), 4500));
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), 10000));
         
         // Competencia: Gana el servidor o gana el timeout
         return Promise.race([reqOriginal, timeout]).catch(err => {
