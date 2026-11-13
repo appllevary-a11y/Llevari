@@ -18,7 +18,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
-try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
+try { db.enablePersistence().catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
 const KM_MIN = 2, KM_MAX = 20;
@@ -624,7 +624,11 @@ async function cargarInicioPrincipal() {
   }
   listaPublicitariaGlobal = [];
 
-  snapR.forEach(doc => {
+  const _docsOrden = snapR.docs.slice().sort((a, b) => {
+    const ra = a.data() || {}, rb = b.data() || {};
+    return calcularDistanciaKm(miLat, miLon, ra.latitud || 0, ra.longitud || 0) - calcularDistanciaKm(miLat, miLon, rb.latitud || 0, rb.longitud || 0);
+  });
+  _docsOrden.forEach(doc => {
     const r = doc.data();
     if (r.ciudad && r.ciudad.toLowerCase() !== miCiudad.toLowerCase()) return;
     const rLat = r.latitud || 0, rLon = r.longitud || 0;
@@ -633,7 +637,7 @@ async function cargarInicioPrincipal() {
     const logoSrc = formatearImagen(r.logoUrl);
 
     const card = document.createElement("div");
-    card.className = "rest-card-big";
+    card.className = "rest-card-big"; card.dataset.rid = doc.id;
     card.innerHTML = `
       <div class="rest-card-cover">
         ${logoSrc ? `<img src="${logoSrc}" class="img-fill" />` : '🍽️'}
@@ -689,7 +693,7 @@ function verTodosLosRestaurantes() {
       const cerrado = (r.estado || "").toUpperCase() === "CERRADO";
       const logoSrc = formatearImagen(r.logoUrl);
       const card = document.createElement("div");
-      card.className = "rest-card-grid";
+      card.className = "rest-card-grid"; card.dataset.rid = doc.id;
       card.innerHTML = `
         <div class="rest-card-cover">
           ${logoSrc ? `<img src="${logoSrc}" class="img-fill" />` : '🍽️'}
@@ -2813,7 +2817,7 @@ function colaProductos(fn) {
 }
 
 function siguienteProd() {
-  while (prodEnCurso < 2 && colaProd.length) {
+  while (prodEnCurso < 3 && colaProd.length) {
     prodEnCurso++;
     colaProd.shift()();
   }
@@ -3326,7 +3330,7 @@ filtrarResultados = async function (q) {
     locs.forEach(l => {
       const logoSrc = formatearImagen(l.logo);
       const card = document.createElement("div");
-      card.className = "rest-card-grid";
+      card.className = "rest-card-grid"; card.dataset.rid = (r.id || r.rId);
       card.innerHTML = '<div class="rest-card-cover">' + (logoSrc ? '<img src="' + logoSrc + '" class="img-fill" />' : "🍽️") + '<span class="badge-status ' + (l.cerrado ? "cerrado" : "abierto") + '">' + (l.cerrado ? "🛑 CERRADO" : "🟢 ABIERTO") + '</span></div><div class="rest-card-body"><h4>' + _vResaltar(l.nombre, palabras) + '</h4><span class="sub-muted">🛵 L. ' + envioPara(l.lat, l.lon) + "</span></div>";
       card.onclick = () => {
         if (l.cerrado) { alert({ titulo: l.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: logoSrc }); return; }
@@ -4265,7 +4269,7 @@ if (window.MutationObserver) {
     window.colaProductos = function (fn) {
       return oldCola(function () {
         // Pausa de 3.5s solo al arrancar, luego corre normal
-        const delay = arranque ? 800 : 0;
+        const delay = arranque ? 600 : 0;
         arranque = false;
         return new Promise(r => setTimeout(r, delay)).then(() => fn());
       });
@@ -4470,7 +4474,7 @@ if (window.MutationObserver) {
           const cerrado = String(r.estado || "").toUpperCase() === "CERRADO";
           const logoSrc = formatearImagen(r.logoUrl || r.logo);
           const card = document.createElement("div");
-          card.className = "rest-card-grid";
+          card.className = "rest-card-grid"; card.dataset.rid = l.id;
           card.innerHTML = `
             <div class="rest-card-cover">
               ${logoSrc ? '<img data-src="'+logoSrc+'" class="img-fill" decoding="async"/>' : '🍽️'}
@@ -5161,3 +5165,38 @@ if (window.MutationObserver) {
   };
 })();
 
+
+
+// ===== PARCHE PREFETCH-TOQUE =====
+// Al bajar el dedo sobre un local, ya se bajan sus platos (antes del tap).
+(function () {
+  const enCurso = {};
+  document.addEventListener('pointerdown', function (e) {
+    const card = e.target.closest && e.target.closest('.rest-card-big, .rest-card-grid');
+    if (!card || !card.dataset.rid) return;
+    const rId = card.dataset.rid;
+    if (enCurso[rId]) return;
+    if ((todosLosProductosCache || []).some(function (p) { return p.rId === rId; })) return;
+    if (window._prodP) {
+      if (window._prodP.ids[rId]) return;
+      window._prodP.ids[rId] = 1;
+    }
+    enCurso[rId] = 1;
+    db.collection('restaurantes').doc(rId).collection('productos').get()
+      .then(function (snap) {
+        const est = (window.LLV_ESTADO || {})[rId] || {};
+        snap.forEach(function (d) {
+          const pt = d.data();
+          if (!pt.nombre || !(pt.precio > 0)) return;
+          if ((todosLosProductosCache || []).some(function (p) { return p.rId === rId && p.pNom === pt.nombre; })) return;
+          todosLosProductosCache.push({
+            rId: rId, rNom: est.nombre || '', rLat: 0, rLon: 0, rCerrado: !!est.cerrado,
+            pNom: pt.nombre, pDesc: pt.descripcion || '', pPrec: pt.precio,
+            pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || est.logo || ''), pOps: pt.opciones || ''
+          });
+        });
+      })
+      .catch(function () { if (window._prodP) delete window._prodP.ids[rId]; })
+      .then(function () { delete enCurso[rId]; }, function () { delete enCurso[rId]; });
+  }, true);
+})();
