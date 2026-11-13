@@ -2159,3 +2159,17 @@ html.is-app .btn-recargar { display: flex; }
 .dish-resumen .res-tot.final { font-size: 16px; font-weight: 800; color: #0F172A; }
 .dish-resumen .res-nota { margin-top: 8px; font-size: 12.5px; line-height: 1.35; color: #475569; }
 .dish-nota-envio { font-size: 12.5px; color: #475569; padding: 2px 2px 8px; }
+
+/* LLV-RESUMEN-BARRA */
+#modalPlatoPro .modal-bottom-bar { gap: 8px; padding-top: 10px; }
+#modalPlatoPro .sub-total-row,
+#modalPlatoPro .dish-nota-envio { display: none; }
+.modal-bottom-bar .dish-resumen { margin: 0; padding: 8px 12px 6px; }
+.modal-bottom-bar .dish-resumen .res-title { font-size: 13px; margin-bottom: 2px; }
+.modal-bottom-bar .dish-resumen .res-lista { max-height: 84px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.modal-bottom-bar .dish-resumen .res-fila { padding: 3px 0; }
+.modal-bottom-bar .dish-resumen .res-info small { display: none; }
+.modal-bottom-bar .dish-resumen .res-sep { margin: 4px 0; }
+.modal-bottom-bar .dish-resumen .res-tot { padding: 1px 0; font-size: 13px; }
+.modal-bottom-bar .dish-resumen .res-tot.final { font-size: 16px; }
+.modal-bottom-bar .dish-resumen .res-nota { display: none; }

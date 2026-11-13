@@ -5588,24 +5588,25 @@ function llvGuiaAndroid() {
   // Resumen claro de lo que el cliente va a pagar (lista + envío + total)
   function pintarResumen(r, rp) {
     const d = currentDishData;
-    const opt = $("modalDishOptions");
-    if (!opt || !opt.parentNode) return;
+    const bar = document.querySelector("#modalPlatoPro .modal-bottom-bar");
+    const ar = bar && bar.querySelector(".actions-row");
+    if (!bar || !ar) return;
     let box = $("dishResumen");
     if (!box) {
       box = document.createElement("div");
       box.id = "dishResumen";
       box.className = "dish-resumen";
-      opt.parentNode.insertBefore(box, opt.nextSibling);
+      bar.insertBefore(box, ar);
     }
     const money = x => "L. " + Number(x).toFixed(2);
     const fila = (q, nombre, detalle, precio) =>
       '<div class="res-fila"><span class="res-q">' + q + 'x</span><div class="res-info"><b>' + esc(nombre) + '</b>' +
       (detalle ? '<small>' + esc(detalle).replace(/ \/ /g, '<br>') + '</small>' : '') +
       '</div><span class="res-precio">' + money(precio) + '</span></div>';
-    let h = '<div class="res-title">🧾 Esto es lo que vas a pedir</div>';
+    let h = '<div class="res-title">🧾 Esto es lo que vas a pedir</div><div class="res-lista">';
     h += fila(currentDishQty, d.plato, opcionesElegidasTexto(), rp.items[0].mostrado);
     combos.forEach((c, i) => { h += fila(c.qty, c.s.pNom, textoOps(c), rp.items[i + 1].mostrado); });
-    h += '<div class="res-sep"></div>';
+    h += '</div><div class="res-sep"></div>';
     h += '<div class="res-tot"><span>Productos</span><span>' + money(r.totProd) + '</span></div>';
     h += '<div class="res-tot"><span>🛵 Envío</span><span>' + money(r.t.envio) + '</span></div>';
     h += '<div class="res-tot final"><span>Total a pagar</span><span>' + money(r.total) + '</span></div>';
