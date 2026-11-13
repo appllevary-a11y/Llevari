@@ -1852,3 +1852,63 @@ html.is-ios .product-thumb-box img,
 html.is-ios .img-fill,
 html.is-ios .sug-thumb img,
 html.is-ios .bn-img { filter: saturate(1.4) contrast(1.12); }
+
+/* ===== IOS LIMPIO ===== */
+
+/* Buscador: sin caja interna */
+html.is-ios .search-row input[type="text"],
+html.is-ios .search-row input[type="text"]:focus {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  outline: none !important;
+}
+html.is-ios .search-row { box-shadow: 0 4px 10px rgba(20,14,43,.22); }
+html.is-ios .search-row:focus-within { box-shadow: 0 6px 14px rgba(139,43,255,.35); }
+
+/* Encabezado: sombra corta, sin mancha sobre el banner */
+html.is-ios .header-bar { box-shadow: 0 4px 12px rgba(59,7,100,.28); }
+
+/* Botones de cristal: una sola sombra definida */
+html.is-ios #colUbi,
+html.is-ios .header-actions .circle-btn {
+  box-shadow: 0 2px 6px rgba(20,0,50,.28);
+}
+html.is-ios #colUbi:active,
+html.is-ios .header-actions .circle-btn:active { box-shadow: 0 1px 3px rgba(20,0,50,.3); }
+
+/* Tarjetas: sombra corta y suave, no se juntan entre sí */
+html.is-ios .card,
+html.is-ios .rest-card-big,
+html.is-ios .rest-card-grid,
+html.is-ios .product-row-card {
+  box-shadow: 0 3px 10px rgba(74,11,196,.16);
+  border: 1px solid rgba(123,31,255,.14);
+}
+html.is-ios .horizontal-scroller { padding-bottom: 16px; }
+html.is-ios .grid-2 { gap: 14px; }
+
+/* Barra inferior */
+html.is-ios .bottom-nav { box-shadow: 0 -3px 12px rgba(74,11,196,.2); }
+
+/* Textos: sin sombra borrosa */
+html.is-ios .bn-sub,
+html.is-ios .bn-rest,
+html.is-ios .ubi-text,
+html.is-ios .cat-big span,
+html.is-ios .hero-title,
+html.is-ios .hero-sub,
+html.is-ios .brand-title { text-shadow: none !important; }
+html.is-ios .bn-title { text-shadow: 0 1px 2px rgba(0,0,0,.4) !important; }
+
+/* Banner y botones pequeños */
+html.is-ios .cat-big { box-shadow: 0 4px 10px rgba(74,11,196,.25) !important; }
+html.is-ios .bn-price { box-shadow: 0 3px 8px rgba(0,0,0,.3); }
+html.is-ios .hero-cta,
+html.is-ios .bn-cta { box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+html.is-ios .btn { box-shadow: 0 3px 8px rgba(0,0,0,.18); }
+html.is-ios .btn-primary { box-shadow: 0 4px 10px rgba(124,58,237,.3); }
+html.is-ios .btn-warning { box-shadow: 0 4px 10px rgba(242,92,5,.3); }
+html.is-ios .btn-plus-abs { box-shadow: 0 2px 6px rgba(242,92,5,.35); }
