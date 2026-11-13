@@ -5157,3 +5157,27 @@ if (window.MutationObserver) {
     return res;
   };
 })();
+
+// ===== PARCHE MEDIR-MENU =====
+(function () {
+  const _o = window.abrirMenuRestaurante;
+  if (typeof _o !== "function") return;
+  window.abrirMenuRestaurante = async function (rId) {
+    const t0 = performance.now();
+    const enRam = (todosLosProductosCache || []).some(function (p) { return p.rId === rId; });
+    const r = _o.apply(this, arguments);
+    let tFila = 0, tImg = 0;
+    const iv = setInterval(function () {
+      const list = document.getElementById("listMenuPlatos");
+      if (list) {
+        if (!tFila && list.querySelector(".product-row-card")) tFila = performance.now() - t0;
+        if (tFila && !tImg) { const im = list.querySelector("img.img-fill"); if (im && im.complete && im.naturalWidth > 0) tImg = performance.now() - t0; }
+      }
+      if ((tFila && tImg) || performance.now() - t0 > 20000) {
+        clearInterval(iv);
+        try { toast("⏱ Menú " + (enRam ? "con RAM" : "sin RAM") + " | 1ª fila " + (tFila ? Math.round(tFila) : "—") + " ms | 1ª foto " + (tImg ? Math.round(tImg) : "—") + " ms"); } catch (e) {}
+      }
+    }, 100);
+    return r;
+  };
+})();

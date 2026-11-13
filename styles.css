@@ -2060,3 +2060,11 @@ html.is-android .bn-slide { will-change: auto !important; }
 @keyframes llvLogo3d { 0%, 100% { transform: translateY(-4px) rotateY(-22deg); } 50% { transform: translateY(3px) rotateY(22deg); } }
 .llv-in-t { background: linear-gradient(90deg, #5B21B6, #7C3AED 40%, #FF8A00 60%, #5B21B6); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; animation: llvBrilloTxt 2.2s linear infinite; }
 .llv-in::after { content: ""; width: 140px; height: 5px; border-radius: 5px; background: linear-gradient(90deg, rgba(124,58,237,.12), #7C3AED, #FF8A00, rgba(255,138,0,.12)); background-size: 200% 100%; animation: llvBrillo 1.2s linear infinite; }
+
+/* PARCHE ANDROID-LOADER-LIGERO */
+html.is-android .llv-in-t { background: none; -webkit-text-fill-color: currentColor; color: var(--c-primary-dark); animation: none; }
+html.is-android .llv-mini { perspective: none; }
+html.is-android .llv-mini::before { animation: none; }
+html.is-android .llv-mini-moto { filter: none; animation: llvMoto .55s ease-in-out infinite alternate; }
+html.is-android .llv-in::after { animation: none; background: linear-gradient(90deg, rgba(124,58,237,.15), #7C3AED, #FF8A00, rgba(255,138,0,.15)); }
+html.is-android .llv-sk-hero, html.is-android .llv-sk-img, html.is-android .llv-sk-line { animation: none; background: #EAE5F6; }
