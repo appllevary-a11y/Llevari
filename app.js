@@ -5179,7 +5179,6 @@ if (window.MutationObserver) {
       }
       if ((tFila && tImg) || performance.now() - t0 > 20000) {
         clearInterval(iv);
-        try { toast("⏱ Menú " + (enRam ? "con RAM" : "sin RAM") + " | 1ª fila " + (tFila ? Math.round(tFila) : "—") + " ms | 1ª foto " + (tImg ? Math.round(tImg) : "—") + " ms"); } catch (e) {}
       }
     }, 100);
     return r;
@@ -5251,7 +5250,6 @@ if (window.MutationObserver) {
     const items = (docs || []).filter(function (pt) { return pt.nombre && pt.precio > 0; }).map(function (pt) {
       return { rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" };
     });
-    try { toast("⚡ REST " + Math.round(performance.now() - t0) + " ms · " + (docs ? items.length + " platos" : "falló")); } catch (e) {}
     if (!items.length) return _o.apply(this, args);
     todosLosProductosCache.push.apply(todosLosProductosCache, items);
     let p;
