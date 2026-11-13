@@ -1912,3 +1912,115 @@ html.is-ios .btn { box-shadow: 0 3px 8px rgba(0,0,0,.18); }
 html.is-ios .btn-primary { box-shadow: 0 4px 10px rgba(124,58,237,.3); }
 html.is-ios .btn-warning { box-shadow: 0 4px 10px rgba(242,92,5,.3); }
 html.is-ios .btn-plus-abs { box-shadow: 0 2px 6px rgba(242,92,5,.35); }
+
+/* ===== IOS SOMBRAS PRO ===== */
+
+/* Tarjetas: contacto + profundidad */
+html.is-ios .card,
+html.is-ios .rest-card-big,
+html.is-ios .rest-card-grid,
+html.is-ios .product-row-card {
+  box-shadow:
+    0 1px 2px rgba(40,10,110,.28),
+    0 8px 16px -4px rgba(74,11,196,.34);
+  border: 1px solid rgba(123,31,255,.12);
+}
+html.is-ios .horizontal-scroller { padding-bottom: 22px; }
+html.is-ios .grid-2 { gap: 16px; }
+html.is-ios .product-row-card { margin-bottom: 16px; }
+
+/* Encabezado */
+html.is-ios .header-bar {
+  box-shadow:
+    0 2px 4px rgba(30,5,90,.3),
+    0 10px 18px -6px rgba(59,7,100,.45);
+}
+
+/* Buscador */
+html.is-ios .search-row {
+  box-shadow:
+    0 2px 4px rgba(20,14,43,.3),
+    0 8px 14px -4px rgba(20,14,43,.38);
+}
+html.is-ios .search-row:focus-within {
+  box-shadow:
+    0 2px 4px rgba(60,10,160,.35),
+    0 10px 18px -4px rgba(139,43,255,.5);
+}
+
+/* Botones de cristal del encabezado */
+html.is-ios #colUbi,
+html.is-ios .header-actions .circle-btn {
+  box-shadow:
+    0 1px 2px rgba(20,0,50,.4),
+    0 5px 9px -2px rgba(20,0,50,.4);
+}
+
+/* Barra inferior */
+html.is-ios .bottom-nav {
+  box-shadow:
+    0 -1px 2px rgba(40,10,110,.2),
+    0 -8px 16px -4px rgba(74,11,196,.3);
+}
+
+/* Súper y Restaurantes */
+html.is-ios .cat-big {
+  box-shadow:
+    0 1px 2px rgba(40,10,110,.3),
+    0 9px 15px -4px rgba(74,11,196,.5) !important;
+}
+
+/* Botones */
+html.is-ios .btn {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.25),
+    0 5px 9px -2px rgba(0,0,0,.28);
+}
+html.is-ios .btn-primary {
+  box-shadow:
+    0 1px 2px rgba(50,10,140,.4),
+    0 6px 11px -2px rgba(124,58,237,.5);
+}
+html.is-ios .btn-warning {
+  box-shadow:
+    0 1px 2px rgba(150,40,0,.4),
+    0 6px 11px -2px rgba(242,92,5,.5);
+}
+html.is-ios .btn-success { box-shadow: 0 1px 2px rgba(0,80,50,.35), 0 6px 11px -2px rgba(0,168,116,.45); }
+html.is-ios .btn-danger { box-shadow: 0 1px 2px rgba(120,0,20,.35), 0 6px 11px -2px rgba(238,28,51,.45); }
+html.is-ios .btn-blue { box-shadow: 0 1px 2px rgba(10,40,130,.35), 0 6px 11px -2px rgba(21,96,255,.45); }
+html.is-ios .btn-outline-primary { box-shadow: 0 1px 2px rgba(40,10,110,.2), 0 4px 8px -2px rgba(74,11,196,.25); }
+html.is-ios .btn:active { box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+
+/* Botón + de los platos y detalles del banner */
+html.is-ios .btn-plus-abs {
+  box-shadow:
+    0 1px 2px rgba(150,40,0,.4),
+    0 4px 8px -1px rgba(242,92,5,.5);
+}
+html.is-ios .bn-price {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.35),
+    0 6px 10px -2px rgba(0,0,0,.4);
+}
+html.is-ios .hero-cta,
+html.is-ios .bn-cta {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.3),
+    0 4px 8px -2px rgba(0,0,0,.35);
+}
+html.is-ios .hero-slider-wrap {
+  box-shadow:
+    0 2px 4px rgba(30,5,90,.35),
+    0 10px 18px -4px rgba(59,7,100,.5);
+}
+html.is-ios .badge-fee { box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 3px 6px -1px rgba(0,0,0,.25); }
+
+/* Modales y alertas */
+html.is-ios .dialog-card,
+html.is-ios .llv-alert-card {
+  box-shadow:
+    0 2px 4px rgba(20,10,60,.3),
+    0 16px 30px -6px rgba(20,10,60,.5);
+}
+html.is-ios .modal-sheet { box-shadow: 0 -4px 8px rgba(0,0,0,.2), 0 -16px 30px -6px rgba(0,0,0,.35); }
