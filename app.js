@@ -5538,28 +5538,39 @@ function llvGuiaAndroid() {
     return { mainSub: mainSub, raw: raw, sub: f.sub, t: f.t, totProd: f.totProd, total: f.totProd + f.t.envio };
   }
 
-  // Reparto SECUENCIAL: el plato principal conserva su precio y cada
-  // sugerencia cuesta exactamente lo que subió el total al agregarla.
+  // Cada producto sale con su precio CON aumento (como si fuera solo).
+  // Al combinarlos, el aumento fijo se comparte: el total baja a lo que
+  // marcan las reglas y esa baja se reparte proporcional entre los productos.
+  const r2 = x => Math.round(x * 100) / 100;
+
   function repartir() {
     const mainSub = (currentDishBasePrice + currentDishExtra) * currentDishQty;
-    let acc = mainSub;
-    const mainT = T(acc).totProd;
-    let prev = mainT;
-    combos.forEach(c => {
-      acc += unit(c) * c.qty;
-      const t = T(acc).totProd;
-      c.precioMostrado = t - prev;
-      prev = t;
+    const items = [{ raw: mainSub, c: null }];
+    combos.forEach(c => items.push({ raw: unit(c) * c.qty, c: c }));
+    let rawTot = 0, suma = 0;
+    items.forEach(it => { it.solo = T(it.raw).totProd; rawTot += it.raw; suma += it.solo; });
+    const tot = T(rawTot).totProd;
+    const k = suma > 0 ? tot / suma : 1;
+    let acum = 0;
+    items.forEach((it, i) => {
+      it.mostrado = (i === items.length - 1) ? r2(tot - acum) : r2(it.solo * k);
+      acum += it.mostrado;
     });
-    return { mainT: mainT, acc: acc, prev: prev };
+    return { items: items, tot: tot };
+  }
+
+  function htmlPrecio(solo, mostrado) {
+    const m = "L. " + mostrado.toFixed(2);
+    if (mostrado >= solo - 0.005) return m;
+    return "<s style='opacity:.55;font-weight:500;font-size:.75em;margin-right:6px'>L. " + solo.toFixed(2) + "</s>" + m;
   }
 
   function pintarPrecios() {
     const rp = repartir();
     filas.forEach(f => {
-      const c = combos.find(x => x.s.pNom === f.s.pNom);
-      if (c) f.pv.textContent = "L. " + c.precioMostrado.toFixed(2);
-      else f.pv.textContent = "+ L. " + (T(rp.acc + Number(f.s.pPrec)).totProd - rp.prev).toFixed(2);
+      const it = rp.items.find(x => x.c && x.c.s.pNom === f.s.pNom);
+      if (it) f.pv.innerHTML = htmlPrecio(it.solo, it.mostrado);
+      else f.pv.textContent = "L. " + T(Number(f.s.pPrec)).totProd.toFixed(2);
     });
     return rp;
   }
@@ -5568,7 +5579,8 @@ function llvGuiaAndroid() {
     if (!currentDishData || !currentDishData.rId) return;
     const r = totales();
     const rp = pintarPrecios();
-    $("modalDishPrice").textContent = "L. " + (rp.mainT / currentDishQty).toFixed(2) + (currentDishQty > 1 ? " c/u" : "");
+    const m = rp.items[0], q = currentDishQty;
+    $("modalDishPrice").innerHTML = htmlPrecio(m.solo / q, m.mostrado / q) + (q > 1 ? " c/u" : "");
     $("modalDishSubtotal").textContent = "L. " + r.totProd;
     $("btnDishOrderNow").textContent = "Pedir • L. " + r.total;
   };
