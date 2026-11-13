@@ -4376,7 +4376,7 @@ if (window.MutationObserver) {
       
       // D. DocumentFragment evita que el celular se congele al pintar muchos platos
       const frag = document.createDocumentFragment();
-      lista.forEach(p => {
+      const _pintar = (p, frag) => {
         const finalPrice = precioVisible(p.pPrec, rLat, rLon);
         const imgSrc = p.pImg || logoUrl;
         const row = document.createElement("div");
@@ -4390,14 +4390,25 @@ if (window.MutationObserver) {
             <div class="product-price">L. ${finalPrice.toFixed(2)}</div>
           </div>
           <div class="product-thumb-box">
-            ${imgSrc ? '<img data-src="'+imgSrc+'" class="img-fill" decoding="async"/>' : '🍽️'}
+            ${imgSrc ? '<img class="img-fill" decoding="async"/>' : '🍽️'}
             <button class="btn-plus-abs">+</button>
           </div>
         `;
+        { const _im = row.querySelector("img"); if (_im && imgSrc) _im.setAttribute("data-src", imgSrc); }
         row.onclick = () => mostrarPlatoPro(rId, rNom, p.pNom, p.pDesc || "", p.pPrec, imgSrc, p.pOps || "", rLat, rLon);
         frag.appendChild(row);
-      });
-      list.appendChild(frag); if (window.llvLazyImgs) llvLazyImgs(list);
+      };
+      let _i = 0;
+      const _lote = () => {
+        if (!list.isConnected) return;
+        const f = document.createDocumentFragment();
+        const fin = Math.min(_i + (_i === 0 ? 8 : 12), lista.length);
+        for (; _i < fin; _i++) _pintar(lista[_i], f);
+        list.appendChild(f);
+        if (window.llvLazyImgs) llvLazyImgs(list);
+        if (_i < lista.length) setTimeout(_lote, 40);
+      };
+      _lote();
     };
 
     if (platosEnMemoria.length > 0) {
@@ -4418,6 +4429,7 @@ if (window.MutationObserver) {
              pImg: formatearImagen(pt.imagenUrl || logoUrl), pOps: pt.opciones || ""
            });
         });
+        if (!todosLosProductosCache.some(x => x.rId === rId)) bajados.forEach(b => todosLosProductosCache.push(b));
         renderizar(bajados);
       } catch(e) { renderizar([]); }
     }

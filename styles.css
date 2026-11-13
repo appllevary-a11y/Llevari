@@ -1690,3 +1690,11 @@ html.is-android .search-row:focus-within .search-icon-badge { animation: vLupa .
 
 /* Onda al tocar (se borra sola al terminar) */
 html.is-android .v-onda { display: block !important; animation: aOnda .4s ease-out forwards !important; }
+
+/* ===== ANDROID MENUS LARGOS ===== */
+html.is-android #listMenuPlatos .product-row-card,
+html.is-android #gridTodosLocales .rest-card-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 124px;
+}
+html.is-android #gridTodosLocales .rest-card-grid { contain-intrinsic-size: auto 170px; }
