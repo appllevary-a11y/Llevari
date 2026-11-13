@@ -5585,6 +5585,46 @@ function llvGuiaAndroid() {
     return rp;
   }
 
+  // Resumen claro de lo que el cliente va a pagar (lista + envío + total)
+  function pintarResumen(r, rp) {
+    const d = currentDishData;
+    const opt = $("modalDishOptions");
+    if (!opt || !opt.parentNode) return;
+    let box = $("dishResumen");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "dishResumen";
+      box.className = "dish-resumen";
+      opt.parentNode.insertBefore(box, opt.nextSibling);
+    }
+    const money = x => "L. " + Number(x).toFixed(2);
+    const fila = (q, nombre, detalle, precio) =>
+      '<div class="res-fila"><span class="res-q">' + q + 'x</span><div class="res-info"><b>' + esc(nombre) + '</b>' +
+      (detalle ? '<small>' + esc(detalle).replace(/ \/ /g, '<br>') + '</small>' : '') +
+      '</div><span class="res-precio">' + money(precio) + '</span></div>';
+    let h = '<div class="res-title">🧾 Esto es lo que vas a pedir</div>';
+    h += fila(currentDishQty, d.plato, opcionesElegidasTexto(), rp.items[0].mostrado);
+    combos.forEach((c, i) => { h += fila(c.qty, c.s.pNom, textoOps(c), rp.items[i + 1].mostrado); });
+    h += '<div class="res-sep"></div>';
+    h += '<div class="res-tot"><span>Productos</span><span>' + money(r.totProd) + '</span></div>';
+    h += '<div class="res-tot"><span>🛵 Envío</span><span>' + money(r.t.envio) + '</span></div>';
+    h += '<div class="res-tot final"><span>Total a pagar</span><span>' + money(r.total) + '</span></div>';
+    h += '<div class="res-nota">Lo que escojas + L. ' + r.t.envio + ' del envío. No hay otros cargos.</div>';
+    box.innerHTML = h;
+
+    let nb = $("modalDishNota");
+    if (!nb) {
+      const fila0 = $("modalDishSubtotal") && $("modalDishSubtotal").parentNode;
+      if (fila0 && fila0.parentNode) {
+        nb = document.createElement("div");
+        nb.id = "modalDishNota";
+        nb.className = "dish-nota-envio";
+        fila0.parentNode.insertBefore(nb, fila0.nextSibling);
+      }
+    }
+    if (nb) nb.textContent = "+ L. " + r.t.envio + " de envío = L. " + r.total + " en total";
+  }
+
   recalcularModalPlato = function () {
     if (!currentDishData || !currentDishData.rId) return;
     const r = totales();
@@ -5593,6 +5633,7 @@ function llvGuiaAndroid() {
     $("modalDishPrice").innerHTML = htmlPrecio(m.solo / q, m.mostrado / q) + (q > 1 ? " c/u" : "");
     $("modalDishSubtotal").textContent = "L. " + r.totProd;
     $("btnDishOrderNow").textContent = "Pedir • L. " + r.total;
+    try { pintarResumen(r, rp); } catch (e) {}
   };
 
   function pedirAhora() {

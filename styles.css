@@ -2144,3 +2144,18 @@ html.is-app .btn-recargar { display: flex; }
 .sug-or .n { flex: 1; font-size: 14px; }
 .sug-or.sel .n { font-weight: 700; }
 .sug-or .p { font-size: 13px; font-weight: 700; color: #64748B; }
+
+/* LLV-RESUMEN */
+.dish-resumen { margin: 8px 18px 16px; padding: 14px 14px 12px; background: #F7F4FF; border: 1px solid #E4DEF5; border-radius: 16px; }
+.dish-resumen .res-title { font-size: 15px; font-weight: 800; color: #0F172A; margin-bottom: 6px; }
+.dish-resumen .res-fila { display: flex; gap: 10px; padding: 6px 0; align-items: flex-start; }
+.dish-resumen .res-q { font-weight: 800; color: var(--c-primary); min-width: 26px; }
+.dish-resumen .res-info { flex: 1; min-width: 0; }
+.dish-resumen .res-info b { display: block; font-size: 14px; font-weight: 700; color: #0F172A; }
+.dish-resumen .res-info small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.35; color: #64748B; }
+.dish-resumen .res-precio { font-size: 14px; font-weight: 700; white-space: nowrap; color: #0F172A; }
+.dish-resumen .res-sep { height: 1px; background: #E4DEF5; margin: 8px 0; }
+.dish-resumen .res-tot { display: flex; justify-content: space-between; padding: 3px 0; font-size: 14px; color: #334155; }
+.dish-resumen .res-tot.final { font-size: 16px; font-weight: 800; color: #0F172A; }
+.dish-resumen .res-nota { margin-top: 8px; font-size: 12.5px; line-height: 1.35; color: #475569; }
+.dish-nota-envio { font-size: 12.5px; color: #475569; padding: 2px 2px 8px; }
