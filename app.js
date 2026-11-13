@@ -5351,7 +5351,7 @@ function llvBanner() {
     if (Date.now() - cerr < 3 * 86400000) return;
     if (document.getElementById("llvInstBanner")) return;
     const ios = llvEsIOS();
-    if (!ios && !llvInstEvt) return;
+    if (!ios && !llvInstEvt && "onbeforeinstallprompt" in window) return;
     const b = document.createElement("div");
     b.id = "llvInstBanner";
     b.style.cssText = LLV_BCSS;
@@ -5371,6 +5371,7 @@ function llvBtnInstalar() {
     + "border-radius:10px;padding:8px 12px;font:700 13px system-ui,sans-serif";
   bi.onclick = async function () {
     if (llvEsIOS()) { llvGuiaIOS(); return; }
+    llvGuiaAndroid(); return;
     try { llvInstEvt.prompt(); await llvInstEvt.userChoice; } catch (e) {}
     llvInstEvt = null; llvBannerQuitar();
   };
@@ -5432,6 +5433,56 @@ function llvGuiaIOS() {
   ok.textContent = "Entendido";
   ok.style.cssText = "width:100%;background:#0033ff;color:#fff;border:0;"
     + "border-radius:12px;padding:12px;font:700 16px system-ui,sans-serif";
+  ok.onclick = function () { g.remove(); };
+  c.appendChild(ok);
+  g.appendChild(c);
+  document.body.appendChild(g);
+}
+
+function llvGuiaAndroid() {
+  if (document.getElementById("llvGuia")) return;
+  const ua = navigator.userAgent || "";
+  const sam = /SamsungBrowser/i.test(ua);
+  const paso1 = sam
+    ? "Toca el menú <b>≡</b> (abajo a la derecha) y luego <b>Añadir página a</b>."
+    : "Toca el menú <b>⋮</b> (arriba a la derecha del navegador).";
+  const paso2 = sam
+    ? "Elige <b>Pantalla de inicio</b> y toca <b>Añadir</b>."
+    : "Toca <b>Instalar app</b> (o <b>Añadir a la pantalla de inicio</b>) y luego <b>Instalar</b>.";
+  const g = document.createElement("div");
+  g.id = "llvGuia";
+  g.style.cssText = "position:fixed;inset:0;z-index:100000;"
+    + "background:rgba(0,0,0,.78);display:flex;align-items:center;"
+    + "justify-content:center;padding:18px";
+  const c = document.createElement("div");
+  c.style.cssText = "background:#fff;color:#111;border-radius:20px;"
+    + "padding:22px 18px;max-width:340px;width:100%;text-align:left;"
+    + "font:600 16px/1.45 system-ui,sans-serif";
+  c.innerHTML = "<div style='font-size:20px;font-weight:800;"
+    + "text-align:center;margin-bottom:14px'>Instala Llevari en 3 pasos</div>"
+    + "<div style='margin-bottom:12px'>1️⃣ " + paso1 + "</div>"
+    + "<div style='margin-bottom:12px'>2️⃣ " + paso2 + "</div>"
+    + "<div style='margin-bottom:16px'>3️⃣ Abre Llevari desde el ícono nuevo "
+    + "y toca <b>Permitir</b> en las notificaciones.</div>";
+  let hayInstalar = false;
+  if (llvInstEvt) {
+    hayInstalar = true;
+    const ins = document.createElement("button");
+    ins.textContent = "Instalar ahora";
+    ins.style.cssText = "width:100%;background:#0033ff;color:#fff;border:0;"
+      + "border-radius:12px;padding:12px;margin-bottom:8px;font:700 16px system-ui,sans-serif";
+    ins.onclick = async function () {
+      g.remove();
+      try { llvInstEvt.prompt(); await llvInstEvt.userChoice; } catch (e) {}
+      llvInstEvt = null; llvBannerQuitar();
+    };
+    c.appendChild(ins);
+  }
+  const ok = document.createElement("button");
+  ok.textContent = "Entendido";
+  ok.style.cssText = hayInstalar
+    ? "width:100%;background:#eef2ff;color:#0033ff;border:0;border-radius:12px;padding:12px;font:700 16px system-ui,sans-serif"
+    : "width:100%;background:#0033ff;color:#fff;border:0;border-radius:12px;padding:12px;font:700 16px system-ui,sans-serif";
   ok.onclick = function () { g.remove(); };
   c.appendChild(ok);
   g.appendChild(c);
