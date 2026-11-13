@@ -5182,3 +5182,28 @@ if (window.MutationObserver) {
     return r;
   };
 })();
+
+// ===== PARCHE MENU-PRIORIDAD =====
+(function () {
+  const _o = window.abrirMenuRestaurante;
+  if (typeof _o !== "function") return;
+  window.abrirMenuRestaurante = function (rId) {
+    const sinRam = !(todosLosProductosCache || []).some(function (p) { return p.rId === rId; });
+    let pend = [];
+    if (sinRam && colaProd.length) pend = colaProd.splice(0, colaProd.length);
+    const t0 = performance.now();
+    const r = _o.apply(this, arguments);
+    if (pend.length) {
+      const iv = setInterval(function () {
+        const l = document.getElementById("listMenuPlatos");
+        if ((l && l.querySelector(".product-row-card")) || performance.now() - t0 > 15000) {
+          clearInterval(iv);
+          pend.forEach(function (f) { colaProd.push(f); });
+          pend = [];
+          siguienteProd();
+        }
+      }, 200);
+    }
+    return r;
+  };
+})();
