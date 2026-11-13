@@ -948,6 +948,7 @@ function alternarModalidadServicio(deliv) {
 
 // 14. CREACIÓN DE PEDIDO EN FIRESTORE
 async function confirmarCreacionPedido() {
+  try { llvPushPedir(); } catch (e) {}
   document.getElementById("layoutTipoServicio").classList.add("hidden");
   const animScreen = document.getElementById("layoutAnimacion");
   if (animScreen) animScreen.classList.remove("hidden");
@@ -5273,3 +5274,138 @@ function armarProductosDetalleWeb() {
   });
   return r;
 }
+
+/* ===== PUSH FCM WEB + INSTALAR PWA ===== */
+const LLV_VAPID = "BAV0edsgJB5Ho1skokgH6mlBmODdTIggx0KflIlvZem97epTj0mX_0SneY-6IkkSNQwBNU_wDmqjniHf1wrIBl4";
+let llvPushTok = null, llvMsgFg = false, llvInstEvt = null;
+function llvEsIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function llvStandalone() {
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+}
+function llvOpcionesNotif(d) {
+  return {
+    body: d.body || "",
+    icon: "icon-192.png",
+    badge: "icon-192.png",
+    tag: (d.pedidoId || "pedido") + "-" + (d.tipo || "aviso"),
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [600, 200, 600, 200, 600],
+    data: { tipo: d.tipo || "", pedidoId: d.pedidoId || "", restId: d.restId || "" }
+  };
+}
+function llvPushPedir() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    try { Notification.requestPermission().then(function () { llvPushRegistrar(); }).catch(function () {}); } catch (e) {}
+  } else {
+    llvPushRegistrar();
+  }
+}
+async function llvPushRegistrar() {
+  try {
+    if (!miTelefono || !("Notification" in window) || !("serviceWorker" in navigator)) return;
+    if (!firebase.messaging) return;
+    const ok = await Promise.resolve(firebase.messaging.isSupported());
+    if (!ok) return;
+    if (Notification.permission !== "granted") return;
+    const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
+    await navigator.serviceWorker.ready;
+    const msg = firebase.messaging();
+    const token = await msg.getToken({ vapidKey: LLV_VAPID, serviceWorkerRegistration: reg });
+    if (!token) return;
+    llvPushTok = { tel: miTelefono, token: token };
+    if (!llvMsgFg) {
+      llvMsgFg = true;
+      msg.onMessage(function (p) {
+        const d = (p && p.data) || {};
+        reg.showNotification(d.title || "LLEVARI", llvOpcionesNotif(d));
+      });
+    }
+    const clave = miTelefono + "|" + token;
+    if (localStorage.getItem("llv_push_ok") === clave) return;
+    await db.collection("clientes").doc(miTelefono).collection("tokens").doc(token).set({
+      plataforma: "web",
+      fecha: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    localStorage.setItem("llv_push_ok", clave);
+  } catch (e) { console.warn("push:", e); }
+}
+function llvBannerQuitar() {
+  const b = document.getElementById("llvInstBanner");
+  if (b) b.remove();
+}
+const LLV_BCSS = "position:fixed;left:10px;right:10px;bottom:84px;z-index:99999;"
+  + "background:#0033ff;color:#fff;border-radius:14px;padding:12px 14px;"
+  + "display:flex;align-items:center;gap:10px;"
+  + "box-shadow:0 6px 20px rgba(0,0,0,.35);font:600 14px/1.3 system-ui,sans-serif";
+const LLV_TXT_IOS = "Para recibir avisos de tu pedido instala Llevari: "
+  + "toca Compartir y luego Añadir a pantalla de inicio.";
+const LLV_TXT_AND = "Instala Llevari para recibir avisos de tu pedido "
+  + "aunque tengas el celular bloqueado.";
+function llvBanner() {
+  try {
+    if (llvStandalone() || !miTelefono) return;
+    const cerr = Number(localStorage.getItem("llv_inst_cerrado") || 0);
+    if (Date.now() - cerr < 3 * 86400000) return;
+    if (document.getElementById("llvInstBanner")) return;
+    const ios = llvEsIOS();
+    if (!ios && !llvInstEvt) return;
+    const b = document.createElement("div");
+    b.id = "llvInstBanner";
+    b.style.cssText = LLV_BCSS;
+    const t = document.createElement("div");
+    t.style.flex = "1";
+    t.textContent = ios ? LLV_TXT_IOS : LLV_TXT_AND;
+    b.appendChild(t);
+    if (!ios) b.appendChild(llvBtnInstalar());
+    b.appendChild(llvBtnCerrar());
+    document.body.appendChild(b);
+  } catch (e) {}
+}
+function llvBtnInstalar() {
+  const bi = document.createElement("button");
+  bi.textContent = "Instalar Llevari";
+  bi.style.cssText = "background:#fff;color:#0033ff;border:0;"
+    + "border-radius:10px;padding:8px 12px;font:700 13px system-ui,sans-serif";
+  bi.onclick = async function () {
+    try { llvInstEvt.prompt(); await llvInstEvt.userChoice; } catch (e) {}
+    llvInstEvt = null; llvBannerQuitar();
+  };
+  return bi;
+}
+function llvBtnCerrar() {
+  const x = document.createElement("button");
+  x.textContent = "✕";
+  x.style.cssText = "background:transparent;color:#fff;border:0;"
+    + "font-size:18px;padding:4px 6px";
+  x.onclick = function () {
+    localStorage.setItem("llv_inst_cerrado", String(Date.now()));
+    llvBannerQuitar();
+  };
+  return x;
+}
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  llvInstEvt = e;
+  setTimeout(llvBanner, 1500);
+});
+window.addEventListener("appinstalled", function () {
+  llvInstEvt = null;
+  llvBannerQuitar();
+});
+auth.onAuthStateChanged(function (u) {
+  if (u) {
+    setTimeout(function () { llvPushRegistrar(); llvBanner(); }, 3500);
+    return;
+  }
+  if (!llvPushTok) return;
+  const t = llvPushTok;
+  llvPushTok = null;
+  try {
+    db.collection("clientes").doc(t.tel).collection("tokens")
+      .doc(t.token).delete().catch(function () {});
+  } catch (e) {}
+});
