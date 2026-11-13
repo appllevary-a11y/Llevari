@@ -5488,3 +5488,15 @@ function llvGuiaAndroid() {
   g.appendChild(c);
   document.body.appendChild(g);
 }
+
+// Pantalla de arranque: no mostrar el login hasta saber si ya hay sesión
+(function () {
+  var h = document.documentElement, listo = false;
+  function quitar() {
+    if (listo) return;
+    listo = true;
+    setTimeout(function () { h.classList.remove("llv-boot"); }, 120);
+  }
+  try { auth.onAuthStateChanged(quitar); } catch (e) { quitar(); }
+  setTimeout(function () { h.classList.remove("llv-boot"); }, 6000);
+})();

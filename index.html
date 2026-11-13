@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=480, user-scalable=no, viewport-fit=cover" />
+  <style>html.llv-boot #appRoot .screen{visibility:hidden!important}html.llv-boot::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-index:149;background:radial-gradient(circle at 50% 38%,#7C3AED,#3B0764 72%)}</style><script>document.documentElement.classList.add("llv-boot");setTimeout(function(){document.documentElement.classList.remove("llv-boot")},8000);</script>
   <script>if(navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("is-app");</script>
   <script>window.llvRecargar=function(b){var h=0,go=function(){if(h)return;h=1;location.reload();};if(navigator.onLine===false){var t=document.createElement("div");t.textContent="Sin conexión a internet";t.style.cssText="position:fixed;left:50%;top:90px;transform:translateX(-50%);z-index:100001;background:rgba(30,10,70,.92);color:#fff;padding:10px 16px;border-radius:14px;font:600 14px system-ui,sans-serif";document.body.appendChild(t);setTimeout(function(){t.remove();},2200);return;}try{b.classList.add("girando");}catch(e){}try{fetch(location.href,{cache:"reload"}).then(go,go);}catch(e){go();}setTimeout(go,2500);};</script>
   <script>(function(){var d=document.documentElement;function aj(){try{if(!d.classList.contains("is-app"))return;var w=Math.min(screen.width,screen.height),h=Math.max(screen.width,screen.height),k=innerWidth/w,b=h-innerHeight/k;if(!(b>=10&&b<=80))return;var o=b>=40?39:0;d.style.setProperty("--app-top",Math.round(b*0.77*k)+"px");d.style.setProperty("--app-bot","max(env(safe-area-inset-bottom,0px),"+Math.round(o*k)+"px)");}catch(e){}}aj();addEventListener("load",aj);addEventListener("resize",aj);addEventListener("orientationchange",aj);})();</script>
@@ -386,7 +387,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-  <script src="app.js?v=1794558856"></script>
+  <script src="app.js?v=1794592929"></script>
   <script src="chat.js?v=1794545029"></script>
 </body>
 </html>
