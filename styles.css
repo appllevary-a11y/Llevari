@@ -2182,3 +2182,7 @@ html.is-app .btn-recargar { display: flex; }
 .dish-res-btn b { font-size: 15px; font-weight: 800; color: var(--c-primary-dark); }
 .dish-res-btn i { font-style: normal; font-size: 13px; color: var(--c-primary); }
 .dish-res-btn.abierto { background: var(--c-primary-light); border-color: var(--c-primary); }
+
+/* LLV-ROTACION */
+html, body { overscroll-behavior: none; }
+#appRoot { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }

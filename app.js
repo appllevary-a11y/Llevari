@@ -5828,3 +5828,21 @@ function llvGuiaAndroid() {
     pintarPrecios();
   };
 })();
+
+/* LLV-ROTACION: al girar el celular, regresa la pantalla a su posición */
+(function () {
+  function reset() {
+    try {
+      window.scrollTo(0, 0);
+      [document.documentElement, document.body, document.getElementById("appRoot"), document.getElementById("layoutAppMain")].forEach(function (el) {
+        if (el) { el.scrollTop = 0; el.scrollLeft = 0; }
+      });
+    } catch (e) {}
+  }
+  function tras() { reset(); [60, 200, 450, 900].forEach(function (ms) { setTimeout(reset, ms); }); }
+  window.addEventListener("orientationchange", tras);
+  window.addEventListener("resize", tras);
+  window.addEventListener("pageshow", tras);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", tras);
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener("change", tras);
+})();
