@@ -5846,3 +5846,36 @@ function llvGuiaAndroid() {
   if (window.visualViewport) window.visualViewport.addEventListener("resize", tras);
   if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener("change", tras);
 })();
+
+/* LLV-PRESENCIA: cliente en línea (igual que la app) */
+(function () {
+  let ultimo = 0, tel = "";
+  function visible() { return document.visibilityState !== "hidden"; }
+  function escribir(on) {
+    try {
+      if (!miTelefono || !auth.currentUser) return Promise.resolve();
+      const ahora = Date.now();
+      if (on) { if (ahora - ultimo < 20000) return Promise.resolve(); ultimo = ahora; } else ultimo = 0;
+      return db.collection("clientes").doc(miTelefono).update({
+        en_linea: on,
+        ultima_actividad: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function () {});
+    } catch (e) { return Promise.resolve(); }
+  }
+  function tick() {
+    if (!visible() || !miTelefono || !auth.currentUser) return;
+    if (tel !== miTelefono) { tel = miTelefono; ultimo = 0; }
+    if (Date.now() - ultimo >= 120000) escribir(true);
+  }
+  setInterval(tick, 5000);
+  document.addEventListener("visibilitychange", function () { if (visible()) tick(); else escribir(false); });
+  window.addEventListener("pagehide", function () { escribir(false); });
+  window.addEventListener("online", function () { ultimo = 0; tick(); });
+  try {
+    const so = auth.signOut.bind(auth);
+    auth.signOut = function () {
+      const p = escribir(false); tel = "";
+      return Promise.race([p, new Promise(function (r) { setTimeout(r, 1500); })]).then(function () { return so(); });
+    };
+  } catch (e) {}
+})();
