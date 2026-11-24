@@ -2317,3 +2317,23 @@ html, body { overscroll-behavior: none; }
 #pfEdNo { background: #EFEDF5; color: #4A4660; }
 #pfGuardar { margin: 6px 0 0 !important; padding: 15px; border-radius: 14px; background: var(--c-primary); background-image: none; font-size: 15px; box-shadow: 0 6px 16px rgba(124,58,237,.28); }
 #pfNuevaDir { margin: 12px 0 0 !important; padding: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 14px; background: #F1EBFF; background-image: none; color: var(--c-primary-dark); box-shadow: none; }
+
+/* LLV-MODERNO-V3: términos, política y eliminar cuenta con el mismo estilo */
+.lg-body, .el-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 16px calc(28px + env(safe-area-inset-bottom, 0px)); }
+.lg-card { padding: 20px 18px 14px; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgba(23,19,43,.04), 0 0 0 1px #ECEAF3; }
+.lg-fecha { margin-bottom: 4px; padding-bottom: 14px; border-bottom: 1px solid #F0EEF6; font-size: 12.5px; font-weight: 600; color: #6E6A82; }
+.lg-card h4 { display: flex; align-items: center; gap: 10px; margin: 22px 0 8px; }
+.lg-card h4 i { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #F1EBFF; color: var(--c-primary-dark); font-size: 12.5px; font-weight: 800; font-style: normal; flex-shrink: 0; }
+.lg-card h4 b { font-size: 16px; font-weight: 800; letter-spacing: -.2px; color: #17132B; }
+.lg-card p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.65; color: #3A3650; }
+.lg-card p.lg-li { padding-left: 14px; text-indent: -12px; }
+.el-card { padding: 26px 20px; border-radius: 20px; background: #fff; text-align: center; box-shadow: 0 1px 2px rgba(23,19,43,.04), 0 0 0 1px #ECEAF3; }
+.el-ico { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #FDECEC; color: #D92D20; }
+.el-ico svg { width: 30px; height: 30px; }
+.el-card h3 { margin: 0 0 8px; font-size: 20px; font-weight: 800; letter-spacing: -.3px; color: #17132B; }
+.el-card p { margin: 0; font-size: 14px; line-height: 1.55; color: #6E6A82; }
+#elPass { margin-bottom: 0; }
+.el-ok, .el-no { display: block; width: 100%; padding: 15px; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
+.el-ok { margin-top: 16px; background: #D92D20; color: #fff; box-shadow: 0 6px 16px rgba(217,45,32,.28); }
+.el-no { margin-top: 10px; background: #fff; color: #4A4660; box-shadow: 0 1px 2px rgba(23,19,43,.05), 0 0 0 1px #ECEAF3; }
+.el-ok:active, .el-no:active { transform: scale(.98); }

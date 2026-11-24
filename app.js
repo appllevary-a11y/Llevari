@@ -6600,3 +6600,101 @@ function llvGuiaAndroid() {
   const _ce = confirmarEliminarCuenta;
   confirmarEliminarCuenta = function () { const r = _ce.apply(this, arguments); limpiaFull(); return r; };
 })();
+
+/* LLV-MODERNO-V3: términos, política y eliminar cuenta con el mismo estilo */
+(function () {
+  const svg = p => '<svg viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
+  const IC = {
+    left: '<path d="M15 6l-6 6 6 6"/>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    warn: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.5v.01"/>'
+  };
+  const el = (tag, cls, html) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; return d; };
+  const tx = (tag, cls, txt) => { const d = el(tag, cls); d.textContent = txt; return d; };
+  const g = id => document.getElementById(id);
+
+  /* ---------- TÉRMINOS Y POLÍTICA ---------- */
+  const _vl = verLegal;
+  verLegal = function () {
+    const r = _vl.apply(this, arguments);
+    const m = g("modalAjustes");
+    const card = m && m.querySelector(".dialog-card");
+    const volver = g("legVol");
+    if (!card || !volver || card.classList.contains("lg-mod")) return r;
+    const h = card.querySelector("h3");
+    const titulo = h ? h.textContent : "";
+    const cuerpo = Array.from(card.children).find(c => c.tagName === "DIV");
+    const texto = cuerpo ? cuerpo.textContent : "";
+    const esVolver = /volver/i.test(volver.textContent);
+    card.textContent = "";
+    card.removeAttribute("style");
+    card.classList.add("lg-mod");
+    volver.className = "pf-back";
+    volver.removeAttribute("style");
+    volver.innerHTML = svg(esVolver ? IC.left : IC.x);
+    volver.setAttribute("aria-label", esVolver ? "Volver" : "Cerrar");
+    const top = el("div", "pf-top");
+    top.appendChild(volver);
+    top.appendChild(tx("h3", "", titulo));
+    top.appendChild(el("span", "pf-sp"));
+    const body = el("div", "lg-body");
+    const lc = el("div", "lg-card");
+    texto.split("\n").map(s => s.trim()).filter(Boolean).forEach(ln => {
+      const mt = ln.match(/^(\d+)\.\s+(.+)$/);
+      if (mt && mt[2] === mt[2].toUpperCase() && mt[2].length < 60) {
+        const hh = el("h4");
+        hh.appendChild(tx("i", "", mt[1]));
+        hh.appendChild(tx("b", "", mt[2].charAt(0) + mt[2].slice(1).toLowerCase()));
+        lc.appendChild(hh);
+      } else if (/^Última actualización/i.test(ln)) {
+        lc.appendChild(tx("div", "lg-fecha", ln));
+      } else {
+        lc.appendChild(tx("p", ln.charAt(0) === "•" ? "lg-li" : "", ln));
+      }
+    });
+    body.appendChild(lc);
+    card.appendChild(top);
+    card.appendChild(body);
+    m.classList.add("aj-full");
+    return r;
+  };
+
+  /* ---------- ELIMINAR CUENTA ---------- */
+  const _ce = confirmarEliminarCuenta;
+  confirmarEliminarCuenta = function () {
+    const r = _ce.apply(this, arguments);
+    const m = g("modalAjustes");
+    const card = m && m.querySelector(".dialog-card");
+    const ok = g("elOk"), no = g("elNo"), pass = g("elPass");
+    if (!card || !ok || !no || !pass || card.classList.contains("el-mod")) return r;
+    const desc = card.querySelector("p.card-desc");
+    const descHtml = desc ? desc.innerHTML : "";
+    card.textContent = "";
+    card.removeAttribute("style");
+    card.classList.add("el-mod");
+    const back = el("button", "pf-back", svg(IC.left));
+    back.setAttribute("aria-label", "Volver");
+    back.onclick = abrirAjustes;
+    const top = el("div", "pf-top");
+    top.appendChild(back);
+    top.appendChild(tx("h3", "", "Eliminar cuenta"));
+    top.appendChild(el("span", "pf-sp"));
+    const body = el("div", "el-body");
+    body.appendChild(el("div", "el-card", '<div class="el-ico">' + svg(IC.warn) + '</div><h3>¿Eliminar tu cuenta?</h3><p>' + descHtml + '</p>'));
+    const gr = el("div", "pf-grupo");
+    gr.style.marginTop = "14px";
+    gr.appendChild(tx("label", "perfil-lbl", "Contraseña"));
+    pass.className = "perfil-inp";
+    pass.removeAttribute("style");
+    gr.appendChild(pass);
+    body.appendChild(gr);
+    ok.className = "el-ok"; ok.removeAttribute("style"); ok.textContent = "Sí, eliminar mi cuenta";
+    no.className = "el-no"; no.removeAttribute("style"); no.textContent = "Cancelar";
+    body.appendChild(ok);
+    body.appendChild(no);
+    card.appendChild(top);
+    card.appendChild(body);
+    m.classList.add("aj-full");
+    return r;
+  };
+})();
