@@ -6396,10 +6396,10 @@ function llvGuiaAndroid() {
   function gestos(wrap) {
     if (wrap._cbG) return;
     wrap._cbG = true;
-    let x0 = 0, y0 = 0, t0 = 0, activo = false, arr = false;
+    let x0 = 0, y0 = 0, t0 = 0, activo = false, arr = false, tapOk = false;
     const cur = () => wrap.querySelector(".cb-slide:not(.bn-out)");
     wrap.addEventListener("pointerdown", e => {
-      activo = true; arr = false; x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); pausar(wrap);
+      activo = true; arr = false; tapOk = false; x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); pausar(wrap);
       const s = cur(); if (s) s.style.transition = "none";
     });
     wrap.addEventListener("pointermove", e => {
@@ -6420,10 +6420,11 @@ function llvGuiaAndroid() {
       if (arr && !cancel && Math.abs(dx) > Math.min(70, wrap.offsetWidth * 0.2)) { reanudar(wrap, true); avanzar(wrap, dx < 0 ? 1 : -1); return; }
       if (arr) { rebotar(wrap); reanudar(wrap); return; }
       reanudar(wrap);
-      if (!cancel && Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 600) tocar();
+      if (!cancel && Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 600) tapOk = true;
     };
     wrap.addEventListener("pointerup", fin);
     wrap.addEventListener("pointercancel", fin);
+    wrap.addEventListener("click", e => { if (tapOk) { tapOk = false; e.preventDefault(); tocar(); } });
   }
   function iniciar() {
     try { if (typeof sliderTimer !== "undefined" && sliderTimer) { clearTimeout(sliderTimer); sliderTimer = null; } } catch (e) {}
@@ -6440,4 +6441,21 @@ function llvGuiaAndroid() {
   }
   iniciarSliderPublicitario = iniciar;
   window._cbDbg = { S: S, elegir: elegir, asegurar: asegurar };
+})();
+
+/* LLV-PRECIO-FIX: lista de precio especial igual al banner */
+(function () {
+  const _p = mostrarPlatosPorPrecio;
+  mostrarPlatosPorPrecio = function (pO) {
+    const orig = todosLosProductosCache;
+    const filt = orig.filter(p => !p.rCerrado && !_bnExcluido(p));
+    todosLosProductosCache = filt;
+    try { _p.apply(this, arguments); } finally { todosLosProductosCache = orig; }
+    try {
+      let min = Infinity;
+      filt.forEach(p => { if (p.pPrec === pO) min = Math.min(min, precioVisible(p.pPrec, p.rLat, p.rLon)); });
+      const h = document.querySelector("#contRestaurantes .section-header h3");
+      if (h && isFinite(min)) h.textContent = "Especiales desde L. " + Math.round(min);
+    } catch (e) {}
+  };
 })();
