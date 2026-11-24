@@ -17,7 +17,7 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
-try { db.settings({ experimentalForceLongPolling: true, merge: true }); } catch (e) {}
+try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
 try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
@@ -6700,22 +6700,27 @@ function llvGuiaAndroid() {
 })();
 
 
-/* LLV-ESTADO-FIX: el abierto/cerrado de las tarjetas siempre sigue al dato en vivo */
+
+/* LLV-ESTADO-FIX: el abierto/cerrado de las tarjetas siempre sigue al dato en vivo (pocas lecturas) */
 (function () {
   const RD = {};
   const norm = s => String(s || "").trim().toLowerCase();
 
   function poblar(snap, parcial) {
     const ids = {};
+    let cambios = 0;
     window.LLV_ESTADO = window.LLV_ESTADO || {};
     snap.forEach(d => {
       const x = d.data() || {};
       ids[d.id] = 1;
+      const antes = RD[d.id];
+      if (antes && antes.cerrado !== (String(x.estado || "").toUpperCase() === "CERRADO")) cambios++;
       RD[d.id] = { id: d.id, nombre: x.nombre || "", lat: x.latitud || 0, lon: x.longitud || 0, logo: x.logoUrl || "", cerrado: String(x.estado || "").toUpperCase() === "CERRADO" };
       window.LLV_ESTADO[d.id] = { cerrado: RD[d.id].cerrado, nombre: RD[d.id].nombre, logo: RD[d.id].logo };
     });
     if (!parcial) Object.keys(RD).forEach(k => { if (!ids[k]) delete RD[k]; });
     try { (todosLosProductosCache || []).forEach(p => { const e = RD[p.rId]; if (e) p.rCerrado = e.cerrado; }); } catch (e) {}
+    return cambios;
   }
 
   function buscar(card) {
@@ -6756,7 +6761,15 @@ function llvGuiaAndroid() {
     pend = requestAnimationFrame(() => { pend = 0; try { sincronizar(); } catch (e) {} });
   }
 
-  /* al tocar una tarjeta se usa el estado en vivo, no el que traía al dibujarse */
+  /* 1 sola lectura del local tocado, con tope de 2.5 s */
+  function docServidor(id) {
+    return Promise.race([
+      db.collection("restaurantes").doc(id).get({ source: "server" }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("t")), 2500))
+    ]);
+  }
+
+  /* al tocar una tarjeta se usa el estado real, no el que traía al dibujarse */
   document.addEventListener("click", function (e) {
     const card = e.target && e.target.closest ? e.target.closest(".rest-card-big, .rest-card-grid") : null;
     if (!card) return;
@@ -6764,12 +6777,18 @@ function llvGuiaAndroid() {
     if (!r) return;
     e.stopPropagation();
     e.preventDefault();
-    if (r.cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(r.logo) });
-    else abrirMenuRestaurante(r.id, r.nombre, r.lat, r.lon, r.logo);
+    const abrir = () => abrirMenuRestaurante(r.id, r.nombre, r.lat, r.lon, r.logo);
+    const avisar = () => alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(r.logo) });
+    if (!r.cerrado) { abrir(); return; }
+    docServidor(r.id).then(d => {
+      if (d && d.exists) { poblar({ forEach: fn => fn(d) }, true); agendar(); }
+      (RD[r.id] || r).cerrado ? avisar() : abrir();
+    }).catch(avisar);
   }, true);
 
   try { new MutationObserver(agendar).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
 
+  /* aviso en vivo: misma conexión que ya usa la app, sin lecturas extra */
   let un = null;
   function iniciar() {
     if (un) return;
@@ -6783,19 +6802,35 @@ function llvGuiaAndroid() {
   }
   function detener() { if (un) { try { un(); } catch (e) {} } un = null; }
 
-  /* al volver a la app (o recuperar internet) se consulta el servidor al instante */
-  let ult = 0;
-  function refrescarServidor() {
-    if (!un) return;
-    const ahora = Date.now();
-    if (ahora - ult < 20000) return;
-    ult = ahora;
-    try { db.enableNetwork(); } catch (e) {}
-    try { db.collection("restaurantes").get({ source: "server" }).then(function (s) { poblar(s, true); agendar(); }).catch(function () {}); } catch (e) {}
+  /* respaldo: revisa TODOS los locales; si el aviso en vivo funciona bien, se va espaciando solo */
+  let enCurso = false, espera = 60000, tm = null, ocultoDesde = 0;
+  function hayLista() {
+    const cs = document.querySelectorAll(".rest-card-big, .rest-card-grid");
+    for (let i = 0; i < cs.length; i++) {
+      const b = cs[i].getBoundingClientRect();
+      if (b.width > 0 && b.height > 0) return true;
+    }
+    return false;
   }
-  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") refrescarServidor(); });
-  window.addEventListener("focus", refrescarServidor);
-  window.addEventListener("pageshow", refrescarServidor);
-  window.addEventListener("online", function () { ult = 0; refrescarServidor(); });
+  function revisar() {
+    if (!un || enCurso || document.visibilityState !== "visible" || !hayLista()) return Promise.resolve();
+    enCurso = true;
+    try { db.enableNetwork(); } catch (e) {}
+    return db.collection("restaurantes").limit(1000).get({ source: "server" })
+      .then(function (s) {
+        const cambios = poblar(s);
+        agendar();
+        espera = cambios ? 30000 : Math.min(espera * 2, 180000);
+      })
+      .catch(function () {})
+      .then(function () { enCurso = false; });
+  }
+  function programar() { clearTimeout(tm); tm = setTimeout(function () { revisar().then(programar); }, espera); }
+  programar();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") { ocultoDesde = Date.now(); return; }
+    if (Date.now() - ocultoDesde > 20000) { espera = 60000; revisar().then(programar); }
+  });
+  window.addEventListener("online", function () { espera = 60000; revisar().then(programar); });
   try { auth.onAuthStateChanged(function (u) { if (u) iniciar(); else detener(); }); } catch (e) {}
 })();
