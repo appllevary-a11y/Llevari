@@ -9,14 +9,16 @@
   <script>(function(){var d=document.documentElement;function aj(){try{if(!d.classList.contains("is-app"))return;var w=Math.min(screen.width,screen.height),h=Math.max(screen.width,screen.height),k=innerWidth/w,b=h-innerHeight/k;if(!(b>=10&&b<=80))return;var o=b>=40?39:0;d.style.setProperty("--app-top",Math.round(b*0.77*k)+"px");d.style.setProperty("--app-bot","max(env(safe-area-inset-bottom,0px),"+Math.round(o*k)+"px)");}catch(e){}}aj();addEventListener("load",aj);addEventListener("resize",aj);addEventListener("orientationchange",aj);})();</script>
   <title>LLEVARI - Delivery & Pickup</title>
   <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#14101F" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#0033ff" />
+  <meta name="color-scheme" content="light dark" />
   <link rel="apple-touch-icon" href="logo.png?v=2" />
   <link rel="icon" href="logo.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Llevari" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="stylesheet" href="styles.css?v=1795485349" />
+  <link rel="stylesheet" href="styles.css?v=1795493054" />
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="preconnect" href="https://www.gstatic.com" />
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
@@ -387,7 +389,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-  <script src="app.js?v=1795485349"></script>
+  <script src="app.js?v=1795493054"></script>
   <script src="chat.js?v=1794545029"></script>
 </body>
 </html>

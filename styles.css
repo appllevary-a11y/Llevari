@@ -2343,3 +2343,149 @@ html.is-android #modalAjustes.aj-full,
 html.is-ios #modalAjustes.aj-full,
 #modalAjustes.aj-full { background: #F5F4F8 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 #modalAjustes.aj-full > .dialog-card { background: #F5F4F8 !important; }
+
+/* LLV-MODERNO-V5: modo oscuro automático (sigue el modo del celular) */
+:root { color-scheme: light dark; }
+@media (prefers-color-scheme: dark) {
+  :root { --c-bg: #14101F; --c-text: #EDEAF7; --c-muted: #A8A3C7; --c-primary-light: #2D2350; }
+  html, body, #appRoot { background-color: #14101F; background-image: linear-gradient(180deg, #17122A 0%, #1E1424 100%); color: #EDEAF7; }
+  /* reglas generadas del CSS original */
+  .card { background-color: #1F1A30; }
+  .card h2 { color: #EDEAF7; }
+  .card-desc { color: #A8A3C7; }
+  input[type="text"], input[type="email"], input[type="password"], input[type="tel"], select { border-color: #3A3358; }
+  input:focus, select:focus { background-color: #1F1A30; }
+  .form-label { color: #EDEAF7; }
+  .checkbox-row { color: #EDEAF7; }
+  .text-link { color: #C9B3FF; }
+  .search-row { background-color: #1F1A30; }
+  .bottom-nav { background-color: #1F1A30; }
+  .cat-chip { background-color: #1F1A30; }
+  .rest-card-big { background-color: #1F1A30; }
+  .badge-fee { background-color: #1F1A30; }
+  .rest-card-grid { background-color: #1F1A30; }
+  .product-row-card { background-color: #1F1A30; }
+  .service-top { background-color: #1F1A30; }
+  .back-btn { background-color: #262040; }
+  .seg-control { background-color: #2D2646; }
+  .divider { background-color: #2D2646; }
+  .alert-box-warning { background-color: #3A1D24; color: #FCA5A5; }
+  .service-bottom-bar { background-color: #1F1A30; }
+  .map-float-btn.left-top { background-color: #1F1A30; }
+  .tracking-island { background-color: #1F1A30; }
+  .dialog-card { background-color: #1F1A30; }
+  .modal-sheet { background-color: #1F1A30; }
+  .dish-info-head h2 { color: #EDEAF7; }
+  .dish-desc { color: #A8A3C7; }
+  .option-group-card { background-color: #1F1A30; border-color: #3A3358; }
+  .option-row { border-bottom-color: #3A3358; }
+  .modal-bottom-bar { background-color: #1F1A30; }
+  .stepper { background-color: #262040; }
+  .map-topbar { background-color: #1F1A30; }
+  #pin .head::after { background-color: #1F1A30; }
+  .geo-results { background-color: #1F1A30; }
+  .geo-results div { border-bottom-color: #3A3358; }
+  .map-addr-pill { background-color: rgba(31,26,48,0.96); }
+  .map-fab-btn { background-color: #1F1A30; }
+  .map-card-confirm { background-color: #1F1A30; }
+  .tab-filter-row { background-color: #2D2646; }
+  .filter-pill { color: #A8A3C7; }
+  .perfil-lock { background-color: #2D2646; }
+  .perfil-dir { background-color: #1F1A30; border-color: #3A3358; }
+  .perfil-dir.activa .perfil-dir-ico { background-color: #1F1A30; }
+  .perfil-mini { background-color: #262040; }
+  .opt-head h4 { color: #EDEAF7; }
+  .opt-badge { background-color: #262040; color: #EDEAF7; }
+  .opt-name { color: #EDEAF7; }
+  .option-row.sel .opt-name { color: #EDEAF7; }
+  .opt-price { color: #A8A3C7; }
+  .sug-title { color: #EDEAF7; }
+  .sug-thumb { background-color: #262040; }
+  .sug-info b { color: #EDEAF7; }
+  .sug-info span { color: #EDEAF7; }
+  .sug-plus { background-color: #262040; color: #EDEAF7; }
+  .bottom-nav { background-color: rgba(31,26,48,.86); }
+  .search-row input::placeholder { color: #A8A3C7; }
+  .v-busq-x { background-color: #2D2646; }
+  .llv-sk-card { background-color: #1F1A30; }
+  .llv-skc { background-color: #1F1A30; }
+  html.is-android .bottom-nav { background-color: rgba(31,26,48,0.96) !important; }
+  html.is-android .search-row { background-color: #1F1A30 !important; }
+  .llv-alert-card { background-color: #1F1A30; }
+  html.is-android .product-thumb-box:has(img.img-fill), html.is-android .rest-card-cover:has(img.img-fill) { background-color: #2D2646 !important; }
+  html.is-ios .bottom-nav { background-color: rgba(31,26,48,.95); }
+  html.is-ios .sub-muted, html.is-ios .card-desc, html.is-ios .opt-sub, html.is-ios .empty-text { color: #EDEAF7; }
+  html.is-ios .product-info-left p { color: #EDEAF7; }
+  html.is-ios .product-info-left h4, html.is-ios .rest-card-body h4 { color: #EDEAF7; }
+  html.is-ios .section-header h3 { color: #EDEAF7; }
+  html.is-ios .product-price { color: #C9B3FF; }
+  html.is-ios .section-link { color: #C9B3FF; }
+  html.is-ios .card, html.is-ios .rest-card-big, html.is-ios .rest-card-grid, html.is-ios .product-row-card { background-color: #1F1A30; }
+  html.is-ios .rest-card-body { background-color: #1F1A30; }
+  html.is-ios .bottom-nav { background-color: #1F1A30; }
+  html.is-ios .nav-label { color: #EDEAF7; }
+  html.is-ios .nav-item.active .nav-label { color: #C9B3FF; }
+  html.is-ios .search-row input { color: #EDEAF7; }
+  html.is-ios .search-row input::placeholder { color: #EDEAF7; }
+  html.is-ios .badge-fee { color: #EDEAF7; }
+  html.is-ios .filter-pill { color: #EDEAF7; }
+  html.is-ios input[type="text"], html.is-ios input[type="email"], html.is-ios input[type="password"], html.is-ios input[type="tel"], html.is-ios select { background-color: #1F1A30; color: #EDEAF7; }
+  html.is-android .llv-sk-hero, html.is-android .llv-sk-img, html.is-android .llv-sk-line { background-color: #2D2646; }
+  .sug-qty { background-color: #262040; }
+  .sug-og { background-color: #1F1A30; border-color: #3A3358; }
+  .sug-or .p { color: #A8A3C7; }
+  .dish-resumen { background-color: #262040; border-color: #3A3358; }
+  .dish-resumen .res-title { color: #EDEAF7; }
+  .dish-resumen .res-info b { color: #EDEAF7; }
+  .dish-resumen .res-info small { color: #A8A3C7; }
+  .dish-resumen .res-precio { color: #EDEAF7; }
+  .dish-resumen .res-sep { background-color: #2D2646; }
+  .dish-resumen .res-tot { color: #EDEAF7; }
+  .dish-resumen .res-tot.final { color: #EDEAF7; }
+  .dish-resumen .res-nota { color: #EDEAF7; }
+  .dish-nota-envio { color: #EDEAF7; }
+  .dish-res-btn { border-color: #3A3358; background-color: #262040; color: #EDEAF7; }
+  /* degradados claros y esqueletos de carga */
+  .rest-card-cover, html.is-ios .rest-card-cover { background-image: linear-gradient(135deg, #2D2350, #3A2A22); }
+  html.is-ios .product-thumb-box { background-image: linear-gradient(135deg, #2D2350, #3A2A22); }
+  .llv-sk-hero, .llv-sk-img, .llv-sk-line, .product-thumb-box:has(img.img-fill), .rest-card-cover:has(img.img-fill) { background-image: linear-gradient(100deg, #2A2340 30%, #352D52 50%, #2A2340 70%); }
+  .llv-alert-icon { background-image: linear-gradient(135deg, #2D2646, #1F1A30); }
+
+  /* textos con color morado oscuro */
+  .btn-outline-primary, .product-price, .info-line-accent, .total-line .val, .tracking-cobro-text, .dish-price, .v-busq-x, .v-res-head b, .llv-in, .llv-alert-title, .dish-res-btn b, html.is-android .llv-in-t { color: #C9B3FF; }
+  .btn-outline-primary { background-color: #2A2150; border-color: #8B5CF6; }
+
+  /* estilos puestos directamente desde el JS */
+  [style*="background:#fff"] { background: #1F1A30 !important; color: #EDEAF7 !important; }
+  [style*="background:#eef2ff"] { background: #2D2646 !important; }
+  [style*="background:#FEE2E2"] { background: #3A1D24 !important; }
+  [style*="color:#111"], [style*="color:#1F1B2E"] { color: #EDEAF7 !important; }
+
+  /* Ajustes, perfil, legal y eliminar cuenta */
+  html #modalAjustes.aj-full, html.is-android #modalAjustes.aj-full, html.is-ios #modalAjustes.aj-full, html #modalAjustes.aj-full > .dialog-card { background: #14101F !important; }
+  .aj-top h3, .pf-top h3, .aj-txt b, .aj-row, .aj-perfil, .perfil-head, .perfil-nombre, .lg-card h4 b, .el-card h3 { color: #F1EEFA; }
+  .aj-x, .pf-back { background: #1F1A30; color: #F1EEFA; box-shadow: 0 0 0 1px #342D4D; }
+  .aj-x:active, .pf-back:active, .aj-perfil:active, .aj-row:active { background: #2A2340; }
+  .aj-perfil, .aj-group, .pf-grupo, .lg-card, .el-card { background: #1F1A30; box-shadow: 0 0 0 1px #342D4D; }
+  .aj-txt small, .aj-lbl, .aj-nota, .perfil-sec, .perfil-lbl, .lg-fecha, .perfil-correo, .el-card p { color: #A8A3C7; }
+  .aj-row + .aj-row::before { background: #2D2646; }
+  .aj-ico, .lg-card h4 i { background: #2D2350; color: #C9B3FF; }
+  .aj-row.peligro .aj-ico, .el-ico { background: #3A1D24; color: #FF8A80; }
+  .aj-row.peligro .aj-txt b { color: #FF8A80; }
+  .aj-chev { color: #6F6A8C; }
+  .aj-pie { color: #4A4466; }
+  .perfil-avatar { box-shadow: 0 10px 24px rgba(0,0,0,.45), 0 0 0 4px #14101F; }
+  #modalAjustes .perfil-inp, #modalAjustes .perfil-inp:focus { background: #2A2340; color: #F1EEFA; }
+  .perfil-lock { background: #2A2340; color: #A8A3C7; }
+  .perfil-dir { background: #1F1A30; border-color: #342D4D; }
+  .perfil-dir.activa { background: #2A2150; border-color: var(--c-primary); }
+  .perfil-dir-ico { background: #2A2340; }
+  .perfil-dir.activa .perfil-dir-ico { background: #352A66; }
+  .perfil-badge { background: #123D2E; color: #6EE7B7; }
+  .perfil-mini { background: #2A2340; color: #A8A3C7; }
+  .perfil-mini[data-a="del"] { background: #3A1D24; color: #FF8A80; }
+  #pfNuevaDir { background: #2A2150; color: #C9B3FF; }
+  #pfEdNo, .el-no { background: #2A2340; color: #EDEAF7; box-shadow: 0 0 0 1px #342D4D; }
+  .lg-fecha { border-bottom-color: #2D2646; }
+  .lg-card p { color: #CFCBE6; }
+}
