@@ -6460,66 +6460,143 @@ function llvGuiaAndroid() {
   };
 })();
 
-/* LLV-MODERNO: ajustes y perfil con estilo moderno */
+
+/* LLV-MODERNO-V2: ajustes y perfil, diseño limpio a pantalla completa */
 (function () {
+  const svg = p => '<svg viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
+  const IC = {
+    shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    right: '<path d="M9 6l6 6-6 6"/>',
+    left: '<path d="M15 6l-6 6 6 6"/>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    pencil: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'
+  };
+  const el = (tag, cls, html) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; return d; };
+  const g = id => document.getElementById(id);
+  const sinEmoji = t => String(t || "").replace(/^\S+\s+/, "");
+  const limpiaFull = () => {
+    const m = g("modalAjustes");
+    if (m && !m.querySelector(".aj-mod, .perfil-card")) m.classList.remove("aj-full");
+  };
+
+  /* ---------- AJUSTES ---------- */
   const _prevAj = abrirAjustes;
   abrirAjustes = function () {
     _prevAj.apply(this, arguments);
-    const card = document.querySelector("#modalAjustes .dialog-card");
-    if (!card || card.classList.contains("aj-mod") || !document.getElementById("ajPol")) return;
-    const g = id => document.getElementById(id);
-    const el = (tag, cls, html) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; return d; };
+    const m = g("modalAjustes");
+    const card = m && m.querySelector(".dialog-card");
+    if (!card || card.classList.contains("aj-mod") || !g("ajPol")) return;
     const fila = (id, ico, tit, sub, extra) => {
       const b = g(id);
       if (!b) return null;
       b.className = "aj-row" + (extra ? " " + extra : "");
       b.removeAttribute("style");
-      b.innerHTML = '<span class="aj-ico">' + ico + '</span><span class="aj-txt"><b>' + tit + '</b><small>' + sub + '</small></span><span class="aj-chev">›</span>';
+      b.innerHTML = '<span class="aj-ico">' + svg(ico) + '</span><span class="aj-txt"><b>' + tit + '</b><small>' + sub + '</small></span><span class="aj-chev">' + svg(IC.right) + '</span>';
       return b;
     };
-    const rPerfil = fila("ajPerfil", "👤", "Mi perfil", "Datos personales y ubicaciones", "perfil");
-    const rPol = fila("ajPol", "🔒", "Política de Privacidad", "Cómo cuidamos tus datos");
-    const rTer = fila("ajTer", "📜", "Términos y Condiciones", "Reglas de uso del servicio");
-    const rCon = fila("ajCon", "✉️", "Contacto y soporte", CORREO_SOPORTE);
-    const rEli = fila("ajEli", "🗑", "Eliminar mi cuenta", "Borra tus datos de forma permanente", "peligro");
+    const rPol = fila("ajPol", IC.shield, "Política de Privacidad", "Cómo cuidamos tus datos");
+    const rTer = fila("ajTer", IC.doc, "Términos y Condiciones", "Reglas de uso del servicio");
+    const rCon = fila("ajCon", IC.mail, "Contacto y soporte", CORREO_SOPORTE);
+    const rEli = fila("ajEli", IC.trash, "Eliminar mi cuenta", "Borra tus datos de forma permanente", "peligro");
+    const rPerfil = g("ajPerfil");
+    if (rPerfil) {
+      const nom = miNombre || "";
+      const cor = (auth.currentUser && auth.currentUser.email) || "Ver y editar mi perfil";
+      rPerfil.className = "aj-perfil";
+      rPerfil.removeAttribute("style");
+      rPerfil.innerHTML = '<span class="aj-av">' + esc(inicialPerfil(nom)) + '</span><span class="aj-txt"><b>' + esc(nom || "Mi perfil") + '</b><small>' + esc(cor) + '</small></span><span class="aj-chev">' + svg(IC.right) + '</span>';
+    }
     const cer = g("ajCer");
     const nota = card.querySelector("p.sub-muted");
     const notaTxt = nota ? nota.textContent : "";
     card.textContent = "";
     card.classList.add("aj-mod");
-    card.appendChild(el("div", "aj-head", "<h3>Ajustes</h3><p>Tu cuenta, ayuda y privacidad</p>"));
+    m.classList.add("aj-full");
+    const top = el("div", "aj-top", "<h3>Ajustes</h3>");
+    if (cer) { cer.className = "aj-x"; cer.removeAttribute("style"); cer.innerHTML = svg(IC.x); cer.setAttribute("aria-label", "Cerrar"); top.appendChild(cer); }
+    card.appendChild(top);
+    const body = el("div", "aj-body");
+    if (rPerfil) body.appendChild(rPerfil);
     const grupo = (titulo, filas) => {
       const fs = filas.filter(Boolean);
       if (!fs.length) return;
-      card.appendChild(el("div", "aj-lbl", titulo));
+      body.appendChild(el("div", "aj-lbl", titulo));
       const gr = el("div", "aj-group");
       fs.forEach(f => gr.appendChild(f));
-      card.appendChild(gr);
+      body.appendChild(gr);
     };
-    grupo("Cuenta", [rPerfil]);
-    grupo("Información", [rPol, rTer, rCon]);
-    grupo("Zona de peligro", [rEli]);
-    if (rEli && notaTxt) card.appendChild(el("p", "aj-nota", "")).textContent = notaTxt;
-    if (cer) { cer.className = "aj-cerrar"; cer.removeAttribute("style"); cer.textContent = "Cerrar"; card.appendChild(cer); }
+    grupo("Legal y ayuda", [rPol, rTer, rCon]);
+    grupo("Cuenta", [rEli]);
+    if (rEli && notaTxt) { const n = el("p", "aj-nota", ""); n.textContent = notaTxt; body.appendChild(n); }
+    body.appendChild(el("div", "aj-pie", "LLEVARI"));
+    card.appendChild(body);
   };
-  const bc = document.getElementById("btnHeaderConfig");
+  const bc = g("btnHeaderConfig");
   if (bc) bc.onclick = abrirAjustes;
+
+  /* ---------- PERFIL ---------- */
+  const _prevAp = abrirPerfil;
+  abrirPerfil = function () {
+    crearModalAjustes().classList.add("aj-full");
+    return _prevAp.apply(this, arguments);
+  };
 
   const _prevPf = pintarPerfil;
   pintarPerfil = function () {
+    crearModalAjustes().classList.add("aj-full");
     _prevPf.apply(this, arguments);
-    const body = document.querySelector("#modalAjustes .perfil-body");
-    if (!body || body.dataset.mod) return;
-    body.dataset.mod = "1";
+    const card = document.querySelector("#modalAjustes .perfil-card");
+    const body = card && card.querySelector(".perfil-body");
+    const head = card && card.querySelector(".perfil-head");
+    const volver = g("pfVolver");
+    if (!card || !body || !head || !volver || card.dataset.mod) return;
+    card.dataset.mod = "1";
+    volver.className = "pf-back";
+    volver.removeAttribute("style");
+    volver.innerHTML = svg(IC.left);
+    volver.setAttribute("aria-label", "Volver");
+    const top = el("div", "pf-top");
+    top.appendChild(volver);
+    top.appendChild(el("h3", "", "Mi perfil"));
+    top.appendChild(el("span", "pf-sp"));
+    card.insertBefore(top, head);
     let gr = null;
     Array.from(body.children).forEach(k => {
       if (k.classList.contains("perfil-sec")) {
-        gr = document.createElement("div");
-        gr.className = "pf-grupo";
-        body.insertBefore(gr, k);
+        k.textContent = sinEmoji(k.textContent);
+        gr = el("div", "pf-grupo");
+        body.insertBefore(gr, k.nextSibling);
+        return;
       }
-      if (k.id === "pfVolver") { gr = null; k.textContent = "❮ Volver a ajustes"; return; }
       if (gr) gr.appendChild(k);
     });
+    body.querySelectorAll(".perfil-lock").forEach(l => {
+      const sp = l.querySelectorAll("span");
+      if (sp[0]) sp[0].textContent = sinEmoji(sp[0].textContent);
+      if (sp[1]) sp[1].innerHTML = svg(IC.lock);
+    });
+    const gu = g("pfGuardar"); if (gu) gu.textContent = "Guardar cambios";
+    const nu = g("pfNuevaDir"); if (nu) nu.innerHTML = svg(IC.plus) + "<span>Agregar ubicación</span>";
   };
+
+  const _prevPd = pintarDirsPerfil;
+  pintarDirsPerfil = function () {
+    _prevPd.apply(this, arguments);
+    document.querySelectorAll("#pfDirs .perfil-mini").forEach(b => {
+      const del = b.getAttribute("data-a") === "del";
+      b.innerHTML = svg(del ? IC.trash : IC.pencil);
+      b.setAttribute("aria-label", del ? "Eliminar" : "Editar");
+    });
+  };
+
+  /* Las demás pantallas del modal (legal, eliminar) mantienen su formato centrado */
+  const _vl = verLegal;
+  verLegal = function () { const r = _vl.apply(this, arguments); const m = g("modalAjustes"); if (m) m.classList.remove("aj-full"); return r; };
+  const _ce = confirmarEliminarCuenta;
+  confirmarEliminarCuenta = function () { const r = _ce.apply(this, arguments); limpiaFull(); return r; };
 })();
