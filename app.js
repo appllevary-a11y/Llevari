@@ -7042,3 +7042,53 @@ function llvGuiaAndroid() {
   const bc = document.getElementById("btnHeaderConfig");
   if (bc) bc.onclick = abrirAjustes;
 })();
+
+/* LLV-NOTIFS-DIAG: diagnóstico dentro de la bandeja */
+(function () {
+  function linea() {
+    const p = document.getElementById("llvNotifPanel");
+    if (!p) return null;
+    let d = document.getElementById("llvNDiag");
+    if (d) return d;
+    d = document.createElement("div");
+    d.id = "llvNDiag";
+    d.style.cssText = "padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));font:12px/1.5 system-ui,sans-serif;border-top:1px solid rgba(124,58,237,.25)";
+    const t = document.createElement("div");
+    t.textContent = "Revisando...";
+    const b = document.createElement("button");
+    b.textContent = "🔧 Probar aviso local";
+    b.style.cssText = "display:block;margin-top:6px;background:#7C3AED;color:#fff;border:0;border-radius:10px;padding:8px 12px;font:600 12px system-ui,sans-serif";
+    b.onclick = function () {
+      navigator.serviceWorker.ready.then(function (r) {
+        return r.showNotification("Prueba local", { body: "Si ves esto, la bandeja funciona", icon: "logo.png" });
+      }).then(function () { setTimeout(function () { pintarDiag("prueba enviada"); }, 600); })
+        .catch(function (e) { pintarDiag("error: " + e.message); });
+    };
+    d.appendChild(t);
+    d.appendChild(b);
+    p.appendChild(d);
+    return d;
+  }
+  function pintarDiag(extra) {
+    const d = linea();
+    if (!d) return;
+    const t = d.firstChild;
+    const perm = ("Notification" in window) ? Notification.permission : "no soportado";
+    let tel = "";
+    try { tel = miTelefono || ""; } catch (e) {}
+    let reg = "sin registrar";
+    try { if (typeof llvPushTok !== "undefined" && llvPushTok) reg = "registrado"; } catch (e) {}
+    const base = "Permiso: " + perm + " · Cuenta: " + (tel ? "sí" : "no") + " · Push: " + reg;
+    if (!navigator.serviceWorker) { t.textContent = base + " · SW: no soportado"; return; }
+    navigator.serviceWorker.getRegistration().then(function (r) {
+      if (!r) { t.textContent = base + " · SW: no hay"; return; }
+      const sw = r.active ? r.active.state : (r.installing ? "instalando" : (r.waiting ? "esperando" : "ninguno"));
+      return r.getNotifications().then(function (ns) {
+        t.textContent = base + " · SW: " + sw + " · En la barra: " + ns.length + (extra ? " · " + extra : "");
+      });
+    }).catch(function (e) { t.textContent = base + " · Error: " + e.message; });
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target && e.target.closest && e.target.closest("#btnHeaderNotifs")) setTimeout(function () { pintarDiag(); }, 500);
+  }, true);
+})();
