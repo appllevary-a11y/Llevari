@@ -6834,3 +6834,138 @@ function llvGuiaAndroid() {
   window.addEventListener("online", function () { espera = 60000; revisar().then(programar); });
   try { auth.onAuthStateChanged(function (u) { if (u) iniciar(); else detener(); }); } catch (e) {}
 })();
+
+/* LLV-NOTIFS: bandeja de notificaciones (igual que LlevariNotifs de la app) */
+(function () {
+  const MAX = 50;
+  function tel() { try { return miTelefono || ""; } catch (e) { return ""; } }
+  function K() { return "llv_notifs_" + tel(); }
+  function leer() {
+    if (!tel()) return [];
+    try { const a = JSON.parse(localStorage.getItem(K()) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function gl(a) { try { localStorage.setItem(K(), JSON.stringify(a)); } catch (e) {} pintar(); }
+  function sinLeer() { return leer().filter(function (n) { return !n.leida; }).length; }
+  function guardar(titulo, cuerpo, imagen, enlace, ts) {
+    if (!tel()) return;
+    ts = ts || Date.now();
+    const a = leer();
+    for (let i = 0; i < a.length; i++) if (a[i].titulo === titulo && a[i].cuerpo === cuerpo && Math.abs(a[i].ts - ts) < 120000) return;
+    a.push({ titulo: titulo, cuerpo: cuerpo, imagen: imagen || "", enlace: enlace || "", ts: ts, leida: false });
+    a.sort(function (x, y) { return y.ts - x.ts; });
+    gl(a.slice(0, MAX));
+  }
+  function el(tag, cls, txt) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+  }
+  function tiempo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return "ahora";
+    if (s < 3600) return "hace " + Math.floor(s / 60) + " min";
+    if (s < 86400) return "hace " + Math.floor(s / 3600) + " h";
+    return new Date(ts).toLocaleDateString("es", { day: "numeric", month: "short" });
+  }
+
+  /* avisos que la web muestra con la app abierta */
+  try {
+    const orig = ServiceWorkerRegistration.prototype.showNotification;
+    ServiceWorkerRegistration.prototype.showNotification = function (t, o) {
+      try { o = o || {}; guardar(String(t || "LLEVARI"), String(o.body || ""), o.image || "", ""); } catch (e) {}
+      return orig.apply(this, arguments);
+    };
+  } catch (e) {}
+
+  /* avisos que llegaron con la app cerrada y siguen en la barra del celular */
+  function revisarBandeja() {
+    if (!tel() || !navigator.serviceWorker) return;
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg || !reg.getNotifications) return;
+      return reg.getNotifications().then(function (ns) {
+        ns.forEach(function (n) { guardar(n.title || "LLEVARI", n.body || "", n.image || "", "", n.timestamp || Date.now()); });
+      });
+    }).catch(function () {});
+  }
+
+  function lista() {
+    const l = document.getElementById("llvNList");
+    if (!l) return;
+    l.textContent = "";
+    const a = leer();
+    if (!a.length) { l.appendChild(el("div", "llv-nvacio", "No tienes notificaciones")); return; }
+    a.forEach(function (n, i) {
+      const it = el("div", "llv-nitem" + (n.leida ? "" : " nueva"));
+      if (/^https?:/i.test(n.imagen || "")) { const im = el("img", "llv-nimg"); im.src = n.imagen; im.alt = ""; it.appendChild(im); }
+      const c = el("div", "llv-ncuerpo");
+      c.appendChild(el("div", "llv-ntit", n.titulo || "LLEVARI"));
+      c.appendChild(el("div", "llv-ntxt", n.cuerpo || ""));
+      c.appendChild(el("div", "llv-nhora", tiempo(n.ts)));
+      const d = el("button", "llv-ndel", "🗑");
+      d.onclick = function (e) { e.stopPropagation(); const b = leer(); b.splice(i, 1); gl(b); };
+      it.appendChild(c);
+      it.appendChild(d);
+      it.onclick = function () {
+        const b = leer();
+        if (b[i]) { b[i].leida = true; gl(b); }
+        if (/^https?:/i.test(n.enlace || "")) window.open(n.enlace, "_blank");
+      };
+      l.appendChild(it);
+    });
+  }
+
+  function pintar() {
+    const bd = document.getElementById("llvNBadge");
+    if (bd) { const n = sinLeer(); bd.textContent = n > 9 ? "9+" : String(n); bd.classList.toggle("hidden", !n); }
+    const p = document.getElementById("llvNotifPanel");
+    if (p && !p.classList.contains("hidden")) lista();
+  }
+
+  function cerrar() { const p = document.getElementById("llvNotifPanel"); if (p) p.classList.add("hidden"); }
+
+  function abrir() {
+    let p = document.getElementById("llvNotifPanel");
+    if (!p) {
+      p = el("div", "llv-npanel");
+      p.id = "llvNotifPanel";
+      const top = el("div", "llv-ntop");
+      const bt = el("button", "llv-nbtxt", "Borrar todas");
+      bt.onclick = function () { gl([]); };
+      const x = el("button", "llv-nx", "✕");
+      x.onclick = cerrar;
+      top.appendChild(el("h3", null, "🔔 Notificaciones"));
+      top.appendChild(bt);
+      top.appendChild(x);
+      const l = el("div", "llv-nlist");
+      l.id = "llvNList";
+      p.appendChild(top);
+      p.appendChild(l);
+      document.body.appendChild(p);
+    }
+    p.classList.remove("hidden");
+    revisarBandeja();
+    lista();
+  }
+
+  function crearCampana() {
+    if (document.getElementById("btnHeaderNotifs")) return;
+    const cont = document.querySelector(".header-actions");
+    if (!cont) return;
+    const b = el("button", "circle-btn", "🔔");
+    b.id = "btnHeaderNotifs";
+    b.setAttribute("aria-label", "Notificaciones");
+    const bd = el("span", "llv-nbadge hidden");
+    bd.id = "llvNBadge";
+    b.appendChild(bd);
+    b.onclick = abrir;
+    cont.insertBefore(b, document.getElementById("btnHeaderConfig"));
+    pintar();
+  }
+
+  crearCampana();
+  window.addEventListener("storage", pintar);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { pintar(); revisarBandeja(); } });
+  try { auth.onAuthStateChanged(function (u) { cerrar(); setTimeout(function () { pintar(); if (u) revisarBandeja(); }, 4000); }); } catch (e) {}
+  setTimeout(function () { pintar(); revisarBandeja(); }, 4000);
+})();
