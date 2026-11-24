@@ -6459,3 +6459,67 @@ function llvGuiaAndroid() {
     } catch (e) {}
   };
 })();
+
+/* LLV-MODERNO: ajustes y perfil con estilo moderno */
+(function () {
+  const _prevAj = abrirAjustes;
+  abrirAjustes = function () {
+    _prevAj.apply(this, arguments);
+    const card = document.querySelector("#modalAjustes .dialog-card");
+    if (!card || card.classList.contains("aj-mod") || !document.getElementById("ajPol")) return;
+    const g = id => document.getElementById(id);
+    const el = (tag, cls, html) => { const d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; return d; };
+    const fila = (id, ico, tit, sub, extra) => {
+      const b = g(id);
+      if (!b) return null;
+      b.className = "aj-row" + (extra ? " " + extra : "");
+      b.removeAttribute("style");
+      b.innerHTML = '<span class="aj-ico">' + ico + '</span><span class="aj-txt"><b>' + tit + '</b><small>' + sub + '</small></span><span class="aj-chev">›</span>';
+      return b;
+    };
+    const rPerfil = fila("ajPerfil", "👤", "Mi perfil", "Datos personales y ubicaciones", "perfil");
+    const rPol = fila("ajPol", "🔒", "Política de Privacidad", "Cómo cuidamos tus datos");
+    const rTer = fila("ajTer", "📜", "Términos y Condiciones", "Reglas de uso del servicio");
+    const rCon = fila("ajCon", "✉️", "Contacto y soporte", CORREO_SOPORTE);
+    const rEli = fila("ajEli", "🗑", "Eliminar mi cuenta", "Borra tus datos de forma permanente", "peligro");
+    const cer = g("ajCer");
+    const nota = card.querySelector("p.sub-muted");
+    const notaTxt = nota ? nota.textContent : "";
+    card.textContent = "";
+    card.classList.add("aj-mod");
+    card.appendChild(el("div", "aj-head", "<h3>Ajustes</h3><p>Tu cuenta, ayuda y privacidad</p>"));
+    const grupo = (titulo, filas) => {
+      const fs = filas.filter(Boolean);
+      if (!fs.length) return;
+      card.appendChild(el("div", "aj-lbl", titulo));
+      const gr = el("div", "aj-group");
+      fs.forEach(f => gr.appendChild(f));
+      card.appendChild(gr);
+    };
+    grupo("Cuenta", [rPerfil]);
+    grupo("Información", [rPol, rTer, rCon]);
+    grupo("Zona de peligro", [rEli]);
+    if (rEli && notaTxt) card.appendChild(el("p", "aj-nota", "")).textContent = notaTxt;
+    if (cer) { cer.className = "aj-cerrar"; cer.removeAttribute("style"); cer.textContent = "Cerrar"; card.appendChild(cer); }
+  };
+  const bc = document.getElementById("btnHeaderConfig");
+  if (bc) bc.onclick = abrirAjustes;
+
+  const _prevPf = pintarPerfil;
+  pintarPerfil = function () {
+    _prevPf.apply(this, arguments);
+    const body = document.querySelector("#modalAjustes .perfil-body");
+    if (!body || body.dataset.mod) return;
+    body.dataset.mod = "1";
+    let gr = null;
+    Array.from(body.children).forEach(k => {
+      if (k.classList.contains("perfil-sec")) {
+        gr = document.createElement("div");
+        gr.className = "pf-grupo";
+        body.insertBefore(gr, k);
+      }
+      if (k.id === "pfVolver") { gr = null; k.textContent = "❮ Volver a ajustes"; return; }
+      if (gr) gr.appendChild(k);
+    });
+  };
+})();
