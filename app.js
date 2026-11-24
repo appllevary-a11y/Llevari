@@ -7066,3 +7066,40 @@ function llvGuiaAndroid() {
   }
   document.addEventListener("pointerdown", pedir, true);
 })();
+
+/* LLV-BATERIA: guía única para quitar la optimización de batería (Android) */
+(function () {
+  if (!/android/i.test(navigator.userAgent)) return;
+  function mostrar() {
+    if (document.getElementById("llvBatGuia")) return;
+    var g = document.createElement("div");
+    g.id = "llvBatGuia";
+    g.style.cssText = "position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:18px";
+    var c = document.createElement("div");
+    c.style.cssText = "background:#fff;color:#111;border-radius:20px;padding:22px 18px;max-width:340px;width:100%;text-align:left;font:600 15px/1.45 system-ui,sans-serif";
+    c.innerHTML = "<div style='font-size:19px;font-weight:800;text-align:center;margin-bottom:12px'>🔔 Para recibir tus avisos</div>"
+      + "<div style='margin-bottom:10px;font-weight:500'>Si tu celular duerme la app, no te llegarán los avisos de tu pedido. Haz esto una vez:</div>"
+      + "<div style='margin-bottom:10px'>1️⃣ Mantén presionado el ícono de <b>Chrome</b> (o de Llevari) y toca <b>ⓘ Información de la app</b>.</div>"
+      + "<div style='margin-bottom:10px'>2️⃣ Entra a <b>Batería</b> y elige <b>Sin restricciones</b>.</div>"
+      + "<div style='margin-bottom:16px'>3️⃣ En Samsung: <b>Ajustes › Batería › Límites de uso en segundo plano</b> y quita Chrome de <b>Apps en suspensión</b>.</div>";
+    var ok = document.createElement("button");
+    ok.textContent = "Listo, ya lo hice";
+    ok.style.cssText = "width:100%;background:#0033ff;color:#fff;border:0;border-radius:12px;padding:12px;margin-bottom:8px;font:700 15px system-ui,sans-serif";
+    ok.onclick = function () { try { localStorage.setItem("llv_bat_ok", "1"); } catch (e) {} g.remove(); };
+    var lu = document.createElement("button");
+    lu.textContent = "Recordármelo después";
+    lu.style.cssText = "width:100%;background:#eef2ff;color:#0033ff;border:0;border-radius:12px;padding:12px;font:700 14px system-ui,sans-serif";
+    lu.onclick = function () { try { localStorage.setItem("llv_bat_luego", String(Date.now())); } catch (e) {} g.remove(); };
+    c.appendChild(ok); c.appendChild(lu); g.appendChild(c); document.body.appendChild(g);
+  }
+  setInterval(function () {
+    try {
+      if (localStorage.getItem("llv_bat_ok")) return;
+      if (Date.now() - Number(localStorage.getItem("llv_bat_luego") || 0) < 3 * 86400000) return;
+      if (!miTelefono || !auth.currentUser) return;
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      if (document.getElementById("llvAlertOverlay") && !document.getElementById("llvAlertOverlay").classList.contains("hidden")) return;
+      mostrar();
+    } catch (e) {}
+  }, 6000);
+})();
