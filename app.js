@@ -7092,3 +7092,32 @@ function llvGuiaAndroid() {
     if (e.target && e.target.closest && e.target.closest("#btnHeaderNotifs")) setTimeout(function () { pintarDiag(); }, 500);
   }, true);
 })();
+
+/* LLV-NOTIFS-ACTIVAR: botón para activar avisos (pide el permiso con un toque) */
+(function () {
+  function poner() {
+    const d = document.getElementById("llvNDiag");
+    if (!d) return;
+    const ok = ("Notification" in window) && Notification.permission === "granted" && (typeof llvPushTok !== "undefined" && llvPushTok);
+    let b = document.getElementById("llvNActivar");
+    if (ok) { if (b) b.remove(); return; }
+    if (b) return;
+    b = document.createElement("button");
+    b.id = "llvNActivar";
+    b.textContent = "✅ Activar avisos en este navegador";
+    b.style.cssText = "display:block;margin-top:8px;background:#16a34a;color:#fff;border:0;border-radius:10px;padding:10px 14px;font:700 13px system-ui,sans-serif";
+    b.onclick = function () {
+      if (!("Notification" in window)) return;
+      const t = d.firstChild;
+      if (Notification.permission === "denied") { t.textContent = "Bloqueado. Toca el candado junto a la dirección > Permisos > Notificaciones > Permitir, y recarga."; return; }
+      Notification.requestPermission().then(function (p) {
+        if (p === "granted") { try { llvPushRegistrar(); } catch (e) {} }
+        setTimeout(function () { const c = document.getElementById("btnHeaderNotifs"); if (c) c.click(); }, 3000);
+      }).catch(function () {});
+    };
+    d.appendChild(b);
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target && e.target.closest && e.target.closest("#btnHeaderNotifs")) setTimeout(poner, 900);
+  }, true);
+})();
