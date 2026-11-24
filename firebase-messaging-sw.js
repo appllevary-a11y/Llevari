@@ -13,18 +13,42 @@ const messaging = firebase.messaging();
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
+// LLV-NOTIFS-SW: guarda el aviso en una cola (IndexedDB) para la bandeja de la página
+function llvCola(n) {
+  return new Promise((ok) => {
+    try {
+      const r = indexedDB.open("llv_notifs_sw", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("cola", { autoIncrement: true });
+      r.onsuccess = () => {
+        try {
+          const tx = r.result.transaction("cola", "readwrite");
+          tx.objectStore("cola").add(n);
+          tx.oncomplete = () => { r.result.close(); ok(); };
+          tx.onerror = () => ok();
+          tx.onabort = () => ok();
+        } catch (e) { ok(); }
+      };
+      r.onerror = () => ok();
+    } catch (e) { ok(); }
+  });
+}
+
 // El push web llega solo con "data": aquí armamos la notificación (evita duplicados)
 messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {};
-  return self.registration.showNotification(d.title || "LLEVARI", {
-    body: d.body || "",
-    icon: "logo.png",
-    tag: (d.pedidoId || "pedido") + "-" + (d.tipo || "aviso"),
-    renotify: true,
-    requireInteraction: true,
-    vibrate: [600, 200, 600, 200, 600],
-    data: { tipo: d.tipo || "", pedidoId: d.pedidoId || "", restId: d.restId || "" }
-  });
+  const titulo = d.title || d.titulo || "LLEVARI";
+  const cuerpo = d.body || d.cuerpo || "";
+  return llvCola({ titulo: titulo, cuerpo: cuerpo, imagen: d.imagen || "", enlace: d.enlace || "", ts: Date.now() }).then(() =>
+    self.registration.showNotification(titulo, {
+      body: cuerpo,
+      icon: "logo.png",
+      tag: (d.pedidoId || "pedido") + "-" + (d.tipo || "aviso"),
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [600, 200, 600, 200, 600],
+      data: { tipo: d.tipo || "", pedidoId: d.pedidoId || "", restId: d.restId || "" }
+    })
+  );
 });
 
 self.addEventListener("notificationclick", (e) => {

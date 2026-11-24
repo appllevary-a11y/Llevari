@@ -6969,3 +6969,47 @@ function llvGuiaAndroid() {
   try { auth.onAuthStateChanged(function (u) { cerrar(); setTimeout(function () { pintar(); if (u) revisarBandeja(); }, 4000); }); } catch (e) {}
   setTimeout(function () { pintar(); revisarBandeja(); }, 4000);
 })();
+
+/* LLV-NOTIFS-SW: pasa a la bandeja los avisos que recibió el service worker */
+(function () {
+  const MAX = 50;
+  function tel() { try { return miTelefono || ""; } catch (e) { return ""; } }
+  function drenar() {
+    const t = tel();
+    if (!t || !window.indexedDB) return;
+    try {
+      const r = indexedDB.open("llv_notifs_sw", 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore("cola", { autoIncrement: true }); };
+      r.onsuccess = function () {
+        const db0 = r.result;
+        try {
+          const tx = db0.transaction("cola", "readwrite");
+          const st = tx.objectStore("cola");
+          const rq = st.getAll();
+          rq.onsuccess = function () {
+            const nuevos = rq.result || [];
+            if (!nuevos.length) return;
+            st.clear();
+            try {
+              const k = "llv_notifs_" + t;
+              let a = [];
+              try { a = JSON.parse(localStorage.getItem(k) || "[]"); if (!Array.isArray(a)) a = []; } catch (e) { a = []; }
+              nuevos.forEach(function (n) {
+                for (let i = 0; i < a.length; i++) if (a[i].titulo === n.titulo && a[i].cuerpo === n.cuerpo && Math.abs(a[i].ts - n.ts) < 120000) return;
+                a.push({ titulo: n.titulo, cuerpo: n.cuerpo, imagen: n.imagen || "", enlace: n.enlace || "", ts: n.ts, leida: false });
+              });
+              a.sort(function (x, y) { return y.ts - x.ts; });
+              localStorage.setItem(k, JSON.stringify(a.slice(0, MAX)));
+              window.dispatchEvent(new Event("storage"));
+            } catch (e) {}
+          };
+          tx.oncomplete = function () { db0.close(); };
+        } catch (e) { try { db0.close(); } catch (e2) {} }
+      };
+    } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") drenar(); });
+  document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#btnHeaderNotifs")) drenar(); }, true);
+  try { auth.onAuthStateChanged(function () { setTimeout(drenar, 4000); }); } catch (e) {}
+  setTimeout(drenar, 4000);
+})();
