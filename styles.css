@@ -2563,3 +2563,13 @@ html.is-ios #modalAjustes.aj-full,
   .llv-ndel{background:rgba(167,139,250,.14);color:#c4b5fd}
   .llv-nvacio{color:#b9a9d9}
 }
+
+/* LLV-RENDIMIENTO: quita animaciones infinitas que hacen lenta la respuesta al tocar */
+html, body { touch-action: manipulation; }
+.header-bar, .auth-gradient { animation: none !important; }
+.btn, .btn-primary, .btn-warning, .btn-huge, .service-bottom-bar .btn { animation: none !important; }
+#btnHeaderConfig, #btnHeaderCarrito, .search-icon-badge, .btn-plus-abs { animation: none !important; }
+.hero-bg-img, .hero-slider-wrap::after, .cat-big-icon-wrap, .cat-chip-ico, .badge-status.abierto { animation: none !important; }
+.nav-item.active .nav-icon { animation: none !important; }
+.bottom-nav, .bn-tag { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.btn:active, .btn-huge:active { transform: scale(.95) !important; transition: transform .08s !important; }
