@@ -17,7 +17,7 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
-try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+try { db.settings({ experimentalForceLongPolling: true, merge: true }); } catch (e) {}
 try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
 
 // 2. ESTADO GLOBAL
@@ -6699,12 +6699,13 @@ function llvGuiaAndroid() {
   };
 })();
 
+
 /* LLV-ESTADO-FIX: el abierto/cerrado de las tarjetas siempre sigue al dato en vivo */
 (function () {
   const RD = {};
   const norm = s => String(s || "").trim().toLowerCase();
 
-  function poblar(snap) {
+  function poblar(snap, parcial) {
     const ids = {};
     window.LLV_ESTADO = window.LLV_ESTADO || {};
     snap.forEach(d => {
@@ -6713,7 +6714,7 @@ function llvGuiaAndroid() {
       RD[d.id] = { id: d.id, nombre: x.nombre || "", lat: x.latitud || 0, lon: x.longitud || 0, logo: x.logoUrl || "", cerrado: String(x.estado || "").toUpperCase() === "CERRADO" };
       window.LLV_ESTADO[d.id] = { cerrado: RD[d.id].cerrado, nombre: RD[d.id].nombre, logo: RD[d.id].logo };
     });
-    Object.keys(RD).forEach(k => { if (!ids[k]) delete RD[k]; });
+    if (!parcial) Object.keys(RD).forEach(k => { if (!ids[k]) delete RD[k]; });
     try { (todosLosProductosCache || []).forEach(p => { const e = RD[p.rId]; if (e) p.rCerrado = e.cerrado; }); } catch (e) {}
   }
 
@@ -6781,5 +6782,20 @@ function llvGuiaAndroid() {
     } catch (e) { un = null; }
   }
   function detener() { if (un) { try { un(); } catch (e) {} } un = null; }
+
+  /* al volver a la app (o recuperar internet) se consulta el servidor al instante */
+  let ult = 0;
+  function refrescarServidor() {
+    if (!un) return;
+    const ahora = Date.now();
+    if (ahora - ult < 20000) return;
+    ult = ahora;
+    try { db.enableNetwork(); } catch (e) {}
+    try { db.collection("restaurantes").get({ source: "server" }).then(function (s) { poblar(s, true); agendar(); }).catch(function () {}); } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") refrescarServidor(); });
+  window.addEventListener("focus", refrescarServidor);
+  window.addEventListener("pageshow", refrescarServidor);
+  window.addEventListener("online", function () { ult = 0; refrescarServidor(); });
   try { auth.onAuthStateChanged(function (u) { if (u) iniciar(); else detener(); }); } catch (e) {}
 })();
