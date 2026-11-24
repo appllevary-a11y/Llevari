@@ -7135,31 +7135,3 @@ document.addEventListener("click", function (e) {
   }
 }, true);
 
-/* LLV-MEDIDOR: temporal, mide la respuesta al tocar (se quita después) */
-(function () {
-  try {
-    var p = document.createElement("div");
-    p.id = "llvMedidor";
-    p.style.cssText = "position:fixed;left:6px;bottom:76px;z-index:2147483647;background:rgba(0,0,0,.82);color:#0f0;font:600 11px/1.3 monospace;padding:6px 8px;border-radius:8px;pointer-events:none;white-space:pre";
-    p.textContent = "medidor listo";
-    document.body.appendChild(p);
-    var bloqueos = 0, maxB = 0, ult = "";
-    function pintar() { p.textContent = ult + "\nbloqueos>50ms: " + bloqueos + " (máx " + Math.round(maxB) + "ms)"; }
-    new PerformanceObserver(function (l) {
-      l.getEntries().forEach(function (e) {
-        if (e.name !== "pointerdown" && e.name !== "pointerup" && e.name !== "click") return;
-        var espera = Math.round(e.processingStart - e.startTime);
-        var codigo = Math.round(e.processingEnd - e.processingStart);
-        ult = e.name + ": total " + Math.round(e.duration) + "ms | espera " + espera + " | codigo " + codigo;
-      });
-      pintar();
-    }).observe({ type: "event", durationThreshold: 16, buffered: false });
-    try {
-      new PerformanceObserver(function (l) {
-        l.getEntries().forEach(function (e) { bloqueos++; if (e.duration > maxB) maxB = e.duration; });
-        pintar();
-      }).observe({ entryTypes: ["longtask"] });
-    } catch (e) {}
-    setTimeout(function () { bloqueos = 0; maxB = 0; pintar(); }, 8000);
-  } catch (e) {}
-})();
