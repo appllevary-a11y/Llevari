@@ -6780,10 +6780,14 @@ function llvGuiaAndroid() {
     const abrir = () => abrirMenuRestaurante(r.id, r.nombre, r.lat, r.lon, r.logo);
     const avisar = () => alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(r.logo) });
     if (!r.cerrado) { abrir(); return; }
+    avisar();
     docServidor(r.id).then(d => {
       if (d && d.exists) { poblar({ forEach: fn => fn(d) }, true); agendar(); }
-      (RD[r.id] || r).cerrado ? avisar() : abrir();
-    }).catch(avisar);
+      if (!(RD[r.id] || r).cerrado) {
+        const o = document.getElementById("llvAlertOverlay");
+        if (o && !o.classList.contains("hidden")) { o.classList.add("hidden"); abrir(); }
+      }
+    }).catch(function () {});
   }, true);
 
   try { new MutationObserver(agendar).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
