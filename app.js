@@ -661,7 +661,7 @@ async function cargarInicioPrincipal() {
         const pData = pd.data();
         if (pData.nombre && pData.precio > 0) {
           const itemProd = {
-            rId: doc.id, rNom: r.nombre, rLat, rLon, rCerrado: cerrado,
+            rId: doc.id, rNom: r.nombre, rLat, rLon, rLogo: formatearImagen(r.logoUrl), rCerrado: cerrado,
             pNom: pData.nombre, pDesc: pData.descripcion || "",
             pPrec: pData.precio, pImg: formatearImagen(pData.imagenHD || pData.imagenUrl || r.logoUrl),
             pOps: pData.opciones || ""
@@ -4437,7 +4437,7 @@ if (window.MutationObserver) {
         snap.forEach(d => {
            const pt = d.data();
            bajados.push({
-             rId: rId, rNom: rNom, rLat: rLat, rLon: rLon,
+             rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rLogo: formatearImagen(logoUrl),
              pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio,
              pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || ""
            });
@@ -5134,7 +5134,7 @@ if (window.MutationObserver) {
     const r = [];
     snap.forEach(function (d) {
       const pt = d.data();
-      if (pt.nombre && pt.precio > 0) r.push({ rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" });
+      if (pt.nombre && pt.precio > 0) r.push({ rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rLogo: formatearImagen(logoUrl), rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" });
     });
     return r;
   }
@@ -5256,7 +5256,7 @@ if (window.MutationObserver) {
     const t0 = performance.now();
     const docs = await pedirRest(rId);
     const items = (docs || []).filter(function (pt) { return pt.nombre && pt.precio > 0; }).map(function (pt) {
-      return { rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" };
+      return { rId: rId, rNom: rNom, rLat: rLat, rLon: rLon, rLogo: formatearImagen(logoUrl), rCerrado: false, pNom: pt.nombre, pDesc: pt.descripcion || "", pPrec: pt.precio, pImg: formatearImagen(pt.imagenHD || pt.imagenUrl || logoUrl), pOps: pt.opciones || "" };
     });
     if (!items.length) return _o.apply(this, args);
     todosLosProductosCache.push.apply(todosLosProductosCache, items);
@@ -5849,23 +5849,42 @@ function llvGuiaAndroid() {
 
 /* LLV-PRESENCIA: cliente en línea (igual que la app) */
 (function () {
-  let ultimo = 0, tel = "";
+  let ultimo = 0, tel = "", ref = null;
   function visible() { return document.visibilityState !== "hidden"; }
-  function escribir(on) {
+  async function resolverRef() {
+    if (ref && tel === miTelefono) return ref;
+    tel = miTelefono; ref = null;
+    const col = db.collection("clientes");
     try {
-      if (!miTelefono || !auth.currentUser) return Promise.resolve();
+      const d = await col.doc(miTelefono).get();
+      if (d.exists) { ref = d.ref; return ref; }
+      const u = auth.currentUser;
+      if (u && u.email) {
+        const s = await col.where("correo", "==", u.email).limit(1).get();
+        if (!s.empty) { ref = s.docs[0].ref; return ref; }
+      }
+      const s2 = await col.where("telefono", "==", miTelefono).limit(1).get();
+      if (!s2.empty) { ref = s2.docs[0].ref; return ref; }
+    } catch (e) { console.log("presencia:", e); }
+    return null;
+  }
+  async function escribir(on) {
+    try {
+      if (!miTelefono || !auth.currentUser) return;
       const ahora = Date.now();
-      if (on) { if (ahora - ultimo < 20000) return Promise.resolve(); ultimo = ahora; } else ultimo = 0;
-      return db.collection("clientes").doc(miTelefono).update({
+      if (on) { if (ahora - ultimo < 20000) return; ultimo = ahora; } else ultimo = 0;
+      const r = await resolverRef();
+      if (!r) return;
+      await r.update({
         en_linea: on,
         ultima_actividad: firebase.firestore.FieldValue.serverTimestamp()
-      }).catch(function () {});
-    } catch (e) { return Promise.resolve(); }
+      }).catch(function (e) { console.log("presencia:", e); });
+    } catch (e) {}
   }
   function tick() {
     if (!visible() || !miTelefono || !auth.currentUser) return;
-    if (tel !== miTelefono) { tel = miTelefono; ultimo = 0; }
-    if (Date.now() - ultimo >= 120000) escribir(true);
+    if (tel !== miTelefono) { tel = miTelefono; ref = null; ultimo = 0; }
+    if (Date.now() - ultimo >= 45000) escribir(true);
   }
   setInterval(tick, 5000);
   document.addEventListener("visibilitychange", function () { if (visible()) tick(); else escribir(false); });
@@ -5878,4 +5897,547 @@ function llvGuiaAndroid() {
       return Promise.race([p, new Promise(function (r) { setTimeout(r, 1500); })]).then(function () { return so(); });
     };
   } catch (e) {}
+})();
+/* LLV-BANNER-APP: banner de la app (campañas, arco, animado) */
+(function () {
+  const BASE_MS = 5200;
+  const nrm = s => String(s == null ? "" : s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const rnd = n => Math.floor(Math.random() * n);
+  const pick = a => a[rnd(a.length)];
+  const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+  const hora = () => new Date().getHours();
+  const hash = s => { let h = 0; s = String(s); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; };
+  const reducir = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  const S = { vistas: null, kinds: [], rids: [], paso: 0, hist: [], idx: -1, pos: 0, camp: [], platos: [], campT: 0, campN: -1, item: null, timer: null, gen: 0, ini: 0, resta: BASE_MS, pausa: false };
+
+  function lsGet(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function cargarVistas() {
+    if (S.vistas) return;
+    S.vistas = {};
+    let nuevo = false;
+    const hoy = new Date().toISOString().slice(0, 10);
+    try { nuevo = localStorage.getItem("cb_dia") !== hoy; } catch (e) {}
+    const raw = lsGet("cb_v", {});
+    Object.keys(raw).forEach(k => { let n = raw[k] | 0; if (nuevo) n = Math.floor(n / 2); if (n > 0) S.vistas[k] = n; });
+    if (nuevo) { try { localStorage.setItem("cb_dia", hoy); } catch (e) {} }
+  }
+  function guardarVistas() {
+    let ks = Object.keys(S.vistas);
+    if (ks.length > 500) { let n = ks.length; for (const k of ks) { if (n <= 350) break; if (S.vistas[k] <= 1) { delete S.vistas[k]; n--; } } }
+    lsSet("cb_v", S.vistas);
+  }
+
+  function nombrePila() {
+    const n = (typeof miNombre === "string" ? miNombre : "").trim();
+    if (!n) return "";
+    const p = n.split(/\s+/)[0];
+    return p.charAt(0).toUpperCase() + p.slice(1);
+  }
+  function saludoMomento() { const h = hora(); return h >= 5 && h < 12 ? "☀️ BUEN DÍA" : h >= 12 && h < 19 ? "🌤️ BUENA TARDE" : "🌙 BUENA NOCHE"; }
+  function saludoTitulo() { const n = nombrePila(); return n ? "¿Qué se te antoja, " + n + "?" : "¿Qué se te antoja hoy?"; }
+  function periodo() { const h = hora(); return h >= 5 && h < 10 ? 0 : h >= 10 && h < 15 ? 1 : h >= 15 && h < 19 ? 2 : 3; }
+  function tagHora(h) {
+    if (h >= 5 && h < 10) return "☀️ PARA EMPEZAR EL DÍA";
+    if (h >= 10 && h < 15) return "🍽️ HORA DE ALMORZAR";
+    if (h >= 15 && h < 19) return "🧁 ANTOJO DE LA TARDE";
+    return "🌙 CENA DE HOY";
+  }
+  function momento(nom, desc) {
+    const h = hora(), t = nrm((nom || "") + " " + (desc || ""));
+    if (h >= 5 && h < 10 && /(desayuno|baleada|huevo|pan|cafe|jugo|panqueque|tostada|omelet|sandwich|licuado)/.test(t)) return true;
+    if (h >= 10 && h < 15 && /(almuerzo|pollo|carne|arroz|pescado|res|cerdo|pasta|sopa|ensalada|hamburguesa|combo|plato)/.test(t)) return true;
+    if (h >= 15 && h < 19 && /(postre|helado|pastel|cafe|frappe|snack|nacho|papas|malteada|batido|crepa|dulce)/.test(t)) return true;
+    if ((h >= 19 || h < 5) && /(pizza|hamburguesa|taco|alitas|pollo|burrito|hot dog|perro|wings|pupusa|cena|combo)/.test(t)) return true;
+    return false;
+  }
+
+  const HOOKS = {
+    hamb: ["Jugosa y calientita", "Para agarrarla con las dos manos", "Una hamburguesa que sí llena", "Doble sabor en cada mordida", "Queso, carne y mucho sabor", "Esa hamburguesa te está esperando", "De las que se disfrutan despacio", "Con todo lo que te gusta", "Bien cargada de sabor", "Antojo de hamburguesa resuelto"],
+    pizza: ["Queso derretido en cada rebanada", "Pizza calientita y recién hecha", "Para compartir o para ti solo", "Masa suave y mucho sabor", "Una pizza que se acaba rápido", "Con ese queso que estira", "Pizza para el antojo de hoy", "Cada rebanada vale la pena", "Calientita y llena de sabor", "El plan perfecto es una pizza"],
+    pollo: ["Crujiente por fuera, jugoso por dentro", "Pollo bien dorado y recién hecho", "Para chuparse los dedos", "Ese crujido que tanto te gusta", "Pollo con sabor de verdad", "Dorado, calientito y rico", "Sazonado como debe ser", "Para repetir sin culpa", "Pollo que se acaba en un ratito", "Un clásico que nunca falla"],
+    taco: ["Sabor de verdad, bien calientito", "Antojito rico para cualquier hora", "Hecho al momento, lleno de sabor", "Sabe a lo de siempre, pero mejor", "Para ese antojo que no se quita", "Bien servido y con buen sazón", "Un bocado y ya quieres otro", "Tradición en cada mordida", "Calientito y con todo", "El antojito perfecto"],
+    dulce: ["El final dulce que mereces", "Un gustito dulce, sin salir de casa", "Para endulzar el día", "Dulce, fresco y bien rico", "Ese postre que te levanta el ánimo", "Date un gusto que sí vale la pena", "Un antojo dulce a un toque", "Cuando se antoja algo dulce", "Para cerrar con broche de oro", "Dulce tentación, a tu puerta"],
+    cafe: ["Para arrancar con buena energía", "Un desayuno que sí te anima", "Recién hecho para empezar bien", "Buen sabor desde temprano", "Para despertar con ganas", "Sencillo, rico y bien servido", "Empieza el día con gusto", "Calientito y recién preparado", "Un buen comienzo de día", "El desayuno que se antoja"],
+    gen: ["Se ve buenísimo, ¿verdad?", "Este antojo no se va a quitar solo", "Hecho para que lo disfrutes", "Rico, bien servido y calientito", "Una opción que no falla", "Tiene todo para gustarte", "Pruébalo, te va a encantar", "Eso se te antoja, admítelo", "De lo mejor del menú", "Para darte un buen gusto"]
+  };
+  const CI = ["pídelo y relájate", "tú pides, nosotros lo llevamos", "llega directo a tu puerta", "sin salir de casa", "en un toque lo tienes", "hoy te lo mereces", "llega a donde estés", "sin filas y sin esperas", "tú solo disfrútalo", "tu antojo, resuelto"];
+  function categoria(n) {
+    if (/hamburg|burger|stacker|whopper/.test(n)) return "hamb";
+    if (/pizza/.test(n)) return "pizza";
+    if (/pollo|alitas|tender|nugget/.test(n)) return "pollo";
+    if (/taco|burrito|baleada|pupusa|nacho/.test(n)) return "taco";
+    if (/helado|postre|pastel|malteada|frappe|crepa/.test(n)) return "dulce";
+    if (/cafe|desayuno|huevo|panqueque/.test(n)) return "cafe";
+    return "gen";
+  }
+  function habla(nom, pv, env, h) {
+    try {
+      const hook = HOOKS[categoria(nrm(nom))];
+      const ci = CI.slice();
+      if (h >= 5 && h < 10) ci.push("y la mañana sale mejor", "para empezar el día bien");
+      else if (h >= 10 && h < 15) ci.push("y el almuerzo queda listo", "almuerzo resuelto sin cocinar");
+      else if (h >= 15 && h < 19) ci.push("y la tarde se pone buena", "un gustito para la tarde");
+      else ci.push("y la cena queda resuelta", "hoy no hay que cocinar");
+      ci.push("llega por L. " + Math.round(env) + " de envío");
+      if (pv > 0 && pv <= 180) ci.push("por L. " + Math.round(pv) + " te das el gusto");
+      const uh = lsGet("cb_fh", []), uc = lsGet("cb_fc", []);
+      const nombre = nombrePila();
+      let res = null, hkS = "", ciS = "";
+      for (let i = 0; i < 20; i++) {
+        const hk = pick(hook), cl = pick(ci);
+        if (uh.indexOf(hk) >= 0 || uc.indexOf(cl) >= 0) continue;
+        const conN = nombre && rnd(3) === 0;
+        res = conN ? nombre + ", " + hk.charAt(0).toLowerCase() + hk.slice(1) + ", " + cl : hk + ", " + cl;
+        hkS = hk; ciS = cl; break;
+      }
+      if (res == null) { hkS = pick(hook); ciS = pick(ci); res = hkS + ", " + ciS; }
+      uh.push(hkS); while (uh.length > 5) uh.shift();
+      uc.push(ciS); while (uc.length > 8) uc.shift();
+      lsSet("cb_fh", uh); lsSet("cb_fc", uc);
+      return res;
+    } catch (e) { return "Pídelo ahora, llega a tu puerta"; }
+  }
+  const POOL = {
+    hamb: ["Jugosa, calientita y lista para morderla", "Para agarrarla con las dos manos", "Una hamburguesa que sí llena"],
+    pizza: ["Queso derretido, directo a tu mesa", "Compártela o no, tú decides", "Calientita y con todo el sabor"],
+    pollo: ["Crujiente por fuera, jugoso por dentro", "Pollo bien dorado, recién hecho", "Para chuparse los dedos"],
+    taco: ["Sabor de verdad, bien calientito", "Antojito rico para cualquier hora", "Lleno de sabor, hecho al momento"],
+    dulce: ["El final dulce que te mereces", "Un gustito dulce, sin salir de casa", "Para endulzar el día"],
+    cafe: ["Empieza el día con buen sabor", "Un desayuno que sí te anima", "Recién hecho, para arrancar bien"]
+  };
+  function fraseVenta(nom, env, h, v) {
+    const pool = POOL[categoria(nrm(nom))];
+    const modo = v % 3;
+    if (modo === 2) return "🛵 A TU PUERTA";
+    if (modo === 0 && pool) return "🔥 SE ANTOJA";
+    return tagHora(h);
+  }
+
+  const CATS = [
+    ["hamburguesa", "🍔", "hamburguesa", [1, 3, 2, 3]], ["pizza", "🍕", "pizza", [0, 2, 2, 3]], ["pollo", "🍗", "pollo", [0, 3, 2, 3]],
+    ["taco", "🌮", "tacos", [0, 2, 2, 3]], ["baleada", "🌯", "baleadas", [3, 2, 1, 1]], ["desayuno", "🍳", "desayuno", [3, 1, 0, 0]],
+    ["cafe", "☕", "café", [3, 1, 3, 1]], ["helado", "🍦", "helado", [0, 1, 3, 1]], ["postre", "🍰", "postre", [0, 1, 3, 2]]
+  ];
+
+  function abiertos() { return todosLosProductosCache.filter(p => !p.rCerrado && p.pPrec > 0); }
+  function fichas(prods) {
+    const m = {};
+    prods.forEach(p => { (m[p.rId] = m[p.rId] || []).push(p); });
+    return Object.keys(m).map(id => {
+      const l = m[id], p0 = l[0], la = num(p0.rLat), lo = num(p0.rLon);
+      let minP = 1e9; const imgs = [];
+      l.forEach(p => { const pv = precioVisible(p.pPrec, la, lo); if (pv < minP) minP = pv; if (p.pImg && imgs.length < 3 && imgs.indexOf(p.pImg) < 0) imgs.push(p.pImg); });
+      return { rId: id, rLogo: ((l.find(p => p.rLogo) || {}).rLogo || ""), rNom: p0.rNom, rLat: la, rLon: lo, km: num(kmHaciaSync(la, lo)), env: Math.round(envioPara(la, lo)), minP: minP, n: l.length, imgs: imgs };
+    });
+  }
+  function mk(li, kind) {
+    return { kind: kind, key: kind + "|" + li.rId, rId: li.rId, rLogo: li.rLogo, rNom: li.rNom, rLat: li.rLat, rLon: li.rLon, env: li.env, imgs: li.imgs.slice(), emoji: "🍽️", grad: Math.abs(hash(li.rId)) % 6, score: 1, chip: "🛵 L. " + li.env };
+  }
+  function top(arr, n) { return arr.sort((a, b) => b.score - a.score).slice(0, n); }
+
+  function construir() {
+    const out = [], prods = abiertos();
+    const L = fichas(prods);
+    if (!L.length) { S.platos = []; return out; }
+    const per = periodo();
+    let tmp = [];
+    L.forEach(li => {
+      const c = mk(li, "local");
+      c.tag = "🟢 ABIERTO AHORA"; c.titulo = li.rNom; c.n = li.n; c.subFmt = "{n} platillos • desde L. " + Math.round(li.minP);
+      c.emoji = "🏪"; c.cta = "Ver menú ➔"; c.grad = 1;
+      c.score = 2.0 + Math.max(0, 2 - li.km * 0.5) + Math.min(1, li.n / 10);
+      tmp.push(c);
+    });
+    top(tmp, 2).forEach(c => out.push(c));
+
+    let cerca = null;
+    L.forEach(li => { if (!cerca || li.km < cerca.km) cerca = li; });
+    if (cerca && cerca.km < 30) {
+      const c = mk(cerca, "cercano");
+      c.tag = "📍 EL MÁS CERCANO"; c.titulo = cerca.rNom;
+      c.subtitulo = (cerca.km < 0.15 ? "Está a un paso de ti" : "A solo " + cerca.km.toFixed(1) + " km de ti") + " • abierto ahora";
+      c.emoji = "📍"; c.cta = "Ver menú ➔"; c.grad = 4; c.score = 2.4;
+      out.push(c);
+    }
+
+    if (L.length >= 2) {
+      let rE = L[0];
+      L.forEach(li => { if (li.env < rE.env) rE = li; });
+      const c = mk(rE, "envio");
+      c.tag = "🛵 ENVÍO MÁS BAJO"; c.titulo = rE.rNom; c.subtitulo = "Solo L. " + rE.env + " de envío • abierto ahora"; c.emoji = "🛵"; c.cta = "Ver menú ➔"; c.score = 2.2;
+      out.push(c);
+      let rV = L[0];
+      L.forEach(li => { if (li.n > rV.n) rV = li; });
+      if (rV.rId !== rE.rId && rV.n >= 8) {
+        const v = mk(rV, "variedad");
+        v.tag = "🏆 MÁS VARIEDAD"; v.titulo = rV.rNom; v.subtitulo = rV.n + " platillos para elegir • abierto ahora"; v.emoji = "🏆"; v.cta = "Ver menú ➔"; v.score = 2.0;
+        out.push(v);
+      }
+    }
+
+    const platos = prods.filter(p => !_bnExcluido(p));
+    tmp = [];
+    for (let ci = 0; ci < CATS.length; ci++) {
+      const term = CATS[ci][0], w = CATS[ci][3][per];
+      let nd = 0; const locs = {}, imgs = [];
+      platos.forEach(p => {
+        if (nrm(p.pNom + " " + p.pDesc).indexOf(term) < 0) return;
+        nd++; locs[p.rId] = 1;
+        if (p.pImg && imgs.length < 3 && imgs.indexOf(p.pImg) < 0) imgs.push(p.pImg);
+      });
+      if (nd < 2 || w < 1) continue;
+      const nl = Object.keys(locs).length;
+      tmp.push({
+        kind: "antojo", key: "antojo|" + term, term: term,
+        tag: w >= 2.5 ? ["☀️ PARA EL DESAYUNO", "🍽️ HORA DE ALMORZAR", "🧁 ANTOJO DE LA TARDE", "🌙 PARA LA NOCHE"][per] : "🔥 SE ANTOJA",
+        titulo: "¿Antojo de " + CATS[ci][2] + "?", n: nd, subFmt: "{n} opciones abiertas ahora en " + nl + (nl === 1 ? " local" : " locales"),
+        imgs: imgs, emoji: CATS[ci][1], cta: "Ver opciones ➔", grad: 2, score: 1.5 + w * 0.9 + Math.min(nd, 10) / 10
+      });
+    }
+    top(tmp, 3).forEach(c => out.push(c));
+
+    const porPrecio = {}; let barato = null, baratoPv = 1e9;
+    platos.forEach(p => {
+      if (p.pPrec < 20) return;
+      (porPrecio[p.pPrec] = porPrecio[p.pPrec] || []).push(p);
+      const pv = precioVisible(p.pPrec, num(p.rLat), num(p.rLon));
+      if (pv < baratoPv && p.pImg) { baratoPv = pv; barato = p; }
+    });
+    let mejorG = null, mejorPr = 0;
+    Object.keys(porPrecio).forEach(k => {
+      const g = porPrecio[k], ls = {};
+      g.forEach(p => { ls[p.rId] = 1; });
+      if (Object.keys(ls).length >= 2 && g.length >= 3 && (!mejorG || g.length > mejorG.length)) { mejorG = g; mejorPr = parseFloat(k); }
+    });
+    if (mejorG) {
+      let minV = 1e9; const imgs = [], ls = {};
+      mejorG.forEach(p => {
+        const pv = precioVisible(p.pPrec, num(p.rLat), num(p.rLon)); if (pv < minV) minV = pv;
+        ls[p.rId] = 1; if (p.pImg && imgs.length < 3 && imgs.indexOf(p.pImg) < 0) imgs.push(p.pImg);
+      });
+      out.push({ kind: "precio", key: "precio|" + mejorPr, precioObj: mejorPr, tag: "💸 PRECIO ESPECIAL", titulo: "Platillos desde L. " + Math.round(minV), n: mejorG.length, subFmt: "{n} opciones en " + Object.keys(ls).length + " locales abiertos", imgs: imgs, emoji: "🎯", cta: "Ver todos ➔", grad: 3, score: 2.5 });
+    }
+    if (barato && platos.length >= 6) {
+      const p = barato, la = num(p.rLat), lo = num(p.rLon), env = Math.round(envioPara(la, lo));
+      out.push({ kind: "economico", key: "eco|" + p.rId + "|" + p.pNom, rId: p.rId, rLogo: p.rLogo, rNom: p.rNom, rLat: la, rLon: lo, env: env, tag: "💸 LO MÁS ECONÓMICO", titulo: p.pNom, subtitulo: "En " + p.rNom + " • abierto ahora", img: p.pImg, imgs: [p.pImg], precioVis: Math.round(baratoPv), cta: "Pedir ahora ➔", chip: "🛵 L. " + env, emoji: "💸", grad: 3, score: 2.6, prod: p });
+    }
+    const conImg = platos.filter(p => p.pImg);
+    if (L.length >= 2 && conImg.length) {
+      const p = pick(conImg), la = num(p.rLat), lo = num(p.rLon), env = Math.round(envioPara(la, lo));
+      out.push({ kind: "sorpresa", key: "sorpresa|" + p.rId + "|" + p.pNom, rId: p.rId, rLogo: p.rLogo, rNom: p.rNom, rLat: la, rLon: lo, env: env, tag: "🎲 SORPRÉNDEME", titulo: p.pNom, subtitulo: "Prueba algo nuevo • " + p.rNom, img: p.pImg, imgs: [p.pImg], precioVis: Math.round(precioVisible(p.pPrec, la, lo)), cta: "Pedir ahora ➔", chip: "🛵 L. " + env, emoji: "🎲", grad: Math.abs(hash(p.rId)) % 6, score: 1.8, prod: p });
+    }
+    try {
+      const vistos = {};
+      leerCarrito().forEach(it => {
+        if (!it.rId || vistos[it.rId]) return; vistos[it.rId] = 1;
+        const li = L.find(x => x.rId === it.rId); if (!li) return;
+        const c = mk(li, "carrito");
+        c.tag = "🛒 ¡TE FALTA POCO!"; c.titulo = "Termina tu pedido"; c.subtitulo = "Tu pedido te espera en " + li.rNom; c.emoji = "🛒"; c.cta = "Terminar pedido ➔"; c.grad = 5; c.score = 99;
+        out.push(c);
+      });
+    } catch (e) {}
+
+    const envR = {}; let suma = 0, envMin = 1e9;
+    let cand = prods.filter(p => p.pImg && !_bnExcluido(p) && p.pPrec >= 30);
+    cand.forEach(p => {
+      const la = num(p.rLat), lo = num(p.rLon);
+      if (envR[p.rId] == null) { envR[p.rId] = Math.round(envioPara(la, lo)); if (envR[p.rId] < envMin) envMin = envR[p.rId]; }
+      p._cbPv = Math.round(precioVisible(p.pPrec, la, lo)); suma += p._cbPv;
+    });
+    const prom = cand.length ? suma / cand.length : 0;
+    cand = cand.sort(() => Math.random() - 0.5).slice(0, 120);
+    S.platos = cand.map(p => {
+      const env = envR[p.rId], pv = p._cbPv;
+      const sc = 1 + (momento(p.pNom, p.pDesc) ? 2.5 : 0) + (pv <= prom * 0.75 ? 1.5 : 0) + (env <= envMin ? 1 : 0);
+      return { kind: "plato", key: "plato|" + p.rId + "|" + p.pNom, lazy: true, rId: p.rId, rLogo: p.rLogo, rNom: p.rNom, rLat: num(p.rLat), rLon: num(p.rLon), env: env, titulo: p.pNom, img: p.pImg, imgs: [p.pImg], precioVis: pv, pv: pv, cta: ["Lo quiero ➔", "Pídelo ya ➔", "Antojárme ➔", "Pedir ahora ➔"][rnd(4)], chip: "🛵 L. " + env, emoji: "🍽️", grad: Math.abs(hash(p.rId)) % 6, score: sc, prod: p };
+    });
+    return out;
+  }
+  function asegurar() {
+    const n = todosLosProductosCache.length, ahora = Date.now();
+    if (n !== S.campN || ahora - S.campT > 30000) { S.campN = n; S.campT = ahora; try { S.camp = construir(); } catch (e) { S.camp = []; S.platos = []; } }
+  }
+
+  function grupo(k) {
+    if (k === "plato" || k === "gusto" || k === "sorpresa") return "plato";
+    if (k === "envio" || k === "economico" || k === "precio") return "valor";
+    if (k === "carrito" || k === "repetir" || k === "favorito" || k === "habitual") return "accion";
+    return "local";
+  }
+  function elegir() {
+    cargarVistas(); asegurar();
+    if (!S.hist.length) S.paso = 0;
+    const pool = S.camp.concat(S.platos);
+    if (!pool.length) return null;
+    const arco = ["plato", "valor", "plato", "accion", "plato", "local"];
+    const quiero = arco[S.paso % arco.length];
+    const ult = S.kinds.length ? S.kinds[S.kinds.length - 1] : "";
+    let mejor = null, mejorP = -1e9;
+    pool.forEach(it => {
+      const key = it.key, kind = it.kind, rid = it.rId || "";
+      const s = S.vistas[key] || 0;
+      let p = Math.min(it.score, 8) * 0.35 + Math.random() * 1.5;
+      p -= s * (kind === "carrito" ? 1.5 : 4);
+      if (grupo(kind) === quiero) p += 4;
+      if (kind === "carrito") p += S.paso <= 1 ? 9 : 3;
+      if (kind === ult) p -= 5;
+      if (rid) { let rr = 0; for (let k = 0; k < S.rids.length; k++) if (S.rids[k] === rid) rr += (k === S.rids.length - 1) ? 3 : 1; p -= rr * 3; }
+      if (p > mejorP) { mejorP = p; mejor = it; }
+    });
+    if (!mejor) return null;
+    S.vistas[mejor.key] = (S.vistas[mejor.key] || 0) + 1;
+    S.kinds.push(mejor.kind); while (S.kinds.length > 5) S.kinds.shift();
+    if (mejor.rId) { S.rids.push(mejor.rId); while (S.rids.length > 6) S.rids.shift(); }
+    S.paso++;
+    guardarVistas();
+    if (mejor.lazy) {
+      const h = hora(), v = (Math.abs(hash(mejor.titulo + mejor.rId)) & 0x7fffffff) + S.paso + Math.floor(Date.now() / 3600000);
+      mejor.tag = fraseVenta(mejor.titulo, mejor.env, h, v);
+      mejor.subtitulo = habla(mejor.titulo, mejor.pv, mejor.env, h) + " • " + mejor.rNom;
+    }
+    return mejor;
+  }
+
+  function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function escribir(node, full, delay, gen) {
+    if (reducir() || full.length < 3) { node.textContent = full; return; }
+    const a = el("span"), b = el("span", "cb-ghost", full);
+    node.textContent = ""; node.appendChild(a); node.appendChild(b);
+    const dur = Math.min(800, 28 * full.length), t0 = performance.now() + delay;
+    const paso = t => {
+      if (!node.isConnected || gen !== S.gen) return;
+      const k = Math.max(0, Math.min(full.length, Math.floor(((t - t0) / dur) * full.length)));
+      a.textContent = full.slice(0, k); b.textContent = full.slice(k);
+      if (k < full.length) requestAnimationFrame(paso); else node.textContent = full;
+    };
+    requestAnimationFrame(paso);
+  }
+  function animar(ms, delay, fn, gen, nodo) {
+    if (reducir()) { fn(1); return; }
+    const t0 = performance.now() + delay;
+    const paso = t => {
+      if (!nodo.isConnected || gen !== S.gen) return;
+      const x = Math.max(0, Math.min(1, (t - t0) / ms)), e = 1 - Math.pow(1 - x, 3);
+      fn(e);
+      if (x < 1) requestAnimationFrame(paso);
+    };
+    requestAnimationFrame(paso);
+  }
+  function chispas(s, derecha, arriba) {
+    if (reducir() || !s.animate) return;
+    for (let i = 0; i < 10; i++) {
+      const sp = el("i", "cb-sp"); sp.style.right = derecha + "px"; sp.style.top = arriba + "px";
+      s.appendChild(sp);
+      const ang = Math.random() * Math.PI * 2, d = 24 + Math.random() * 36;
+      sp.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: "translate(" + Math.cos(ang) * d + "px," + Math.sin(ang) * d + "px) scale(.2)", opacity: 0 }], { duration: 700 + Math.random() * 300, delay: 350, easing: "ease-out", fill: "backwards" }).onfinish = () => sp.remove();
+      setTimeout(() => sp.remove(), 1600);
+    }
+  }
+  function insignia(logo, emoji, size) {
+    const w = el("div", "cb-ins"); w.style.width = w.style.height = size + "px";
+    w.appendChild(el("i", "cb-ring"));
+    if (logo) {
+      w.classList.add("cb-ins-logo");
+      const im = el("img"); im.alt = "";
+      im.onerror = () => { im.remove(); w.classList.remove("cb-ins-logo"); w.appendChild(el("span", "", emoji)); };
+      im.src = logo; w.appendChild(im);
+    } else w.appendChild(el("span", "", emoji));
+    return w;
+  }
+  function abanico(s, it) {
+    const f = el("div", "cb-fan");
+    const imgs = (it.imgs || []).filter(Boolean).slice(0, 3);
+    const soloEmoji = it.kind === "antojo" || it.kind === "precio";
+    const logo = soloEmoji ? "" : (it.rLogo || "");
+    if (!imgs.length) {
+      if (logo) {
+        const b = el("div", "cb-biglogo"), im = el("img"); im.alt = "";
+        im.onerror = () => { b.remove(); const e = el("div", "cb-bigemo"); e.appendChild(el("span", "", it.emoji || "🍽️")); f.appendChild(e); };
+        im.src = logo; b.appendChild(im); f.appendChild(b);
+      } else {
+        const b = el("div", "cb-bigemo"); b.appendChild(el("span", "", it.emoji || "🍽️")); f.appendChild(b);
+      }
+    } else {
+      const orden = imgs.length === 3 ? [0, 2, 1] : imgs.length === 2 ? [0, 1] : [0];
+      orden.forEach((i, oi) => {
+        const rel = i - (imgs.length - 1) / 2, c = el("div", "cb-card");
+        c.style.setProperty("--r", (rel * 16) + "deg"); c.style.setProperty("--x", (rel * 34) + "px");
+        c.style.setProperty("--d", (0.26 + oi * 0.12) + "s"); c.style.setProperty("--f", (1.9 + i * 0.35) + "s");
+        if (i % 2 === 0) c.style.marginTop = "-41px";
+        const im = el("img"); im.alt = ""; im.onerror = () => c.remove(); im.src = imgs[i]; c.appendChild(im); f.appendChild(c);
+      });
+      f.appendChild(insignia(logo, it.emoji || "🍽️", soloEmoji ? 46 : 42));
+    }
+    s.appendChild(f);
+  }
+  function construirSlide(it, gen) {
+    const s = el("div", "bn-slide cb-slide cb-p" + ((((it.grad | 0) % 6) + 6) % 6));
+    s.appendChild(el("i", "cb-aur cb-aur1")); s.appendChild(el("i", "cb-aur cb-aur2"));
+    for (let i = 0; i < 3; i++) {
+      const b = el("i", "cb-bub"), sz = 30 + i * 16;
+      b.style.width = b.style.height = sz + "px"; b.style.left = (18 + i * 32) + "%"; b.style.top = (10 + (i % 2) * 48) + "%"; b.style.animationDuration = (2.3 + i * 0.65) + "s";
+      s.appendChild(b);
+    }
+    const hero = (it.kind === "plato" || it.kind === "economico") && it.img;
+    if (hero) {
+      s.classList.add("cb-hero-on");
+      const im = el("img", "cb-hero"); im.alt = "";
+      im.style.setProperty("--kx", (Math.random() < 0.5 ? -10 : 10) + "px");
+      const os = el("div", "cb-hero-os");
+      im.onerror = () => { im.remove(); os.remove(); s.classList.remove("cb-hero-on"); abanico(s, it); };
+      im.src = it.img; s.appendChild(im); s.appendChild(os);
+    } else abanico(s, it);
+    s.appendChild(el("div", "cb-ob"));
+    const body = el("div", "cb-body");
+    body.appendChild(el("span", "cb-tag", it.tag || ""));
+    const tt = el("div", "cb-title", it.titulo || ""); body.appendChild(tt);
+    const ts = el("div", "cb-sub");
+    if (it.subFmt && it.n > 0) {
+      ts.textContent = it.subFmt.replace("{n}", "0");
+      animar(900, 420, e => { ts.textContent = it.subFmt.replace("{n}", String(Math.round(it.n * e))); }, gen, ts);
+    } else ts.textContent = it.subtitulo || "";
+    body.appendChild(ts);
+    if (it.cta) {
+      const row = el("div", "cb-row"); row.appendChild(el("span", "cb-cta", it.cta));
+      if (it.chip) row.appendChild(el("span", "cb-chip", it.chip));
+      body.appendChild(row);
+    }
+    s.appendChild(body);
+    if (hero && it.rLogo) { const ih = insignia(it.rLogo, "🏪", 40); ih.classList.add("cb-ins-h"); s.appendChild(ih); }
+    escribir(tt, it.titulo || "", 220, gen);
+    if (typeof it.precioVis === "number" && it.precioVis > 0) {
+      const pr = el("div", "cb-price", "L. 0"); s.appendChild(pr);
+      animar(850, 380, e => { pr.textContent = "L. " + Math.round(it.precioVis * e); }, gen, pr);
+    }
+    if (it.kind !== "saludo") chispas(s, hero ? 56 : 76, hero ? 52 : 98);
+    return s;
+  }
+  function dots(wrap, ms) {
+    let d = wrap.querySelector(".bn-dots");
+    if (!d) { d = el("div", "bn-dots"); wrap.appendChild(d); }
+    d.innerHTML = "";
+    const total = Math.min(Math.max(S.camp.length, 1), 6), act = ((S.pos % total) + total) % total;
+    for (let k = 0; k < total; k++) {
+      const sg = el("span", "bn-seg" + (k < act ? " hecho" : k === act ? " act" : "")), f = el("i");
+      if (k === act) f.style.animationDuration = ms + "ms";
+      sg.appendChild(f); d.appendChild(sg);
+    }
+  }
+  function durDe(it) { return BASE_MS + (it && it.kind === "plato" ? 1500 : 0); }
+  function programar(wrap, ms) {
+    clearTimeout(S.timer);
+    const gen = S.gen;
+    S.ini = Date.now(); S.resta = ms;
+    S.timer = setTimeout(() => {
+      if (gen !== S.gen || !wrap.isConnected) return;
+      if (document.hidden || wrap.offsetParent === null) { programar(wrap, 1500); return; }
+      avanzar(wrap, 1);
+    }, ms);
+  }
+  function mostrar(wrap, it, dir, ms) {
+    S.item = it;
+    const gen = S.gen, dur = ms || durDe(it);
+    const old = wrap.querySelector(".cb-slide:not(.bn-out)");
+    wrap.querySelectorAll(".cb-slide").forEach(n => { if (n !== old) n.remove(); });
+    const s = construirSlide(it, gen);
+    s.style.setProperty("--bn-dir", dir);
+    wrap.appendChild(s);
+    if (old) {
+      if (old.style.transform) {
+        old.style.transition = "transform .32s ease, opacity .32s ease";
+        old.style.transform = "translateX(" + (-dir * wrap.offsetWidth * 0.9) + "px)"; old.style.opacity = "0";
+      } else { old.style.setProperty("--bn-dir", dir); old.classList.add("bn-out"); }
+      setTimeout(() => old.remove(), 460);
+    }
+    dots(wrap, dur);
+    programar(wrap, dur);
+  }
+  function avanzar(wrap, dir) {
+    if (!wrap.isConnected) return;
+    let it = null;
+    if (dir < 0) { if (S.idx > 0) { S.idx--; it = S.hist[S.idx]; } }
+    else if (S.idx < S.hist.length - 1) { S.idx++; it = S.hist[S.idx]; }
+    else { it = elegir(); if (it) { S.hist.push(it); while (S.hist.length > 12) S.hist.shift(); S.idx = S.hist.length - 1; } }
+    if (!it) { rebotar(wrap); programar(wrap, 1200); return; }
+    S.pos += dir > 0 ? 1 : -1;
+    mostrar(wrap, it, dir);
+  }
+  function rebotar(wrap) {
+    const s = wrap.querySelector(".cb-slide:not(.bn-out)"); if (!s) return;
+    s.style.transition = "transform .35s cubic-bezier(.3,1.6,.5,1), opacity .25s";
+    s.style.transform = "translateX(0)"; s.style.opacity = "1";
+    const f = s.querySelector(".cb-fan"); if (f) f.style.setProperty("--px", "0px");
+    setTimeout(() => { s.style.transition = ""; }, 400);
+  }
+  function pausar(wrap) {
+    if (S.pausa) return;
+    S.pausa = true; clearTimeout(S.timer);
+    S.resta = Math.max(400, S.resta - (Date.now() - S.ini));
+    wrap.classList.add("bn-pausa");
+  }
+  function reanudar(wrap, sinProgramar) {
+    if (!S.pausa) return;
+    S.pausa = false; wrap.classList.remove("bn-pausa");
+    if (!sinProgramar) programar(wrap, S.resta);
+  }
+  function tocar() {
+    const it = S.item;
+    if (!it || it.kind === "saludo") return;
+    try {
+      const p = it.prod;
+      if (p && !p.rCerrado) { mostrarPlatoPro(p.rId, p.rNom, p.pNom, p.pDesc, p.pPrec, p.pImg, p.pOps, p.rLat, p.rLon); return; }
+      if (it.kind === "antojo") { const et = document.getElementById("etBuscador"); if (et) { et.value = it.term; et.dispatchEvent(new Event("input", { bubbles: true })); } return; }
+      if (it.kind === "precio") { mostrarPlatosPorPrecio(it.precioObj); return; }
+      if (it.kind === "carrito") { cambiarTab(1); return; }
+      if (it.rId) abrirMenuRestaurante(it.rId, it.rNom, it.rLat, it.rLon, (it.imgs && it.imgs[0]) || "");
+    } catch (e) {}
+  }
+  function gestos(wrap) {
+    if (wrap._cbG) return;
+    wrap._cbG = true;
+    let x0 = 0, y0 = 0, t0 = 0, activo = false, arr = false;
+    const cur = () => wrap.querySelector(".cb-slide:not(.bn-out)");
+    wrap.addEventListener("pointerdown", e => {
+      activo = true; arr = false; x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); pausar(wrap);
+      const s = cur(); if (s) s.style.transition = "none";
+    });
+    wrap.addEventListener("pointermove", e => {
+      if (!activo) return;
+      const dx = e.clientX - x0, dy = e.clientY - y0;
+      if (!arr && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) arr = true;
+      if (!arr) return;
+      const s = cur(); if (!s) return;
+      s.style.animation = "none";
+      s.style.transform = "translateX(" + (dx * 0.85) + "px)";
+      s.style.opacity = String(1 - Math.min(0.5, Math.abs(dx) / Math.max(1, wrap.offsetWidth)));
+      const f = s.querySelector(".cb-fan"); if (f) f.style.setProperty("--px", (dx * 0.3) + "px");
+    });
+    const fin = e => {
+      if (!activo) return;
+      activo = false;
+      const cancel = e.type === "pointercancel", dx = e.clientX - x0, dy = e.clientY - y0, dt = Date.now() - t0;
+      if (arr && !cancel && Math.abs(dx) > Math.min(70, wrap.offsetWidth * 0.2)) { reanudar(wrap, true); avanzar(wrap, dx < 0 ? 1 : -1); return; }
+      if (arr) { rebotar(wrap); reanudar(wrap); return; }
+      reanudar(wrap);
+      if (!cancel && Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 600) tocar();
+    };
+    wrap.addEventListener("pointerup", fin);
+    wrap.addEventListener("pointercancel", fin);
+  }
+  function iniciar() {
+    try { if (typeof sliderTimer !== "undefined" && sliderTimer) { clearTimeout(sliderTimer); sliderTimer = null; } } catch (e) {}
+    try { clearTimeout(_bn.timer); _bn.gen++; } catch (e) {}
+    clearTimeout(S.timer);
+    ++S.gen;
+    S.pausa = false; S.hist = []; S.idx = -1; S.pos = 0; S.kinds = []; S.rids = []; S.paso = 0; S.campT = 0; S.campN = -1; S.item = null;
+    const wrap = document.querySelector(".hero-slider-wrap");
+    if (!wrap) return;
+    wrap.classList.add("bn-wrap", "cb-wrap");
+    wrap.querySelectorAll(".hero-overlay, .hero-content, .hero-bg-img, .bn-slide").forEach(n => n.remove());
+    gestos(wrap);
+    mostrar(wrap, { kind: "saludo", key: "saludo", tag: saludoMomento(), titulo: saludoTitulo(), subtitulo: "Estamos buscando lo mejor cerca de ti ✨", emoji: "🍽️", grad: 0, imgs: [] }, 1, 2600);
+  }
+  iniciarSliderPublicitario = iniciar;
+  window._cbDbg = { S: S, elegir: elegir, asegurar: asegurar };
 })();

@@ -2186,3 +2186,69 @@ html.is-app .btn-recargar { display: flex; }
 /* LLV-ROTACION */
 html, body { overscroll-behavior: none; }
 #appRoot { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+
+/* LLV-BANNER-APP */
+.cb-slide { overflow: hidden; -webkit-user-select: none; user-select: none; }
+.cb-slide img { -webkit-user-drag: none; pointer-events: none; }
+.cb-p0 { background: linear-gradient(135deg, #2D0A8C 0%, #6D1FF0 62%, #FF4F00 135%); --cb-a: #8B2BFF; }
+.cb-p1 { background: linear-gradient(135deg, #0B2E7A 0%, #1F6BFF 70%, #5AD1FF 140%); --cb-a: #38BDF8; }
+.cb-p2 { background: linear-gradient(135deg, #7A1400 0%, #FF4F00 65%, #FFC93D 140%); --cb-a: #FFB020; }
+.cb-p3 { background: linear-gradient(135deg, #00553B 0%, #00B87C 70%, #9BFFD6 150%); --cb-a: #34D399; }
+.cb-p4 { background: linear-gradient(135deg, #7A0B5E 0%, #E1349B 66%, #FF9AC8 145%); --cb-a: #F472B6; }
+.cb-p5 { background: linear-gradient(135deg, #120536 0%, #3B16A8 62%, #8B2BFF 140%); --cb-a: #A78BFA; }
+.cb-aur { position: absolute; width: 190px; height: 190px; border-radius: 50%; pointer-events: none; opacity: .5; background: radial-gradient(circle, var(--cb-a) 0%, transparent 68%); }
+.cb-aur1 { left: -50px; top: -60px; animation: cbDriftA 8s ease-in-out infinite alternate; }
+.cb-aur2 { right: -40px; bottom: -70px; animation: cbDriftB 9.5s ease-in-out infinite alternate; }
+@keyframes cbDriftA { from { transform: translate(-26px, 18px); } to { transform: translate(26px, -18px); } }
+@keyframes cbDriftB { from { transform: translate(22px, -14px); } to { transform: translate(-22px, 16px); } }
+.cb-bub { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,.28), rgba(255,255,255,0) 70%); animation: cbBub 3s ease-in-out infinite alternate; }
+@keyframes cbBub { from { transform: translateY(0); } to { transform: translateY(-9px); } }
+.cb-hero { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; animation: cbKen 8.5s linear forwards; }
+@keyframes cbKen { from { transform: scale(1.05) translateX(var(--kx, 8px)); } to { transform: scale(1.22) translateX(calc(var(--kx, 8px) * -1)); } }
+.cb-hero-os { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, rgba(15,23,42,.9), rgba(59,7,100,.1)); }
+.cb-ob { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; pointer-events: none; background: linear-gradient(0deg, rgba(0,0,0,.6), transparent); }
+.cb-fan { position: absolute; z-index: 1; right: 10px; top: 50%; width: 132px; height: 128px; margin-top: -64px; transform: translateX(var(--px, 0px)); transition: transform .3s ease; }
+.cb-card { position: absolute; left: 50%; top: 50%; width: 62px; height: 62px; margin: -31px 0 0 -31px; padding: 2px; background: #fff; border-radius: 16px; box-shadow: 0 6px 14px rgba(0,0,0,.35); transform: translateX(var(--x)) rotate(var(--r)) scale(0); animation: cbPop .52s var(--d) cubic-bezier(.3,1.6,.5,1) forwards, cbBal var(--f) ease-in-out .9s infinite alternate; }
+.cb-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; display: block; }
+@keyframes cbPop { to { transform: translateX(var(--x)) rotate(var(--r)) scale(1); } }
+@keyframes cbBal { from { transform: translateX(var(--x)) rotate(calc(var(--r) - 3deg)) translateY(0); } to { transform: translateX(var(--x)) rotate(calc(var(--r) + 3deg)) translateY(-4px); } }
+.cb-ins { position: absolute; right: 0; bottom: 0; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(255,255,255,.25); border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,.35); transform: scale(0); animation: cbPop2 .52s .64s cubic-bezier(.3,1.6,.5,1) forwards; }
+.cb-ring { position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 50%; border: 2px solid #fff; animation: cbRing 1.7s ease-out infinite; }
+@keyframes cbRing { from { transform: scale(1); opacity: .8; } to { transform: scale(1.8); opacity: 0; } }
+@keyframes cbPop2 { to { transform: scale(1); } }
+.cb-bigemo { position: absolute; left: 50%; top: 50%; width: 80px; height: 80px; margin: -40px 0 0 -40px; display: flex; align-items: center; justify-content: center; font-size: 64px; line-height: 1; transform: scale(0); animation: cbPop2 .6s .25s cubic-bezier(.3,1.6,.5,1) forwards; }
+.cb-bigemo span { display: block; animation: cbFlot 2.2s ease-in-out infinite alternate; }
+@keyframes cbFlot { from { transform: translateY(0) rotate(-9deg); } to { transform: translateY(-8px) rotate(9deg); } }
+.cb-body { position: relative; z-index: 2; width: 60%; height: 100%; padding: 14px 10px 24px 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.cb-hero-on .cb-body { width: 66%; }
+.cb-body > * { animation: bnTxt .45s backwards; }
+.cb-body > :nth-child(2) { animation-delay: .1s; }
+.cb-body > :nth-child(3) { animation-delay: .18s; }
+.cb-body > :nth-child(4) { animation-delay: .26s; }
+.cb-body > .cb-tag { animation: bnTxt .45s .05s backwards, cbPulse 1.1s .6s ease-in-out infinite; }
+.cb-tag { align-self: flex-start; font-size: 10px; font-weight: 800; letter-spacing: .3px; color: #fff; padding: 4px 10px; border-radius: 10px; background: linear-gradient(90deg, var(--c-accent), var(--c-accent-dark)); }
+.cb-title { margin-top: 6px; font-size: 21px; font-weight: 800; line-height: 1.15; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.45); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cb-ghost { color: transparent; text-shadow: none; }
+.cb-sub { font-size: 12.5px; color: #E9E3FF; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cb-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.cb-cta { font-size: 12px; font-weight: 800; color: var(--c-primary-dark); background: #fff; padding: 7px 13px; border-radius: 16px; box-shadow: 0 3px 10px rgba(0,0,0,.3); white-space: nowrap; animation: cbPulse .9s ease-in-out infinite; }
+.cb-chip { font-size: 11px; font-weight: 800; color: #fff; padding: 5px 9px; border-radius: 10px; background: rgba(255,255,255,.25); white-space: nowrap; }
+@keyframes cbPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.cb-price { position: absolute; z-index: 3; right: 12px; top: 12px; padding: 7px 12px; border-radius: 16px; font-size: 16px; font-weight: 900; color: #fff; background: linear-gradient(135deg, var(--c-accent), var(--c-accent-dark)); box-shadow: 0 6px 16px rgba(0,0,0,.35); transform: rotate(-8deg) scale(0); animation: cbSello .56s .38s cubic-bezier(.3,1.6,.5,1) forwards, cbWob 1.7s 1s ease-in-out infinite alternate; }
+@keyframes cbSello { to { transform: rotate(-8deg) scale(1); } }
+@keyframes cbWob { from { transform: rotate(-11deg); } to { transform: rotate(-5deg); } }
+.cb-sp { position: absolute; z-index: 4; width: 6px; height: 6px; border-radius: 50%; background: #fff; pointer-events: none; }
+.bn-pausa .cb-hero, .bn-pausa .cb-card, .bn-pausa .cb-aur, .bn-pausa .cb-bub { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .cb-slide *, .cb-slide { animation: none !important; }
+  .cb-card { transform: translateX(var(--x)) rotate(var(--r)); }
+  .cb-ins, .cb-bigemo { transform: none; }
+  .cb-price { transform: rotate(-8deg); }
+}
+.cb-ins-logo { background: #fff; padding: 2px; box-sizing: border-box; }
+.cb-ins img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.cb-ins-h { right: 14px; bottom: 26px; z-index: 3; }
+.cb-biglogo { position: absolute; left: 50%; top: 50%; width: 104px; height: 104px; margin: -52px 0 0 -52px; padding: 4px; box-sizing: border-box; border-radius: 50%; background: #fff; box-shadow: 0 8px 20px rgba(0,0,0,.4); transform: scale(0); animation: cbPop2 .6s .25s cubic-bezier(.3,1.6,.5,1) forwards, cbFlotL 2.2s .9s ease-in-out infinite alternate; }
+.cb-biglogo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+@keyframes cbFlotL { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+@media (prefers-reduced-motion: reduce) { .cb-biglogo { transform: none; } }
