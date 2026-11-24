@@ -2573,3 +2573,31 @@ html, body { touch-action: manipulation; }
 .nav-item.active .nav-icon { animation: none !important; }
 .bottom-nav, .bn-tag { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 .btn:active, .btn-huge:active { transform: scale(.95) !important; transition: transform .08s !important; }
+
+/* LLV-HEADER-VIVO: botones del encabezado más vivos y brillantes; se oculta el carrito (ya está abajo) */
+#btnHeaderCarrito { display: none !important; }
+.header-actions { gap: 10px; }
+.header-actions .circle-btn {
+  border: 1.5px solid rgba(255,255,255,.75) !important;
+  font-size: 0 !important;
+  position: relative;
+}
+.header-actions .circle-btn::after { content: ""; width: 22px; height: 22px; background-repeat: no-repeat; background-position: center; background-size: contain; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+.header-actions #btnHeaderNotifs {
+  background: linear-gradient(145deg, #FFE066 0%, #FFB020 45%, #FF7A00 100%) !important;
+  box-shadow: 0 4px 14px rgba(255,150,0,.65), 0 0 0 3px rgba(255,176,32,.22), inset 0 2px 3px rgba(255,255,255,.65) !important;
+}
+.header-actions #btnHeaderNotifs::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9'/%3E%3Cpath d='M13.7 21a2 2 0 0 1-3.4 0' fill='none'/%3E%3C/svg%3E"); }
+.header-actions #btnHeaderConfig {
+  background: linear-gradient(145deg, #67E8F9 0%, #22A8F0 50%, #2563EB 100%) !important;
+  box-shadow: 0 4px 14px rgba(34,168,240,.65), 0 0 0 3px rgba(103,232,249,.22), inset 0 2px 3px rgba(255,255,255,.6) !important;
+}
+.header-actions #btnHeaderConfig::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E"); }
+.header-actions #btnHeaderRecargar {
+  background: linear-gradient(145deg, #86EFAC 0%, #22C55E 50%, #15803D 100%) !important;
+  box-shadow: 0 4px 14px rgba(34,197,94,.65), 0 0 0 3px rgba(134,239,172,.22), inset 0 2px 3px rgba(255,255,255,.6) !important;
+}
+.header-actions #btnHeaderRecargar::after { display: none; }
+.header-actions #btnHeaderRecargar svg { width: 21px; height: 21px; stroke: #fff; stroke-width: 2.6; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+.header-actions .circle-btn:active { transform: scale(.88) !important; filter: brightness(1.12); }
+.llv-nbadge { border-color: #fff !important; background: #ef4444; box-shadow: 0 2px 6px rgba(239,68,68,.6); }
