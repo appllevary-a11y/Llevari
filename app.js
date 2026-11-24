@@ -7013,3 +7013,32 @@ function llvGuiaAndroid() {
   try { auth.onAuthStateChanged(function () { setTimeout(drenar, 4000); }); } catch (e) {}
   setTimeout(drenar, 4000);
 })();
+
+/* LLV-SALIR-AJUSTES: botón "Cerrar sesión" en la pantalla de ajustes nueva */
+(function () {
+  const prev = abrirAjustes;
+  abrirAjustes = function () {
+    prev.apply(this, arguments);
+    try {
+      const m = document.getElementById("modalAjustes");
+      const card = m && m.querySelector(".dialog-card.aj-mod");
+      const eli = document.getElementById("ajEli");
+      if (!card || !eli || document.getElementById("ajSalir")) return;
+      const b = document.createElement("button");
+      b.id = "ajSalir";
+      b.className = "aj-row";
+      b.innerHTML = '<span class="aj-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M16 8l4 4-4 4M20 12H9"/></svg></span><span class="aj-txt"><b>Cerrar sesión</b><small>Salir de esta cuenta</small></span><span class="aj-chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>';
+      b.onclick = function () {
+        if (!confirm("¿Cerrar sesión?")) return;
+        m.classList.add("hidden");
+        auth.signOut();
+        localStorage.clear();
+        miTelefono = "";
+        mostrarPantallaLogin();
+      };
+      eli.parentNode.insertBefore(b, eli);
+    } catch (e) {}
+  };
+  const bc = document.getElementById("btnHeaderConfig");
+  if (bc) bc.onclick = abrirAjustes;
+})();
