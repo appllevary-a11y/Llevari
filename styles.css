@@ -2337,3 +2337,9 @@ html, body { overscroll-behavior: none; }
 .el-ok { margin-top: 16px; background: #D92D20; color: #fff; box-shadow: 0 6px 16px rgba(217,45,32,.28); }
 .el-no { margin-top: 10px; background: #fff; color: #4A4660; box-shadow: 0 1px 2px rgba(23,19,43,.05), 0 0 0 1px #ECEAF3; }
 .el-ok:active, .el-no:active { transform: scale(.98); }
+
+/* LLV-MODERNO-V4: fondo opaco en Android (anula el velo negro de los modales) */
+html.is-android #modalAjustes.aj-full,
+html.is-ios #modalAjustes.aj-full,
+#modalAjustes.aj-full { background: #F5F4F8 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+#modalAjustes.aj-full > .dialog-card { background: #F5F4F8 !important; }
