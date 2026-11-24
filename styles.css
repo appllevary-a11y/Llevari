@@ -2601,3 +2601,32 @@ html, body { touch-action: manipulation; }
 .header-actions #btnHeaderRecargar svg { width: 21px; height: 21px; stroke: #fff; stroke-width: 2.6; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 .header-actions .circle-btn:active { transform: scale(.88) !important; filter: brightness(1.12); }
 .llv-nbadge { border-color: #fff !important; background: #ef4444; box-shadow: 0 2px 6px rgba(239,68,68,.6); }
+
+/* LLV-HEADER-NEO: botones del encabezado con neumorfismo (relieve suave) */
+.header-actions { gap: 14px; }
+.header-actions #btnHeaderNotifs, .header-actions #btnHeaderConfig, .header-actions #btnHeaderRecargar {
+  width: 46px !important; height: 46px !important;
+  border: 0 !important;
+  font-size: 0 !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.12) 45%, rgba(10,0,50,.18) 100%) !important;
+  box-shadow:
+    7px 7px 15px rgba(10,0,50,.55),
+    -6px -6px 13px rgba(255,255,255,.26),
+    inset 1px 1px 2px rgba(255,255,255,.55),
+    inset -1px -1px 2px rgba(10,0,50,.25) !important;
+  transition: box-shadow .15s ease, transform .15s ease !important;
+}
+.header-actions .circle-btn::after { width: 23px; height: 23px; filter: drop-shadow(0 0 5px var(--neo-glow, rgba(255,255,255,.6))) !important; }
+.header-actions #btnHeaderNotifs { --neo-glow: rgba(255,210,74,.85); }
+.header-actions #btnHeaderConfig { --neo-glow: rgba(142,233,255,.85); }
+.header-actions #btnHeaderRecargar { --neo-glow: rgba(124,243,176,.85); }
+.header-actions #btnHeaderNotifs::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FFD24A' stroke='%23FFD24A' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9'/%3E%3Cpath d='M13.7 21a2 2 0 0 1-3.4 0' fill='none'/%3E%3C/svg%3E") !important; }
+.header-actions #btnHeaderConfig::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238EE9FF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") !important; }
+.header-actions #btnHeaderRecargar svg { stroke: #7CF3B0 !important; stroke-width: 2.6; width: 22px; height: 22px; filter: drop-shadow(0 0 5px rgba(124,243,176,.85)) !important; }
+.header-actions #btnHeaderNotifs:active, .header-actions #btnHeaderConfig:active, .header-actions #btnHeaderRecargar:active {
+  transform: scale(.96) !important; filter: none !important;
+  box-shadow:
+    inset 6px 6px 12px rgba(10,0,50,.6),
+    inset -5px -5px 10px rgba(255,255,255,.2) !important;
+}
+.llv-nbadge { top: -3px !important; right: -3px !important; border: 2px solid #fff !important; background: #ff3b5c !important; box-shadow: 0 2px 8px rgba(255,59,92,.7) !important; }
