@@ -7123,3 +7123,10 @@ function llvGuiaAndroid() {
     }
   }, true);
 })();
+
+/* LLV-NOTIFS-CONFIRMAR-X: pide confirmación al borrar un aviso con la ✕ */
+document.addEventListener("click", function (e) {
+  if (e.target && e.target.closest && e.target.closest(".llv-ndel") && !confirm("¿Borrar esta notificación?")) {
+    e.stopPropagation(); e.preventDefault();
+  }
+}, true);
