@@ -7043,81 +7043,26 @@ function llvGuiaAndroid() {
   if (bc) bc.onclick = abrirAjustes;
 })();
 
-/* LLV-NOTIFS-DIAG: diagnóstico dentro de la bandeja */
-(function () {
-  function linea() {
-    const p = document.getElementById("llvNotifPanel");
-    if (!p) return null;
-    let d = document.getElementById("llvNDiag");
-    if (d) return d;
-    d = document.createElement("div");
-    d.id = "llvNDiag";
-    d.style.cssText = "padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));font:12px/1.5 system-ui,sans-serif;border-top:1px solid rgba(124,58,237,.25)";
-    const t = document.createElement("div");
-    t.textContent = "Revisando...";
-    const b = document.createElement("button");
-    b.textContent = "🔧 Probar aviso local";
-    b.style.cssText = "display:block;margin-top:6px;background:#7C3AED;color:#fff;border:0;border-radius:10px;padding:8px 12px;font:600 12px system-ui,sans-serif";
-    b.onclick = function () {
-      navigator.serviceWorker.ready.then(function (r) {
-        return r.showNotification("Prueba local", { body: "Si ves esto, la bandeja funciona", icon: "logo.png" });
-      }).then(function () { setTimeout(function () { pintarDiag("prueba enviada"); }, 600); })
-        .catch(function (e) { pintarDiag("error: " + e.message); });
-    };
-    d.appendChild(t);
-    d.appendChild(b);
-    p.appendChild(d);
-    return d;
-  }
-  function pintarDiag(extra) {
-    const d = linea();
-    if (!d) return;
-    const t = d.firstChild;
-    const perm = ("Notification" in window) ? Notification.permission : "no soportado";
-    let tel = "";
-    try { tel = miTelefono || ""; } catch (e) {}
-    let reg = "sin registrar";
-    try { if (typeof llvPushTok !== "undefined" && llvPushTok) reg = "registrado"; } catch (e) {}
-    const base = "Permiso: " + perm + " · Cuenta: " + (tel ? "sí" : "no") + " · Push: " + reg;
-    if (!navigator.serviceWorker) { t.textContent = base + " · SW: no soportado"; return; }
-    navigator.serviceWorker.getRegistration().then(function (r) {
-      if (!r) { t.textContent = base + " · SW: no hay"; return; }
-      const sw = r.active ? r.active.state : (r.installing ? "instalando" : (r.waiting ? "esperando" : "ninguno"));
-      return r.getNotifications().then(function (ns) {
-        t.textContent = base + " · SW: " + sw + " · En la barra: " + ns.length + (extra ? " · " + extra : "");
-      });
-    }).catch(function (e) { t.textContent = base + " · Error: " + e.message; });
-  }
-  document.addEventListener("click", function (e) {
-    if (e.target && e.target.closest && e.target.closest("#btnHeaderNotifs")) setTimeout(function () { pintarDiag(); }, 500);
-  }, true);
-})();
 
-/* LLV-NOTIFS-ACTIVAR: botón para activar avisos (pide el permiso con un toque) */
+/* LLV-PERMISOS: pide los permisos necesarios al primer toque con sesión iniciada */
 (function () {
-  function poner() {
-    const d = document.getElementById("llvNDiag");
-    if (!d) return;
-    const ok = ("Notification" in window) && Notification.permission === "granted" && (typeof llvPushTok !== "undefined" && llvPushTok);
-    let b = document.getElementById("llvNActivar");
-    if (ok) { if (b) b.remove(); return; }
-    if (b) return;
-    b = document.createElement("button");
-    b.id = "llvNActivar";
-    b.textContent = "✅ Activar avisos en este navegador";
-    b.style.cssText = "display:block;margin-top:8px;background:#16a34a;color:#fff;border:0;border-radius:10px;padding:10px 14px;font:700 13px system-ui,sans-serif";
-    b.onclick = function () {
-      if (!("Notification" in window)) return;
-      const t = d.firstChild;
-      if (Notification.permission === "denied") { t.textContent = "Bloqueado. Toca el candado junto a la dirección > Permisos > Notificaciones > Permitir, y recarga."; return; }
-      Notification.requestPermission().then(function (p) {
-        if (p === "granted") { try { llvPushRegistrar(); } catch (e) {} }
-        setTimeout(function () { const c = document.getElementById("btnHeaderNotifs"); if (c) c.click(); }, 3000);
-      }).catch(function () {});
-    };
-    d.appendChild(b);
+  var hecho = false;
+  function pedir() {
+    if (hecho || !miTelefono || !auth.currentUser) return;
+    hecho = true;
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then(function () { llvPushRegistrar(); }).catch(function () {});
+      } else { llvPushRegistrar(); }
+    } catch (e) {}
+    try {
+      if (navigator.permissions && navigator.geolocation) {
+        navigator.permissions.query({ name: "geolocation" }).then(function (r) {
+          if (r.state === "prompt") setTimeout(function () { navigator.geolocation.getCurrentPosition(function () {}, function () {}, { timeout: 10000 }); }, 2500);
+        }).catch(function () {});
+      }
+    } catch (e) {}
   }
-  document.addEventListener("click", function (e) {
-    if (e.target && e.target.closest && e.target.closest("#btnHeaderNotifs")) setTimeout(poner, 900);
-  }, true);
+  document.addEventListener("pointerdown", pedir, true);
 })();
