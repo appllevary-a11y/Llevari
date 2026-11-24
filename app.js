@@ -7103,3 +7103,23 @@ function llvGuiaAndroid() {
     } catch (e) {}
   }, 6000);
 })();
+
+/* LLV-NOTIFS-PERSIST: las notificaciones solo se borran con los botones de borrar */
+(function () {
+  try {
+    const orig = Storage.prototype.clear;
+    Storage.prototype.clear = function () {
+      if (this !== window.localStorage) return orig.call(this);
+      const keep = [];
+      try { for (let i = 0; i < this.length; i++) { const k = this.key(i); if (k && k.indexOf("llv_notifs_") === 0) keep.push([k, this.getItem(k)]); } } catch (e) {}
+      orig.call(this);
+      keep.forEach(function (p) { try { window.localStorage.setItem(p[0], p[1]); } catch (e) {} });
+    };
+  } catch (e) {}
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  document.addEventListener("click", function (e) {
+    if (e.target && e.target.closest && e.target.closest(".llv-nbtxt") && !confirm("¿Borrar todas las notificaciones?")) {
+      e.stopPropagation(); e.preventDefault();
+    }
+  }, true);
+})();
