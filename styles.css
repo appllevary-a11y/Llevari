@@ -2489,3 +2489,15 @@ html.is-ios #modalAjustes.aj-full,
   .lg-fecha { border-bottom-color: #2D2646; }
   .lg-card p { color: #CFCBE6; }
 }
+
+/* LLV-MODERNO-V6: fondo oscuro limpio (grafito) y sombras sin brillo morado */
+@media (prefers-color-scheme: dark) {
+  :root { --c-bg: #0E0D13; }
+  html, body, #appRoot { background-color: #0E0D13; background-image: none; }
+  .card, .rest-card-big, .rest-card-grid, .product-row-card,
+  html.is-android .card, html.is-android .rest-card-big, html.is-android .rest-card-grid, html.is-android .product-row-card { box-shadow: 0 4px 14px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.05) !important; }
+  .bottom-nav, html.is-android .bottom-nav { box-shadow: 0 -6px 20px rgba(0,0,0,.6) !important; border-top: 1px solid rgba(255,255,255,.06) !important; }
+  .nav-item.active .nav-pill { box-shadow: none; }
+  .cat-big, .cat-big[style*="FFF1DC"], .cat-big[style*="EDE9FE"] { box-shadow: 0 8px 18px rgba(0,0,0,.5) !important; }
+  .hero-slider-wrap { box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+}
