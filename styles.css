@@ -2501,3 +2501,13 @@ html.is-ios #modalAjustes.aj-full,
   .cat-big, .cat-big[style*="FFF1DC"], .cat-big[style*="EDE9FE"] { box-shadow: 0 8px 18px rgba(0,0,0,.5) !important; }
   .hero-slider-wrap { box-shadow: 0 8px 20px rgba(0,0,0,.5); }
 }
+
+/* LLV-MODERNO-V7: fondo claro limpio (sin rosado) */
+@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+  :root { --c-bg: #F5F5FA; }
+  html, body, #appRoot { background-color: #F5F5FA; background-image: linear-gradient(180deg, #F8F8FC 0%, #F1F0F7 100%); }
+  .card, .rest-card-big, .rest-card-grid, .product-row-card,
+  html.is-android .card, html.is-android .rest-card-big, html.is-android .rest-card-grid, html.is-android .product-row-card { box-shadow: 0 6px 18px rgba(24,20,48,.10), 0 1px 3px rgba(24,20,48,.06) !important; }
+  .bottom-nav, html.is-android .bottom-nav { box-shadow: 0 -6px 20px rgba(24,20,48,.08) !important; border-top: 1px solid rgba(24,20,48,.06) !important; }
+  .nav-item.active .nav-pill { box-shadow: none; }
+}

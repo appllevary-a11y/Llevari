@@ -6698,3 +6698,88 @@ function llvGuiaAndroid() {
     return r;
   };
 })();
+
+/* LLV-ESTADO-FIX: el abierto/cerrado de las tarjetas siempre sigue al dato en vivo */
+(function () {
+  const RD = {};
+  const norm = s => String(s || "").trim().toLowerCase();
+
+  function poblar(snap) {
+    const ids = {};
+    window.LLV_ESTADO = window.LLV_ESTADO || {};
+    snap.forEach(d => {
+      const x = d.data() || {};
+      ids[d.id] = 1;
+      RD[d.id] = { id: d.id, nombre: x.nombre || "", lat: x.latitud || 0, lon: x.longitud || 0, logo: x.logoUrl || "", cerrado: String(x.estado || "").toUpperCase() === "CERRADO" };
+      window.LLV_ESTADO[d.id] = { cerrado: RD[d.id].cerrado, nombre: RD[d.id].nombre, logo: RD[d.id].logo };
+    });
+    Object.keys(RD).forEach(k => { if (!ids[k]) delete RD[k]; });
+    try { (todosLosProductosCache || []).forEach(p => { const e = RD[p.rId]; if (e) p.rCerrado = e.cerrado; }); } catch (e) {}
+  }
+
+  function buscar(card) {
+    if (!card.querySelector(".rest-card-cover .badge-status")) return null;
+    const h = card.querySelector("h4");
+    if (!h) return null;
+    const n = norm(h.textContent);
+    let r = null, c = 0;
+    for (const k in RD) if (norm(RD[k].nombre) === n) { r = RD[k]; c++; }
+    return c === 1 ? r : null;
+  }
+
+  function sincronizar() {
+    document.querySelectorAll(".rest-card-big, .rest-card-grid").forEach(card => {
+      const r = buscar(card);
+      if (!r) return;
+      const b = card.querySelector(".badge-status");
+      if (b) {
+        const cls = "badge-status " + (r.cerrado ? "cerrado" : "abierto");
+        const txt = r.cerrado ? "🛑 CERRADO" : "🟢 ABIERTO";
+        if (b.className !== cls) b.className = cls;
+        if (b.textContent !== txt) b.textContent = txt;
+      }
+      if (card.classList.contains("rest-card-big")) {
+        const sub = card.querySelector(".rest-card-body .sub-muted");
+        const fee = card.querySelector(".badge-fee");
+        if (sub && (r.cerrado || fee)) {
+          const t = r.cerrado ? "No disponible" : "⏱ 20-35 min • " + fee.textContent.trim();
+          if (sub.textContent !== t) sub.textContent = t;
+        }
+      }
+    });
+  }
+
+  let pend = 0;
+  function agendar() {
+    if (pend) return;
+    pend = requestAnimationFrame(() => { pend = 0; try { sincronizar(); } catch (e) {} });
+  }
+
+  /* al tocar una tarjeta se usa el estado en vivo, no el que traía al dibujarse */
+  document.addEventListener("click", function (e) {
+    const card = e.target && e.target.closest ? e.target.closest(".rest-card-big, .rest-card-grid") : null;
+    if (!card) return;
+    const r = buscar(card);
+    if (!r) return;
+    e.stopPropagation();
+    e.preventDefault();
+    if (r.cerrado) alert({ titulo: r.nombre || "Local", mensaje: "Este local está cerrado actualmente 🛑", imagen: formatearImagen(r.logo) });
+    else abrirMenuRestaurante(r.id, r.nombre, r.lat, r.lon, r.logo);
+  }, true);
+
+  try { new MutationObserver(agendar).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+
+  let un = null;
+  function iniciar() {
+    if (un) return;
+    try {
+      un = db.collection("restaurantes").onSnapshot(function (snap) {
+        if (snap.empty && snap.metadata.fromCache) return;
+        poblar(snap);
+        agendar();
+      }, function () {});
+    } catch (e) { un = null; }
+  }
+  function detener() { if (un) { try { un(); } catch (e) {} } un = null; }
+  try { auth.onAuthStateChanged(function (u) { if (u) iniciar(); else detener(); }); } catch (e) {}
+})();
