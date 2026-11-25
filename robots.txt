@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://appllevary-a11y.github.io/Llevari/sitemap.xml

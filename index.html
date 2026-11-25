@@ -7,7 +7,7 @@
   <script>if(navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("is-app");</script>
   <script>window.llvRecargar=function(b){var h=0,go=function(){if(h)return;h=1;location.reload();};if(navigator.onLine===false){var t=document.createElement("div");t.textContent="Sin conexión a internet";t.style.cssText="position:fixed;left:50%;top:90px;transform:translateX(-50%);z-index:100001;background:rgba(30,10,70,.92);color:#fff;padding:10px 16px;border-radius:14px;font:600 14px system-ui,sans-serif";document.body.appendChild(t);setTimeout(function(){t.remove();},2200);return;}try{b.classList.add("girando");}catch(e){}try{fetch(location.href,{cache:"reload"}).then(go,go);}catch(e){go();}setTimeout(go,2500);};</script>
   <script>(function(){var d=document.documentElement;function aj(){try{if(!d.classList.contains("is-app"))return;var w=Math.min(screen.width,screen.height),h=Math.max(screen.width,screen.height),k=innerWidth/w,b=h-innerHeight/k;if(!(b>=10&&b<=80))return;var o=b>=40?39:0;d.style.setProperty("--app-top",Math.round(b*0.77*k)+"px");d.style.setProperty("--app-bot","max(env(safe-area-inset-bottom,0px),"+Math.round(o*k)+"px)");}catch(e){}}aj();addEventListener("load",aj);addEventListener("resize",aj);addEventListener("orientationchange",aj);})();</script>
-  <title>LLEVARI - Delivery & Pickup</title>
+  <title>Llevari | Pedidos a domicilio en Choluteca, Honduras</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0E0D13" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#0033ff" />
@@ -28,6 +28,15 @@
       console.error("Error:", msg, "línea", line);
     };
   </script>
+<meta name="description" content="Llevari es la app de pedidos a domicilio en Choluteca, Honduras. Pide comida y más, y sigue a tu repartidor en el mapa.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://appllevary-a11y.github.io/Llevari/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Llevari | Pedidos a domicilio en Choluteca, Honduras">
+<meta property="og:description" content="Llevari es la app de pedidos a domicilio en Choluteca, Honduras. Pide comida y más, y sigue a tu repartidor en el mapa.">
+<meta property="og:url" content="https://appllevary-a11y.github.io/Llevari/">
+<meta property="og:image" content="https://appllevary-a11y.github.io/Llevari/logo.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Llevari","alternateName":"Llevari App","url":"https://appllevary-a11y.github.io/Llevari/"}</script>
 </head>
 <body>
 
