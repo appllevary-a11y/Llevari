@@ -2630,3 +2630,36 @@ html, body { touch-action: manipulation; }
     inset -5px -5px 10px rgba(255,255,255,.2) !important;
 }
 .llv-nbadge { top: -3px !important; right: -3px !important; border: 2px solid #fff !important; background: #ff3b5c !important; box-shadow: 0 2px 8px rgba(255,59,92,.7) !important; }
+
+/* LLV-IOS-OSCURO: modo oscuro en iPhone (anula los colores fijos de html.is-ios) */
+@media (prefers-color-scheme: dark) {
+  html.is-ios { --c-bg: #0E0D13; --c-text: #EDEAF7; --c-muted: #A8A3C7; --c-primary-light: #2D2350; }
+  html.is-ios, html.is-ios body, html.is-ios #appRoot {
+    background-color: #0E0D13 !important; background-image: none !important; color: #EDEAF7;
+  }
+  html.is-ios .card, html.is-ios .rest-card-big, html.is-ios .rest-card-grid,
+  html.is-ios .product-row-card, html.is-ios .rest-card-body, html.is-ios .search-row {
+    background-color: #1F1A30 !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.05) !important;
+  }
+  html.is-ios .bottom-nav {
+    background: rgba(31,26,48,.96) !important;
+    box-shadow: 0 -6px 20px rgba(0,0,0,.6) !important;
+    border-top: 1px solid rgba(255,255,255,.06) !important;
+  }
+  html.is-ios .nav-label { color: #A8A3C7 !important; }
+  html.is-ios .nav-item.active .nav-label { color: #C9B3FF !important; }
+  html.is-ios .nav-item.active .nav-pill { background: #2D2350 !important; box-shadow: none !important; }
+  html.is-ios .seg-control, html.is-ios .tab-filter-row { background: #2A2340 !important; }
+  html.is-ios .product-info-left h4, html.is-ios .rest-card-body h4,
+  html.is-ios .section-header h3, html.is-ios .search-row input { color: #EDEAF7 !important; }
+  html.is-ios .search-row input::placeholder { color: #8E88AD !important; }
+  html.is-ios .sub-muted, html.is-ios .card-desc, html.is-ios .opt-sub,
+  html.is-ios .empty-text, html.is-ios .product-info-left p { color: #A8A3C7 !important; }
+  html.is-ios .product-price, html.is-ios .section-link { color: #C9B3FF !important; }
+  html.is-ios input[type="text"], html.is-ios input[type="email"], html.is-ios input[type="password"],
+  html.is-ios input[type="tel"], html.is-ios select { border-color: #3A3358 !important; }
+  html.is-ios .rest-card-cover, html.is-ios .product-thumb-box {
+    background: linear-gradient(135deg, #2D2350, #3B2A55) !important;
+  }
+}
