@@ -1868,7 +1868,6 @@ async function guardarNuevaUbicacionCuenta(dir) {
   if (!miTelefono) return;
   try {
     await db.collection("clientes").doc(miTelefono).update({ direcciones: firebase.firestore.FieldValue.arrayUnion(dir) });
-    try { localStorage.removeItem("llv_dirs_" + miTelefono); } catch (e2) {}
     seleccionarUbicacion(dir.lat, dir.lon, dir.etiqueta, dir.desc, -1);
   } catch (e) {
     toast("No se pudo guardar la ubicación: " + e.message);
@@ -1890,6 +1889,7 @@ function seleccionarUbicacion(lat, lon, etiqueta, desc, idx) {
 }
 
 async function mostrarSelectorUbicaciones() {
+  if (window.llvAndroid && window.llvUbiRapido) return window.llvUbiRapido();
   const modal = document.getElementById("modalSelectorUbicaciones");
   const list = document.getElementById("listaMisUbicaciones");
   modal.classList.remove("hidden");
@@ -1897,16 +1897,11 @@ async function mostrarSelectorUbicaciones() {
   list.innerHTML = '<p class="sub-muted">Cargando...</p>';
   let dirs = [];
   try {
-    const doc = await llvGetCrit(db.collection("clientes").doc(miTelefono), 3000);
+    const doc = await db.collection("clientes").doc(miTelefono).get();
     if (doc.exists) dirs = doc.data().direcciones || [];
-    if (window.llvAndroid) { try { localStorage.setItem("llv_dirs_" + miTelefono, JSON.stringify(dirs)); } catch (e2) {} }
   } catch (e) {
-    let _g = null;
-    if (window.llvAndroid) { try { _g = JSON.parse(localStorage.getItem("llv_dirs_" + miTelefono) || "null"); } catch (e3) {} }
-    if (_g && _g.length) { dirs = _g; } else {
-      list.innerHTML = '<p class="sub-muted" style="color:#DC2626">No se pudieron cargar tus ubicaciones.</p>' + (window.llvAndroid ? '<button class="btn btn-primary" style="margin-top:8px" onclick="mostrarSelectorUbicaciones()">Reintentar</button>' : '');
-      return;
-    }
+    list.innerHTML = '<p class="sub-muted" style="color:#DC2626">No se pudieron cargar tus ubicaciones.</p>';
+    return;
   }
   list.innerHTML = "";
   const validas = dirs.map((d, i) => ({ d, i })).filter(x => x.d && x.d.lat && x.d.lon);
@@ -1975,15 +1970,16 @@ function etiquetaEstado(es) {
 }
 
 async function cargarHistorial() {
+  if (window.llvAndroid && window.llvPedidosRapido) return window.llvPedidosRapido();
   const c = document.getElementById("listContHistorial");
   if (!c) return;
   const miFiltro = filtroPedidos;
   c.innerHTML = '<div class="empty-box"><p>Cargando pedidos...</p></div>';
   let snap;
   try {
-    snap = await llvGetCrit(db.collection("clientes").doc(miTelefono).collection("mis_pedidos"), 3500);
+    snap = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
   } catch (e) {
-    c.innerHTML = '<div class="empty-box"><p>No se pudieron cargar tus pedidos.</p>' + (window.llvAndroid ? '<button class="btn btn-primary" style="margin-top:10px" onclick="cargarHistorial()">Reintentar</button>' : '') + '</div>';
+    c.innerHTML = '<div class="empty-box"><p>No se pudieron cargar tus pedidos.</p></div>';
     return;
   }
   if (snap.empty) { c.innerHTML = '<div class="empty-box"><p>Aún no tienes pedidos registrados.</p></div>'; return; }
@@ -1993,10 +1989,10 @@ async function cargarHistorial() {
     try {
       const _hc = window._histFin && window._histFin[d.pId];
       if (_hc) return { d, r: _hc };
-      const r = await llvGetCrit(db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId), 3500);
+      const r = await db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId).get();
       if (!r.exists) return null;
       const _rd = r.data();
-      if (ESTADOS_FINALES.includes(String(_rd.estado || "NUEVO").toUpperCase())) { (window._histFin = window._histFin || {})[d.pId] = _rd; llvHistGuardar(); }
+      if (ESTADOS_FINALES.includes(String(_rd.estado || "NUEVO").toUpperCase())) (window._histFin = window._histFin || {})[d.pId] = _rd;
       return { d, r: _rd };
     } catch (e) { return null; }
   }));
@@ -7141,7 +7137,7 @@ document.addEventListener("click", function (e) {
   }
 }, true);
 
-/* LLV-CARGA-ANDROID: lecturas rápidas y a prueba de red lenta, solo en Android (ubicaciones y pedidos) */
+/* LLV-CARGA-ANDROID: carga inteligente solo en Android (ubicaciones y pedidos): muestra lo guardado al instante y solo repinta si hay cambios */
 (function () {
   window.llvAndroid = /android/i.test(navigator.userAgent);
   window._llvCritico = 0;
@@ -7167,16 +7163,178 @@ document.addEventListener("click", function (e) {
       ref.get({ source: "server" }).then(ok, function (e) { cache().then(ok, function () { ko(e); }); });
     }).then(function (v) { llvFin(); return v; }, function (e) { llvFin(); throw e; });
   };
-  const KH = "llv_histfin";
-  window.llvHistLeer = function () { try { return JSON.parse(localStorage.getItem(KH) || "{}") || {}; } catch (e) { return {}; } };
+  window.llvHistLeer = function () { try { return JSON.parse(localStorage.getItem("llv_histfin") || "{}") || {}; } catch (e) { return {}; } };
   window.llvHistGuardar = function () {
     if (!window.llvAndroid) return;
     try {
       const h = window._histFin || {}, o = {};
       Object.keys(h).slice(-40).forEach(function (k) { o[k] = h[k]; });
-      localStorage.setItem(KH, JSON.stringify(o));
+      localStorage.setItem("llv_histfin", JSON.stringify(o));
     } catch (e) {}
   };
-  if (window.llvAndroid) window._histFin = window._histFin || window.llvHistLeer();
+  if (!window.llvAndroid) return;
+  window._histFin = window._histFin || window.llvHistLeer();
+
+  // ---- Mis ubicaciones: sale al instante con lo guardado y solo se repinta si algo cambió ----
+  function firmaDirs(d) {
+    try { return JSON.stringify((d || []).map(function (x) { return [x && x.etiqueta, x && x.desc, x && x.lat, x && x.lon]; })); } catch (e) { return ""; }
+  }
+  window.llvUbiRapido = async function () {
+    const modal = document.getElementById("modalSelectorUbicaciones");
+    const list = document.getElementById("listaMisUbicaciones");
+    if (!modal || !list) return;
+    modal.classList.remove("hidden");
+    list.style.cssText = "max-height:40vh;overflow-y:auto;margin-bottom:12px";
+    const clave = "llv_dirs_" + miTelefono;
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(clave) || "null"); } catch (e) {}
+    function pintar(dirs) {
+      list.innerHTML = "";
+      const validas = dirs.map(function (d, i) { return { d: d, i: i }; }).filter(function (x) { return x.d && x.d.lat && x.d.lon; });
+      if (!validas.length) { list.innerHTML = '<p class="sub-muted">Aún no tienes ubicaciones guardadas.</p>'; return; }
+      validas.forEach(function (x) {
+        const d = x.d, i = x.i;
+        const sel = Math.abs(d.lat - miLat) < 0.0001 && Math.abs(d.lon - miLon) < 0.0001;
+        const ico = d.etiqueta === "Casa" ? "🏠" : d.etiqueta === "Trabajo" ? "💼" : "📍";
+        const item = document.createElement("div");
+        item.className = "card card-row";
+        item.style.cssText = "padding:10px 14px;margin-bottom:10px;border:" + (sel ? "2px solid var(--c-primary)" : "1px solid #E4DEF5") + ";background:" + (sel ? "var(--c-primary-light)" : "#fff");
+        item.innerHTML = '<input type="radio" ' + (sel ? "checked" : "") + ' style="accent-color: var(--c-primary); margin-right: 12px; pointer-events:none" /><div style="flex:1"><h4 style="font-size:15px">' + ico + " " + esc(d.etiqueta) + "</h4>" + (d.desc ? '<p class="sub-muted">' + esc(d.desc) + "</p>" : "") + "</div>";
+        item.onclick = function () { modal.classList.add("hidden"); seleccionarUbicacion(d.lat, d.lon, d.etiqueta, d.desc, i); };
+        list.appendChild(item);
+      });
+    }
+    if (local) pintar(local); else list.innerHTML = '<p class="sub-muted">Cargando...</p>';
+    try {
+      const doc = await llvGetCrit(db.collection("clientes").doc(miTelefono), 3000);
+      const dirs = doc.exists ? (doc.data().direcciones || []) : [];
+      try { localStorage.setItem(clave, JSON.stringify(dirs)); } catch (e) {}
+      if (!local || firmaDirs(dirs) !== firmaDirs(local)) pintar(dirs);
+    } catch (e) {
+      if (!local) list.innerHTML = '<p class="sub-muted" style="color:#DC2626">No se pudieron cargar tus ubicaciones.</p><button class="btn btn-primary" style="margin-top:8px" onclick="mostrarSelectorUbicaciones()">Reintentar</button>';
+    }
+  };
+
+  // ---- Pedidos (En proceso / Historial): al instante, sin recargar si no hay cambios ----
+  const PED = { tel: null, rows: null, firma: "", ts: 0, vuelo: null };
+  function firmaPed(rows) {
+    return rows.map(function (x) { return x.d.pId + ":" + x.es + ":" + (x.r.total || 0) + ":" + (x.r.id_numerico || 0); }).sort().join("|");
+  }
+  function leerLocal() {
+    try {
+      const g = JSON.parse(localStorage.getItem("llv_pedidos") || "null");
+      if (g && g.tel === miTelefono && Array.isArray(g.rows)) { PED.rows = g.rows; PED.firma = firmaPed(g.rows); }
+    } catch (e) {}
+  }
+  function guardarLocal() {
+    try {
+      const act = PED.rows.filter(function (x) { return !x.fin; });
+      const fin = PED.rows.filter(function (x) { return x.fin; }).sort(function (a, b) { return (b.r.id_numerico || 0) - (a.r.id_numerico || 0); }).slice(0, 40);
+      localStorage.setItem("llv_pedidos", JSON.stringify({ tel: miTelefono, rows: act.concat(fin) }));
+    } catch (e) {}
+  }
+  function pintarPed() {
+    const c = document.getElementById("listContHistorial");
+    if (!c || !PED.rows) return;
+    const miFiltro = filtroPedidos;
+    const llave = miFiltro + "|" + PED.firma;
+    if (c.getAttribute("data-llv") === llave && c.firstChild) return;
+    c.setAttribute("data-llv", llave);
+    const filas = PED.rows.filter(function (x) { return miFiltro === 0 ? !x.fin : x.fin; });
+    c.innerHTML = "";
+    if (!filas.length) {
+      c.innerHTML = '<div class="empty-box"><p>' + (miFiltro === 0 ? "No tienes pedidos en curso ahora." : "Aún no tienes pedidos finalizados.") + "</p></div>";
+      return;
+    }
+    filas.sort(function (a, b) { return (b.r.id_numerico || 0) - (a.r.id_numerico || 0); });
+    filas.forEach(function (x) {
+      const r = x.r, et = etiquetaEstado(x.es);
+      const card = document.createElement("div");
+      card.className = "card card-row";
+      card.style.margin = "0 0 12px";
+      card.style.cursor = "pointer";
+      card.innerHTML = '<div style="flex:1;min-width:0"><h4 style="font-size:15px">' + esc(r.restaurante_nombre) + " • L. " + Number(r.total || 0).toFixed(2) + '</h4><p class="sub-muted" style="white-space:pre-line;margin:3px 0 8px">' + esc(r.nombre_plato) + '</p><span style="font-size:12px;font-weight:700;color:' + et[1] + '">' + et[0] + '</span></div><span style="font-size:18px;color:var(--c-primary)">➔</span>';
+      card.onclick = function () {
+        if (!x.fin) {
+          pedidoActivoId = x.d.pId;
+          restIdSeleccionadoTemp = x.d.rId;
+          rNombreTemp = r.restaurante_nombre;
+          restauranteLatTemp = r.restaurante_lat || miLat;
+          restauranteLonTemp = r.restaurante_lon || miLon;
+          localStorage.setItem("pedidoActivoId", pedidoActivoId);
+          localStorage.setItem("restIdActivo", restIdSeleccionadoTemp);
+          localStorage.setItem("rNombreActivo", rNombreTemp);
+          abrirPantallaSeguimientoEnVivo();
+        } else {
+          alert("Restaurante: " + r.restaurante_nombre + "\nFecha: " + (r.fecha || "") + "\nEstado: " + x.es + "\n\n" + (r.nombre_plato || "") + "\n\nProductos: L. " + (Number(r.subtotal || 0) + Number(r.aumento || 0)).toFixed(2) + "\nEnvío: L. " + Number(r.costo_envio || 0).toFixed(2) + "\nTotal: L. " + Number(r.total || 0).toFixed(2));
+        }
+      };
+      c.appendChild(card);
+    });
+  }
+  function refrescarPed() {
+    if (PED.vuelo) return PED.vuelo;
+    PED.vuelo = (async function () {
+      const snap = await llvGetCrit(db.collection("clientes").doc(miTelefono).collection("mis_pedidos"), 3500);
+      const hist = window._histFin || {};
+      const previos = {};
+      (PED.rows || []).forEach(function (x) { previos[x.d.pId] = x; });
+      const res = await Promise.all(snap.docs.map(async function (doc) {
+        const d = doc.data();
+        if (!d.rId || !d.pId) return null;
+        if (hist[d.pId]) return { d: d, r: hist[d.pId] };
+        try {
+          const r = await llvGetCrit(db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId), 3500);
+          if (!r.exists) return null;
+          const rd = r.data();
+          if (ESTADOS_FINALES.includes(String(rd.estado || "NUEVO").toUpperCase())) { (window._histFin = window._histFin || {})[d.pId] = rd; llvHistGuardar(); }
+          return { d: d, r: rd };
+        } catch (e) { return previos[d.pId] ? { d: d, r: previos[d.pId].r } : null; }
+      }));
+      const rows = res.filter(Boolean).map(function (x) {
+        const es = String(x.r.estado || "NUEVO").toUpperCase();
+        return Object.assign(x, { es: es, fin: ESTADOS_FINALES.includes(es) });
+      });
+      PED.ts = Date.now();
+      const f = firmaPed(rows);
+      if (!PED.rows || f !== PED.firma) { PED.rows = rows; PED.firma = f; guardarLocal(); pintarPed(); }
+    })().finally(function () { PED.vuelo = null; });
+    return PED.vuelo;
+  }
+  window.llvPedidosRapido = function () {
+    const c = document.getElementById("listContHistorial");
+    if (!c) return;
+    if (PED.tel !== miTelefono) { PED.tel = miTelefono; PED.rows = null; PED.firma = ""; PED.ts = 0; }
+    if (!PED.rows) leerLocal();
+    if (PED.rows) pintarPed();
+    else { c.setAttribute("data-llv", ""); c.innerHTML = '<div class="empty-box"><p>Cargando pedidos...</p></div>'; }
+    if (!PED.rows || Date.now() - PED.ts > 6000) {
+      return refrescarPed().catch(function () {
+        if (!PED.rows) { c.setAttribute("data-llv", ""); c.innerHTML = '<div class="empty-box"><p>No se pudieron cargar tus pedidos.</p><button class="btn btn-primary" style="margin-top:10px" onclick="cargarHistorial()">Reintentar</button></div>'; }
+      });
+    }
+  };
+  setInterval(function () {
+    try {
+      if (document.hidden || typeof tabActualIndex === "undefined" || tabActualIndex !== 2) return;
+      if (PED.rows && PED.rows.some(function (x) { return !x.fin; })) refrescarPed().catch(function () {});
+    } catch (e) {}
+  }, 12000);
+  document.addEventListener("visibilitychange", function () {
+    try { if (!document.hidden && typeof tabActualIndex !== "undefined" && tabActualIndex === 2 && PED.rows) { PED.ts = 0; window.llvPedidosRapido(); } } catch (e) {}
+  });
+  ["pedirDesdeCarrito", "cancelarPedidoActivo"].forEach(function (n) {
+    const o = window[n];
+    if (typeof o !== "function") return;
+    window[n] = function () {
+      const r = o.apply(this, arguments);
+      PED.ts = 0;
+      Promise.resolve(r).then(function () {
+        PED.ts = 0;
+        try { if (typeof tabActualIndex !== "undefined" && tabActualIndex === 2) window.llvPedidosRapido(); } catch (e) {}
+      }, function () {});
+      return r;
+    };
+  });
 })();
 /* /LLV-CARGA-ANDROID */
