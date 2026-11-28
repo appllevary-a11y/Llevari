@@ -2724,21 +2724,26 @@ html .section-link:active, html.is-ios .section-link:active, html.is-android .se
 }
 /* /LLV-SEC-INICIO */
 
-/* LLV-NEO-INICIO: neomorfismo limpio, fondo y piezas del mismo material (iPhone y Android) */
+/* LLV-NEO-INICIO: neomorfismo con volumen, sin luces pálidas (iPhone y Android) */
 html {
-  --nm-bg: #E4E0F1; --nm-hi: #EDEAF8; --nm-lo: #D9D4EB;
-  --nm-lt: rgba(255,255,255,.95); --nm-dk: rgba(140,126,192,.46);
-  --nm-raised: 8px 8px 16px var(--nm-dk), -8px -8px 16px var(--nm-lt);
-  --nm-raised-sm: 4px 4px 9px var(--nm-dk), -4px -4px 9px var(--nm-lt);
-  --nm-inset-sm: inset 4px 4px 8px var(--nm-dk), inset -4px -4px 8px var(--nm-lt);
-  --nm-h-dk: rgba(14,0,52,.55); --nm-h-lt: rgba(196,160,255,.40);
-  --nm-h-raised: 6px 6px 13px var(--nm-h-dk), -5px -5px 11px var(--nm-h-lt), inset 1px 1px 2px rgba(255,255,255,.30);
-  --nm-h-inset: inset 5px 5px 10px var(--nm-h-dk), inset -4px -4px 8px var(--nm-h-lt);
+  --nm-bg: #E4E0F1; --nm-hi: #EFECFA; --nm-lo: #DCD7EE;
+  --nm-dk: rgba(86,64,168,.40); --nm-dk2: rgba(86,64,168,.26); --nm-dkc: rgba(52,24,120,.48);
+  --nm-rim: inset 1.5px 1.5px 2px rgba(255,255,255,.92), inset -2px -2px 4px rgba(86,64,168,.14);
+  --nm-raised: 10px 12px 24px var(--nm-dk), 3px 4px 8px var(--nm-dk2);
+  --nm-raised-sm: 6px 7px 14px var(--nm-dk), 2px 3px 5px var(--nm-dk2);
+  --nm-raised-c: 10px 12px 24px var(--nm-dkc), 3px 4px 8px var(--nm-dk2);
+  --nm-inset: inset 4px 5px 10px rgba(86,64,168,.38), inset -1px -1px 0 rgba(255,255,255,.75);
+  --nm-bevel: inset 2px 2px 3px rgba(255,255,255,.50), inset -3px -5px 10px rgba(0,0,0,.28);
+  --nm-h-raised: 5px 6px 12px rgba(14,0,52,.58), 2px 3px 4px rgba(14,0,52,.35), inset 1.5px 1.5px 2px rgba(255,255,255,.40), inset -2px -3px 5px rgba(14,0,52,.32);
+  --nm-h-inset: inset 5px 6px 11px rgba(14,0,52,.70), inset -1px -1px 0 rgba(255,255,255,.25);
 }
 @media (prefers-color-scheme: dark) {
   html {
-    --nm-bg: #1D1932; --nm-hi: #241F3C; --nm-lo: #171329;
-    --nm-lt: rgba(82,70,130,.34); --nm-dk: rgba(5,3,12,.80);
+    --nm-bg: #1D1932; --nm-hi: #272142; --nm-lo: #171329;
+    --nm-dk: rgba(0,0,0,.74); --nm-dk2: rgba(0,0,0,.50); --nm-dkc: rgba(0,0,0,.78);
+    --nm-rim: inset 1.5px 1.5px 2px rgba(255,255,255,.11), inset -2px -2px 4px rgba(0,0,0,.45);
+    --nm-inset: inset 4px 5px 10px rgba(0,0,0,.78), inset -1px -1px 0 rgba(255,255,255,.06);
+    --nm-bevel: inset 2px 2px 3px rgba(255,255,255,.34), inset -3px -5px 10px rgba(0,0,0,.40);
   }
 }
 html, html body, html #appRoot, html.is-ios, html.is-ios body, html.is-ios #appRoot, html.is-android, html.is-android body, html.is-android #appRoot {
@@ -2754,52 +2759,55 @@ html .header-actions .circle-btn:active, html.is-ios .header-actions .circle-btn
   transform: scale(.97); box-shadow: var(--nm-h-inset) !important;
 }
 html .search-row, html.is-ios .search-row, html.is-android .search-row {
-  box-shadow: inset 5px 5px 10px rgba(46,16,120,.30), inset -4px -4px 8px rgba(255,255,255,.95) !important;
+  box-shadow: inset 5px 6px 11px rgba(46,16,120,.38), inset -1px -1px 0 rgba(255,255,255,.7) !important;
 }
 html .search-icon-badge { position: relative; }
 html .search-icon-badge::after {
   content: ""; position: absolute; top: 5px; left: 8px; width: 15px; height: 9px; border-radius: 50%;
   background: rgba(255,255,255,.34); filter: blur(1px); transform: rotate(-32deg); pointer-events: none;
 }
-html .hero-slider-wrap, html.is-ios .hero-slider-wrap, html.is-android .hero-slider-wrap { box-shadow: var(--nm-raised) !important; }
+html .hero-slider-wrap, html.is-ios .hero-slider-wrap, html.is-android .hero-slider-wrap { box-shadow: var(--nm-raised-c) !important; }
+html .hero-slider-wrap::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 6; box-shadow: var(--nm-bevel);
+}
 html .cat-big.cat-big, html.is-ios .cat-big.cat-big, html.is-android .cat-big.cat-big {
-  box-shadow: var(--nm-raised), inset 0 1px 1px rgba(255,255,255,.45) !important;
+  box-shadow: var(--nm-raised-c), var(--nm-bevel) !important;
 }
 html .cat-big.cat-big:active, html.is-ios .cat-big.cat-big:active, html.is-android .cat-big.cat-big:active {
-  box-shadow: inset 6px 6px 12px rgba(0,0,0,.30), inset -5px -5px 10px rgba(255,255,255,.24) !important;
+  box-shadow: inset 6px 7px 13px rgba(0,0,0,.36), inset -1px -1px 0 rgba(255,255,255,.35) !important;
 }
 html .cat-big-icon-wrap, html.is-ios .cat-big-icon-wrap, html.is-android .cat-big-icon-wrap {
-  box-shadow: 3px 3px 8px rgba(0,0,0,.18), -3px -3px 7px rgba(255,255,255,.30);
+  box-shadow: 3px 4px 8px rgba(0,0,0,.22), inset 1.5px 1.5px 2px rgba(255,255,255,.62), inset -2px -2px 4px rgba(0,0,0,.12);
 }
 html .section-link, html.is-ios .section-link, html.is-android .section-link {
-  background: linear-gradient(145deg, var(--nm-hi), var(--nm-lo)) !important; box-shadow: var(--nm-raised-sm) !important;
+  background: linear-gradient(145deg, var(--nm-hi), var(--nm-lo)) !important; box-shadow: var(--nm-raised-sm), var(--nm-rim) !important;
 }
 html .section-link:active, html.is-ios .section-link:active, html.is-android .section-link:active {
-  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset) !important;
 }
-html #tabInicio .horizontal-scroller, html.is-ios #tabInicio .horizontal-scroller, html.is-android #tabInicio .horizontal-scroller { padding: 24px 26px 38px; }
+html #tabInicio .horizontal-scroller, html.is-ios #tabInicio .horizontal-scroller, html.is-android #tabInicio .horizontal-scroller { padding: 24px 26px 40px; }
 html .rest-card-big, html.is-ios .rest-card-big, html.is-android .rest-card-big {
-  background: var(--nm-bg) !important; border: 0 !important; box-shadow: var(--nm-raised) !important;
+  background: linear-gradient(145deg, var(--nm-hi), var(--nm-lo)) !important; border: 0 !important; box-shadow: var(--nm-raised), var(--nm-rim) !important;
 }
 html .rest-card-big .rest-card-body, html.is-ios .rest-card-big .rest-card-body, html.is-android .rest-card-big .rest-card-body {
   background: transparent !important;
 }
 html .bottom-nav, html.is-ios .bottom-nav, html.is-android .bottom-nav {
-  background: var(--nm-bg) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-  border: 0 !important; box-shadow: 0 -8px 18px var(--nm-lt), 0 -1px 0 var(--nm-lt), inset 0 2px 3px var(--nm-lt) !important;
+  background: linear-gradient(180deg, var(--nm-hi), var(--nm-bg)) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border: 0 !important; box-shadow: 0 -9px 22px var(--nm-dk), inset 0 1.5px 0 rgba(255,255,255,.80) !important;
 }
 html .nav-item.active .nav-pill, html.is-ios .nav-item.active .nav-pill, html.is-android .nav-item.active .nav-pill {
-  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset) !important;
 }
 @media (prefers-color-scheme: dark) {
   html .search-row, html.is-ios .search-row, html.is-android .search-row {
-    box-shadow: inset 5px 5px 10px rgba(0,0,0,.68), inset -3px -3px 7px rgba(255,255,255,.06) !important;
-  }
-  html .cat-big.cat-big, html.is-ios .cat-big.cat-big, html.is-android .cat-big.cat-big {
-    box-shadow: var(--nm-raised), inset 0 1px 1px rgba(255,255,255,.32) !important;
+    box-shadow: inset 5px 6px 11px rgba(0,0,0,.78), inset -1px -1px 0 rgba(255,255,255,.06) !important;
   }
   html .cat-big-icon-wrap, html.is-ios .cat-big-icon-wrap, html.is-android .cat-big-icon-wrap {
-    box-shadow: 3px 3px 8px rgba(0,0,0,.30), -3px -3px 7px rgba(255,255,255,.12);
+    box-shadow: 3px 4px 8px rgba(0,0,0,.34), inset 1.5px 1.5px 2px rgba(255,255,255,.50), inset -2px -2px 4px rgba(0,0,0,.20);
+  }
+  html .bottom-nav, html.is-ios .bottom-nav, html.is-android .bottom-nav {
+    box-shadow: 0 -9px 22px var(--nm-dk), inset 0 1.5px 0 rgba(255,255,255,.09) !important;
   }
 }
 /* /LLV-NEO-INICIO */
