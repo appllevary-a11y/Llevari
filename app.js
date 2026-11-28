@@ -1868,6 +1868,7 @@ async function guardarNuevaUbicacionCuenta(dir) {
   if (!miTelefono) return;
   try {
     await db.collection("clientes").doc(miTelefono).update({ direcciones: firebase.firestore.FieldValue.arrayUnion(dir) });
+    try { localStorage.removeItem("llv_dirs_" + miTelefono); } catch (e2) {}
     seleccionarUbicacion(dir.lat, dir.lon, dir.etiqueta, dir.desc, -1);
   } catch (e) {
     toast("No se pudo guardar la ubicación: " + e.message);
@@ -1896,11 +1897,16 @@ async function mostrarSelectorUbicaciones() {
   list.innerHTML = '<p class="sub-muted">Cargando...</p>';
   let dirs = [];
   try {
-    const doc = await db.collection("clientes").doc(miTelefono).get();
+    const doc = await llvGetCrit(db.collection("clientes").doc(miTelefono), 3000);
     if (doc.exists) dirs = doc.data().direcciones || [];
+    if (window.llvAndroid) { try { localStorage.setItem("llv_dirs_" + miTelefono, JSON.stringify(dirs)); } catch (e2) {} }
   } catch (e) {
-    list.innerHTML = '<p class="sub-muted" style="color:#DC2626">No se pudieron cargar tus ubicaciones.</p>';
-    return;
+    let _g = null;
+    if (window.llvAndroid) { try { _g = JSON.parse(localStorage.getItem("llv_dirs_" + miTelefono) || "null"); } catch (e3) {} }
+    if (_g && _g.length) { dirs = _g; } else {
+      list.innerHTML = '<p class="sub-muted" style="color:#DC2626">No se pudieron cargar tus ubicaciones.</p>' + (window.llvAndroid ? '<button class="btn btn-primary" style="margin-top:8px" onclick="mostrarSelectorUbicaciones()">Reintentar</button>' : '');
+      return;
+    }
   }
   list.innerHTML = "";
   const validas = dirs.map((d, i) => ({ d, i })).filter(x => x.d && x.d.lat && x.d.lon);
@@ -1975,9 +1981,9 @@ async function cargarHistorial() {
   c.innerHTML = '<div class="empty-box"><p>Cargando pedidos...</p></div>';
   let snap;
   try {
-    snap = await db.collection("clientes").doc(miTelefono).collection("mis_pedidos").get();
+    snap = await llvGetCrit(db.collection("clientes").doc(miTelefono).collection("mis_pedidos"), 3500);
   } catch (e) {
-    c.innerHTML = '<div class="empty-box"><p>No se pudieron cargar tus pedidos.</p></div>';
+    c.innerHTML = '<div class="empty-box"><p>No se pudieron cargar tus pedidos.</p>' + (window.llvAndroid ? '<button class="btn btn-primary" style="margin-top:10px" onclick="cargarHistorial()">Reintentar</button>' : '') + '</div>';
     return;
   }
   if (snap.empty) { c.innerHTML = '<div class="empty-box"><p>Aún no tienes pedidos registrados.</p></div>'; return; }
@@ -1987,10 +1993,10 @@ async function cargarHistorial() {
     try {
       const _hc = window._histFin && window._histFin[d.pId];
       if (_hc) return { d, r: _hc };
-      const r = await db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId).get();
+      const r = await llvGetCrit(db.collection("restaurantes").doc(d.rId).collection("pedidos").doc(d.pId), 3500);
       if (!r.exists) return null;
       const _rd = r.data();
-      if (ESTADOS_FINALES.includes(String(_rd.estado || "NUEVO").toUpperCase())) (window._histFin = window._histFin || {})[d.pId] = _rd;
+      if (ESTADOS_FINALES.includes(String(_rd.estado || "NUEVO").toUpperCase())) { (window._histFin = window._histFin || {})[d.pId] = _rd; llvHistGuardar(); }
       return { d, r: _rd };
     } catch (e) { return null; }
   }));
@@ -2823,7 +2829,7 @@ function colaProductos(fn) {
 }
 
 function siguienteProd() {
-  while (prodEnCurso < 2 && colaProd.length) {
+  while (prodEnCurso < 2 && colaProd.length && !(window._llvCritico > 0)) {
     prodEnCurso++;
     colaProd.shift()();
   }
@@ -4295,7 +4301,7 @@ if (window.MutationObserver) {
         if (opts && (opts.source === "cache" || opts.source === "server")) return reqOriginal;
         
         // Creamos una bomba de tiempo de 4.5 segundos
-        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), 10000));
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT_RED")), (/android/i.test(navigator.userAgent) ? 6000 : 10000)));
         
         // Competencia: Gana el servidor o gana el timeout
         return Promise.race([reqOriginal, timeout]).catch(err => {
@@ -7135,3 +7141,42 @@ document.addEventListener("click", function (e) {
   }
 }, true);
 
+/* LLV-CARGA-ANDROID: lecturas rápidas y a prueba de red lenta, solo en Android (ubicaciones y pedidos) */
+(function () {
+  window.llvAndroid = /android/i.test(navigator.userAgent);
+  window._llvCritico = 0;
+  function llvUtil(v) { return !!v && (v.exists === true || v.empty === false); }
+  function llvFin() {
+    window._llvCritico = Math.max(0, (window._llvCritico || 1) - 1);
+    if (!window._llvCritico && typeof siguienteProd === "function") { try { siguienteProd(); } catch (e) {} }
+  }
+  window.llvGetCrit = function (ref, ms) {
+    if (!window.llvAndroid) return ref.get();
+    ms = ms || 3500;
+    window._llvCritico = (window._llvCritico || 0) + 1;
+    return new Promise(function (resolve, reject) {
+      let listo = false, t1 = null, t2 = null;
+      const limpiar = function () { clearTimeout(t1); clearTimeout(t2); };
+      const ok = function (v) { if (!listo) { listo = true; limpiar(); resolve(v); } };
+      const ko = function (e) { if (!listo) { listo = true; limpiar(); reject(e); } };
+      const cache = function () {
+        return ref.get({ source: "cache" }).then(function (v) { return llvUtil(v) ? v : Promise.reject(new Error("SIN_CACHE")); });
+      };
+      t1 = setTimeout(function () { cache().then(ok, function () {}); }, ms);
+      t2 = setTimeout(function () { ko(new Error("TIMEOUT")); }, 15000);
+      ref.get({ source: "server" }).then(ok, function (e) { cache().then(ok, function () { ko(e); }); });
+    }).then(function (v) { llvFin(); return v; }, function (e) { llvFin(); throw e; });
+  };
+  const KH = "llv_histfin";
+  window.llvHistLeer = function () { try { return JSON.parse(localStorage.getItem(KH) || "{}") || {}; } catch (e) { return {}; } };
+  window.llvHistGuardar = function () {
+    if (!window.llvAndroid) return;
+    try {
+      const h = window._histFin || {}, o = {};
+      Object.keys(h).slice(-40).forEach(function (k) { o[k] = h[k]; });
+      localStorage.setItem(KH, JSON.stringify(o));
+    } catch (e) {}
+  };
+  if (window.llvAndroid) window._histFin = window._histFin || window.llvHistLeer();
+})();
+/* /LLV-CARGA-ANDROID */
