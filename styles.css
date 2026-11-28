@@ -2811,3 +2811,53 @@ html .nav-item.active .nav-pill, html.is-ios .nav-item.active .nav-pill, html.is
   }
 }
 /* /LLV-NEO-INICIO */
+
+/* LLV-NEO-LOCALES: neomorfismo en "Todos los locales" (iPhone y Android) */
+html { --nm-raised-md: 7px 9px 18px var(--nm-dk), 2px 3px 6px var(--nm-dk2); }
+html .section-header:has(+ #gridTodosLocales) { align-items: center; padding: 18px 18px 12px; }
+html .section-header:has(+ #gridTodosLocales) > h3 {
+  font-size: 20px; font-weight: 900; letter-spacing: -.4px; line-height: 1.15;
+  background: linear-gradient(90deg, #2D0A8C 0%, #7C3AED 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent !important; color: transparent;
+  animation: none; min-width: 0;
+}
+html .section-header:has(+ #gridTodosLocales) > h3::after {
+  content: ""; display: block; width: 38px; height: 4px; margin-top: 6px; border-radius: 4px;
+  background: linear-gradient(90deg, #FF9500, #FF4F00); box-shadow: 0 2px 6px rgba(255,106,0,.35);
+}
+html .section-header:has(+ #gridTodosLocales) > .back-btn,
+html.is-ios .section-header:has(+ #gridTodosLocales) > .back-btn,
+html.is-android .section-header:has(+ #gridTodosLocales) > .back-btn {
+  background: linear-gradient(145deg, var(--nm-hi), var(--nm-lo)) !important; color: #5B21B6 !important;
+  box-shadow: var(--nm-raised-sm), var(--nm-rim) !important; transition: box-shadow .18s ease, transform .18s ease;
+}
+html .section-header:has(+ #gridTodosLocales) > .back-btn:active,
+html.is-ios .section-header:has(+ #gridTodosLocales) > .back-btn:active,
+html.is-android .section-header:has(+ #gridTodosLocales) > .back-btn:active {
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset) !important; transform: scale(.96);
+}
+html #gridTodosLocales, html.is-ios #gridTodosLocales, html.is-android #gridTodosLocales { gap: 18px; padding: 8px 20px 36px; }
+html .rest-card-grid, html.is-ios .rest-card-grid, html.is-android .rest-card-grid,
+html .llv-skc, html.is-ios .llv-skc, html.is-android .llv-skc {
+  background: linear-gradient(145deg, var(--nm-hi), var(--nm-lo)) !important; border: 0 !important;
+  box-shadow: var(--nm-raised-md), var(--nm-rim) !important;
+}
+html .rest-card-grid .rest-card-body, html.is-ios .rest-card-grid .rest-card-body, html.is-android .rest-card-grid .rest-card-body { background: transparent !important; }
+html .rest-card-grid:active, html.is-ios .rest-card-grid:active, html.is-android .rest-card-grid:active {
+  box-shadow: var(--nm-raised-sm), var(--nm-rim) !important;
+}
+html .llv-skc { border-radius: 20px; }
+html .llv-skc .llv-sk-img, html .llv-skc .llv-sk-line, html.is-ios .llv-skc .llv-sk-img, html.is-ios .llv-skc .llv-sk-line,
+html.is-android .llv-skc .llv-sk-img, html.is-android .llv-skc .llv-sk-line {
+  background-color: var(--nm-lo) !important;
+  background-image: linear-gradient(100deg, var(--nm-lo) 30%, var(--nm-hi) 50%, var(--nm-lo) 70%) !important;
+  background-size: 220% 100%;
+}
+@media (prefers-color-scheme: dark) {
+  html .section-header:has(+ #gridTodosLocales) > h3 { background-image: linear-gradient(90deg, #FFFFFF 0%, #C9B3FF 100%); }
+  html .section-header:has(+ #gridTodosLocales) > .back-btn,
+  html.is-ios .section-header:has(+ #gridTodosLocales) > .back-btn,
+  html.is-android .section-header:has(+ #gridTodosLocales) > .back-btn { color: #D9C8FF !important; }
+}
+/* /LLV-NEO-LOCALES */
